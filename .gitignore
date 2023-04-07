@@ -17,4 +17,7 @@ var/
 *.egg
 
 # Serverless directories
-.serverless
+.serverless/
+node_modules/
+
+Pipfile.lock
