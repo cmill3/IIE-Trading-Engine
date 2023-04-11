@@ -1,19 +1,19 @@
 import boto3
 
+ddb = boto3.resource('dynamodb','us-east-1')
+transactions_table = ddb.Table('icarus-transaction-table')
+orders_table = ddb.Table('icarus-orders-table')
+positions_table = ddb.Table('icarus-positions-table')
 
-def create_dynamo_record(Trade_Type, order_id, datetime_stamp, transaction_id, position_id, trading_strategy, option_name, 
-                         option_side, strike_price, contract_expiry, open_outcome, avg_fill_price_open, last_fill_price_open,
-                         qty_placed_open, qty_executed_open, order_created_datetime, order_transaction_datetime, bp_balance, order_status):    
-    ddb = boto3.resource('dynamodb','us-east-1')
-    transactions_table = ddb.Table('icarus-transaction-table')
-    orders_table = ddb.Table('icarus-orders-table')
-    positions_table = ddb.Table('icarus-positions-table')
+
+def create_dynamo_record(order_info_obj):    
+
 
     ## FILL IN
     transaction_item ={
-        'transaction_id': transaction_id,
-        'trade_type': Trade_Type,
-        'order_id': order_id,
+        'transaction_id': order_info_obj['transaction_id'],
+        'trade_type': order_info_obj['Trade_Type'],
+        'order_id': order_info_obj['order_id'],
         'datetimestamp': datetime_stamp,
         'position_id': position_id,
         'trading_strategy': trading_strategy,
@@ -30,13 +30,13 @@ def create_dynamo_record(Trade_Type, order_id, datetime_stamp, transaction_id, p
         'last_fill_price_open': None,
         'qty_placed_open': None,
         'qty_executed_open': None,
-        'order_status': order_status
+        'order_status': order_info_obj['order_status']
     }
     order_item ={
-        'order_id': order_id,
+        'order_id': order_info_obj['order_id'],
         'trade_type': Trade_Type,
         'datetimestamp': datetime_stamp,
-        'transaction_id': transaction_id,
+        'transaction_ids': transaction_id,
         'position_id': position_id,
         'trading_strategy': trading_strategy,
         'option_name': option_name,

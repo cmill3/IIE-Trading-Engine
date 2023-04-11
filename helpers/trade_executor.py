@@ -39,13 +39,14 @@ def execute_new_trades(data, account_id, trading_mode):
         if is_valid:
             contract_valid = trade.verify_contract(row["contract_name"])
             if contract_valid:
-                open_order_id = trade.place_order(trading_mode, account_id, row['symbol'], row['option_contract'], order_side, row['quantity'], order_type, duration)
+                open_order_id, trade_result, status = trade.place_order(trading_mode, account_id, row['symbol'], row['option_contract'], order_side, row['quantity'], order_type, duration)
                 if open_order_id != "None":
                     order_info_obj = trade.get_order_info(trading_mode, account_id, open_order_id)
                     order_info_obj['position_id'], order_info_obj['transaction_id'] = create_ids(trade_obj["symbol"], row["option_contract"], row["trading_strategy"], order_info_obj['created_date'])
                     order_info_obj["pm_data"] = row.to_dict()
                     order_info_obj['order_id'] = open_order_id
                     order_info_obj['account_balance'] = account_balance
+                    order_info_obj['status'] = status
                     transaction_data.append(order_info_obj)
                 else:
                     order_info_obj['status'] = "failed"
