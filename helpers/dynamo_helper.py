@@ -76,13 +76,13 @@ def create_dynamo_record(Trade_Type, order_id, datetime_stamp, transaction_id, p
     response = transactions_table.put_item(
             Item=transaction_item
         )
-    print(item_2)
+    print(order_item)
     response = orders_table.put_item(
             Item=order_item
         )   
-    print(item_3)
+    print(position_item)
     response = positions_table.put_item(
             Item=position_item
         )
 
-    return response
+    return response, order_item

@@ -12,6 +12,7 @@ def build_trade(event, context):
     df = pull_data()
     results_df = process_data(df)
     print(results_df)
+    csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
     return {
         'statusCode': 200
     }
