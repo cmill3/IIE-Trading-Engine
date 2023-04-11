@@ -40,9 +40,9 @@ def option_lookup(symbol: str) -> dict:
      the first value is for the SPDR ETF, so the [0] will work here -- this has opportunity to be troublesome in the future"""
      return
 
-def verify_contract(symbol: str) -> dict:
+def verify_contract(symbol: str, access_token: str) -> dict:
 
-    response = requests.post('https://api.tradier.com/v1/markets/quotes', params={"symbols": symbol}, headers={'Authorization': f'Bearer {ACCESSTOKEN}', 'Accept': 'application/json'})
+    response = requests.post('https://api.tradier.com/v1/markets/quotes', params={"symbols": symbol}, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
     return response
 
 

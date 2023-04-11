@@ -1,3 +1,4 @@
+import helpers.trade_executor as trade_executor
 import helpers.tradier as trade
 import helpers.dynamo_helper as db
 import pandas as pd
@@ -10,6 +11,7 @@ import os
 
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
+trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
 d = datetime.datetime.now() #Today's date
@@ -23,8 +25,8 @@ duration = "gtc"
 def manage_portfolio(event, context):
     access_token, base_url, account_id = trade.get_tradier_credentials()
     new_trades_df = pull_new_trades()
-    open_trades_df = trade.get_account_positions(base_url, account_id, access_token)
-    open_trades_df = get_open_positions(base_url, account_id, access_token)
+    # open_trades_df = trade.get_account_positions(base_url, account_id, access_token)
+    open_trades_df = pull_open_orders_df()
     orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
     trade_response = close_orders(orders_to_close, base_url, account_id, access_token)
     account_balance = trade.get_account_balance(access_token, base_url, account_id, access_token)
@@ -42,6 +44,13 @@ def pull_new_trades():
 def pull_open_trades():
     open_trades_df = db.get_open_orders()
 
+def pull_open_orders_df():
+    keys = s3.list_objects(Bucket=trading_data_bucket, Prefix="open_orders_data/")["Contents"]
+    query_key = keys[-1]['Key']
+    data = s3.get_object(Bucket=trading_data_bucket, Key=query_key)
+    df = pd.read_csv(data.get("Body"))
+    return df
+
 def evaluate_open_trades(df,base_url, access_token):
     orders_to_close = []
     for index, row in df.iterrows():
@@ -51,12 +60,13 @@ def evaluate_open_trades(df,base_url, access_token):
     return orders_to_close
 
 def close_orders(orders_list, account_id, base_url, access_token):
+
     for order in orders_list:
-        id, status_code, status, result = trade.place_order(order['underlying_symbol'], order['contract'], order_side, order['quantity'], order_type, duration)
+        id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, order['underlying_symbol'], order['contract'], order_side, order['quantity'], order_type, duration)
         if status_code == 200:
             order_info_obj = trade.get_order_info(base_url, account_id, access_token, order['open_order_id'])
             order_info_obj['pm_data'] = order
-            db.create_dynamo_record(order_info_obj)
+            orderdb.create_dynamo_record(order_info_obj)
 
 
 
