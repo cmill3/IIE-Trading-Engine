@@ -1,20 +1,19 @@
-from TradierCred import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID
+from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL   
 from operator import index
 import requests
 import pandas as pd
-import numpy as np
 import datetime
 import json
-from pprint import pprint
+from helpers import dynamo_helper as db
 import logging
 import urllib3
 from typing import Dict
 from urllib3.exceptions import InsecureRequestWarning
-from fake_useragent import UserAgent
-import csv
-import subprocess
-import pandas_market_calendars as mcal
 import boto3
+import os
+
+trading_mode = os.getenv('TRADING_MODE')
+d = datetime.datetime.now() #Today's date
 
 df = pd.read_csv('/Users/ogdiz/Projects/APE-Executor/Trade_Builder/TB_PostProcessing_Data.csv', usecols=['Sym', 'Trading Strategy','Call/Put', 'Strike Price', 'Option Name','Contract Expiry @ 1 Week', 'Contract Expiry @ 2 Weeks'])
 df.dropna(inplace = True)
@@ -68,12 +67,27 @@ datetime_csv = d.strftime("%Y-%m-%d-%H-%M-%S")
 # duration = "GTC"
 # quantity = "1"
 
+def run_executor(event, context):
+    base_url, access_token, account_id = get_tradier_credentials()
+    data = pull_trades()
+    execute_trade(data, base_url, access_token, account_id)
+
+def get_tradier_credentials():
+    if trading_mode == "PAPER":
+        base_url = PAPER_BASE_URL
+        access_token = PAPER_ACCESSTOKEN
+        account_id = PAPER_ACCOUNTID
+    elif trading_mode == "LIVE":
+        base_url = LIVE_BASE_URL
+        access_token = ACCESSTOKEN
+        account_id = ACCOUNTID
+    return base_url, account_id, access_token
 """Trade/Account Functions"""
 
-def acct_balance(Trade_Type: str, account_id: str) -> dict:
-    if Trade_Type == "LIVE":
-        response = requests.get(f'https://api.tradier.com/v1/accounts/{ACCOUNTID}/balances', params=account_id, headers={'Authorization': f'Bearer {ACCESSTOKEN}', 'Accept': 'application/json'})
-        print(response.status_code)
+def get_account_balance(base_url: str, account_id: str, access_token:str) -> dict:
+    try:
+        response = requests.get(f'{base_url}accounts/{account_id}/balances', params=account_id, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+         
         if response.status_code == 200:
             response_json = response.json()
             option_buying_power = response_json['balances']['margin']['option_buying_power']
@@ -82,44 +96,17 @@ def acct_balance(Trade_Type: str, account_id: str) -> dict:
         else:
             print("Buying power pull for live trader failed")
             return response
-    elif Trade_Type == "PAPER":
-        response = requests.get(f'https://sandbox.tradier.com/v1/accounts/{PAPER_ACCOUNTID}/balances', params=account_id, headers={'Authorization': f'Bearer {PAPER_ACCESSTOKEN}', 'Accept': 'application/json'})
-        print(response.status_code)
-        if response.status_code == 200:
-            response_json = response.json()
-            option_buying_power = response_json['balances']['margin']['option_buying_power']
-            cash_balance.append(int(option_buying_power))    
-            return response
-        else:
-            print("Buying power for paper trader pull failed")
-            return response
-    else:
+    except:
         return "Account Balance pull unsuccessful"
      
 # acct_balance("PAPER", PAPER_ACCOUNTID)
 
 """The portion that takes the account balance and allocates a certain amount will be below - currently unweighted**"""
-def account_value_checkpoint(x) -> dict:
-    print(type(x))
-    print(cash_balance)
-    if  x >= acct_balance_min:
-        Qty_of_Contracts.append(1)
-        Contract_Trade_Status.append("Approved")
-        return Contract_Trade_Status
-    elif x < acct_balance_min:
-        Contract_Trade_Status.append("Declined - Insufficient Funds")
-        Qty_of_Contracts.append(0)
-        return Contract_Trade_Status
+def account_value_checkpoint(current_balance) -> dict:
+    if  current_balance >= acct_balance_min:
+        return True
     else:
-        Qty_of_Contracts.append(0)
-        Contract_Trade_Status.append("Account Value Checkpoint Processing Error")
-        print("Account Value Checkpoint failed")
-        return "Account Value Checkpoint failed"
-
-
-# account_value_checkpoint(cash_balance)
-# print(Qty_of_Contracts)
-# print(Contract_Trade_Status)
+        return False
 
 """Functions that will search options for the contract ID (might need to use search --> strikes to find the contract we want, but fortunately the strike date and price will come from TB"""
 
@@ -140,69 +127,38 @@ def option_lookup(symbol: str) -> dict:
 def verify_contract(symbol: str) -> dict:
 
     response = requests.post('https://api.tradier.com/v1/markets/quotes', params={"symbols": symbol}, headers={'Authorization': f'Bearer {ACCESSTOKEN}', 'Accept': 'application/json'})
-    print(response.status_code)
-    print(response.content)
-    # print(response.json())
-    return
+    return response
 
 # verify_contract(Testing_Option_Symbol)
 
 """Function that will place the order"""
 
-def place_order(Trade_Type: str, account_id: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str) -> Dict:
+def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str) -> Dict:
 
-    if Trade_Type == "LIVE":
-     
-        response = requests.post(f'https://api.tradier.com/v1/accounts/{ACCOUNTID}/orders', 
+    response = requests.post(f'{base_url}{account_id}/orders', 
             params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": side, "quantity": quantity, "type": order_type, "duration": duration}, 
-            json=None, verify=False, headers={'Authorization': f'Bearer {ACCESSTOKEN}', 'Accept': 'application/json'})
-    elif Trade_Type == "PAPER":
-        response = requests.post(f'https://sandbox.tradier.com/v1/accounts/{PAPER_ACCOUNTID}/orders', 
-           params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": order_side, "quantity": quantity,"type": order_type, "duration": duration}, 
-           json=None, verify=False, headers={'Authorization': f'Bearer {PAPER_ACCESSTOKEN}', 'Accept': 'application/json'})
-    else:
-        print("Trade type (Live or Paper) must be selected in order to place a trade to the right account")
+            json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})    
     
     if response.status_code == 200:
         response_json = json.loads(response.json())
         id = response_json['order']['id']
-        open_order_id.append(id)
-        print("Order placement for " + option_symbol + " is successful!")
         successful_trades.append(option_symbol)
         trade_open_outcome.append("Success")
         order_status.append("Open")
-        print(response.status_code)
-        print(response.content)
-        return response.status_code
+        return open_order_id
     else:
-        print("Order placement for " + option_symbol + " has failed. Review option contract availability and code.")
         open_order_id.append("None")
         failed_trades.append(option_symbol)
         trade_open_outcome.append("Failed")
         order_status.append("Failed")
-        print(response.status_code)
-        print(response.content)
-        return response.status_code
+        return "failed"
     
-def Create_DateTime(): #This is to create the date time of the trade/attempt
-    d = datetime.datetime.now() #Today's date
-    datetime_of_trade = d.strftime("%Y-%m-%d %H:%M:%S")
-    date_of_trade = d.strftime("%Y-%m-%d")
-    trade_datetime.append(datetime_of_trade)
-    trade_date.append(date_of_trade)
-    return
     
-def get_order_info(Trade_Type: str, account_id: str, order_id: str):
-    if Trade_Type == "LIVE":
-        response = requests.post(f'https://api.tradier.com/v1/accounts/{ACCOUNTID}/orders/{order_id}', 
-            params={"account_id": account_id, "id": order_id, "includeTags": True}, 
-            json=None, verify=False, headers={'Authorization': f'Bearer {ACCESSTOKEN}', 'Accept': 'application/json'})
-    elif Trade_Type == "PAPER":
-        response = requests.post(f'https://sandbox.tradier.com/v1/accounts/{PAPER_ACCOUNTID}/orders/{order_id}', 
-           params={"account_id": account_id, "id": order_id, "includeTags": True}, 
-           json=None, verify=False, headers={'Authorization': f'Bearer {PAPER_ACCESSTOKEN}', 'Accept': 'application/json'})
-    else:
-        print("Trade type (Live or Paper) must be selected in order to place a trade to the right account")
+def get_order_info(base_url: str, account_id: str, access_token:str, order_id: str):
+    
+    response = requests.post(f'{base_url}{account_id}/orders/{order_id}', 
+        params={"account_id": account_id, "id": order_id, "includeTags": True}, 
+        json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
 
     if response.status_code == 200:
         response_json = json.loads(response.json())
@@ -211,14 +167,7 @@ def get_order_info(Trade_Type: str, account_id: str, order_id: str):
         last_fill_price = response_json['order']['last_fill_price']
         transaction_dt = response_json['order']['transaction_date']
         created_dt = response_json['order']['create_date']
-        order_print_quantity_executed.append(exec_quantity)
-        order_print_average_fill_price.append(average_fill_price)
-        order_print_last_fill_price.append(last_fill_price)
-        order_print_created_dt.append(created_dt)
-        order_print_transaction_dt.append(transaction_dt)
-        print(response.status_code)
-        print(response.content)
-        return response.status_code
+        return {"average_fill_price": average_fill_price, "last_fill_price": last_fill_price, "exec_quantity": exec_quantity, "transaction_dt": transaction_dt, "created_dt": created_dt, "status": "Success"}
     else:
         print("Order information for order_id:" + order_id + " has failed. Review option contract availability and code.")
         print(response.status_code)
@@ -233,91 +182,6 @@ def create_ids(underlying, option_name, trading_strategy, datetime):
     position_ids.append(position_id)
     transaction_ids.append(transaction_ids)
 
-def create_dynamo_record(Trade_Type, order_id, datetime_stamp, transaction_id, position_id, trading_strategy, option_name, 
-                         option_side, strike_price, contract_expiry, open_outcome, avg_fill_price_open, last_fill_price_open,
-                         qty_placed_open, qty_executed_open, order_created_datetime, order_transaction_datetime, bp_balance, order_status):    
-    ddb = boto3.resource('dynamodb','us-east-1')
-    table1 = ddb.Table('icarus-transaction-table')
-    table2 = ddb.Table('icarus-orders-table')
-    table3 = ddb.Table('icarus-positions-table')
-
-    ## FILL IN
-    item_1={
-        'transaction_id': transaction_id,
-        'trade_type': Trade_Type,
-        'order_id': order_id,
-        'datetimestamp': datetime_stamp,
-        'position_id': position_id,
-        'trading_strategy': trading_strategy,
-        'option_name': option_name,
-        'trade_open_outcome': open_outcome,
-        'avg_fill_price_open': avg_fill_price_open,
-        'last_fill_price_open': last_fill_price_open,
-        'qty_placed_open': qty_placed_open,
-        'qty_executed_open': qty_executed_open,
-        'order_creation_dt': order_created_datetime,
-        'order_transaction_dt': order_transaction_datetime,
-        'closing_order_id': None,
-        'avg_fill_price_open': None,
-        'last_fill_price_open': None,
-        'qty_placed_open': None,
-        'qty_executed_open': None,
-        'order_status': order_status
-    }
-    item_2={
-        'order_id': order_id,
-        'trade_type': Trade_Type,
-        'datetimestamp': datetime_stamp,
-        'transaction_id': transaction_id,
-        'position_id': position_id,
-        'trading_strategy': trading_strategy,
-        'option_name': option_name,
-        'option_side': option_side,
-        'strike_price': strike_price,
-        'two_week_contract_expiry': contract_expiry,
-        'trade_open_outcome': open_outcome,
-        'avg_fill_price_open': avg_fill_price_open,
-        'last_fill_price_open': last_fill_price_open,
-        'qty_placed_open': qty_placed_open,
-        'qty_executed_open': qty_executed_open,
-        'order_creation_dt': order_created_datetime,
-        'order_transaction_dt': order_transaction_datetime,
-        'trade_close_outcome': None,
-        'closing_order_id': None,
-        'avg_fill_price_open': None,
-        'last_fill_price_open': None,
-        'qty_placed_open': None,
-        'qty_executed_open': None,
-        'PITM_Balance': bp_balance,
-        'order_status': order_status
-    }
-    item_3={
-        'position_id': position_id,
-        'trade_type': Trade_Type,
-        'order_ids': order_id,
-        'datetimestamp': datetime_stamp,
-        'transaction_ids': transaction_id,
-        'trading_strategy': trading_strategy,
-        'option_names': option_name,
-        'two_week_contract_expiry': contract_expiry,
-        'closing_order_ids': None,
-        'position_order_status': order_status
-    }
-
-    print(item_1)
-    response = table1.put_item(
-            Item=item_1
-        )
-    print(item_2)
-    response = table2.put_item(
-            Item=item_2
-        )   
-    print(item_3)
-    response = table3.put_item(
-            Item=item_3
-        )
-
-    return response
 
 """Opportunity to review trade if we change the 'confirmed' from always true to send text/slack"""
 
@@ -359,59 +223,47 @@ df_final = pd.concat([df, df_outcome, df_status, df_balance, df_contractqty, df_
 #                          Qty_of_Contracts[i], order_print_quantity_executed[i], order_print_created_dt[i], 
 #                          order_print_transaction_dt[i], cash_balance[i], order_status[i])
     
-def Live_or_Paper(Trade_Type):
-    if Trade_Type == "Paper":
-        for i, row in df.iterrows():
-            acct_balance("PAPER", PAPER_ACCOUNTID)
-            account_value_checkpoint(cash_balance[i])
-            verify_contract(Option_Name[i])
-            place_order("PAPER", PAPER_ACCOUNTID, Ticker_Symbol[i], Option_Name[i], order_side, Qty_of_Contracts, order_type, duration)
-            Create_DateTime()
-            if open_order_id != "None":
-                get_order_info("PAPER", PAPER_ACCOUNTID, open_order_id[i])
-            else:
-                order_print_quantity_executed.append("None")
-                order_print_average_fill_price.append("None")
-                order_print_last_fill_price.append("None")
-                order_print_created_dt.append("None")
-                order_print_transaction_dt.append("None")
-        for i, in df_final.iterrows():
-            create_ids(Ticker_Symbol[i], Option_Name[i], Trading_Strategy[i], df_datetime[i])
-            create_dynamo_record("PAPER", open_order_id[i], trade_datetime[i], transaction_ids[i], position_ids[i], 
-                         Trading_Strategy[i], Option_Name[i], CP_Label[i], Strike_Price[i], Contract_Expiry[i],
-                         trade_open_outcome[i], order_print_average_fill_price[i], order_print_last_fill_price[i],
-                         Qty_of_Contracts[i], order_print_quantity_executed[i], order_print_created_dt[i], 
-                         order_print_transaction_dt[i], cash_balance[i], order_status[i])
-    elif Trade_Type == "Live":
-        for i, row in df.iterrows():
-            acct_balance("LIVE", PAPER_ACCOUNTID)
-            account_value_checkpoint(cash_balance[i])
-            verify_contract(Option_Name[i])
-            place_order("LIVE", PAPER_ACCOUNTID, Ticker_Symbol[i], Option_Name[i], order_side, Qty_of_Contracts, order_type, duration)
-            Create_DateTime()
-            if open_order_id != "None":
-                get_order_info("LIVE", PAPER_ACCOUNTID, open_order_id[i])
-            else:
-                order_print_quantity_executed.append("None")
-                order_print_average_fill_price.append("None")
-                order_print_last_fill_price.append("None")
-                order_print_created_dt.append("None")
-                order_print_transaction_dt.append("None")
-        for i, in df_final.iterrows():
-            create_ids(Ticker_Symbol[i], Option_Name[i], Trading_Strategy[i], df_datetime[i])
-            create_dynamo_record("LIVE", open_order_id[i], trade_datetime[i], transaction_ids[i], position_ids[i], 
-                         Trading_Strategy[i], Option_Name[i], CP_Label[i], Strike_Price[i], Contract_Expiry[i],
-                         trade_open_outcome[i], order_print_average_fill_price[i], order_print_last_fill_price[i],
-                         Qty_of_Contracts[i], order_print_quantity_executed[i], order_print_created_dt[i], 
-                         order_print_transaction_dt[i], cash_balance[i], order_status[i])
-    else:
-        print("Live or Paper Trading Type must be selected")
+def execute_trade(data, account_id):
+    transaction_data = []
+    # failed_trades = []
+    for i, row in data.iterrows():
+        account_balance = get_account_balance(trading_mode, account_id)
+        is_valid = account_value_checkpoint(account_balance)
+        if is_valid:
+            contract_valid = verify_contract(row["contract_name"])
+            if contract_valid:
+                open_order_id = place_order(trading_mode, account_id, row['symbol'], row['option_contract'], order_side, Qty_of_Contracts, order_type, duration)
+                if open_order_id != "None":
+                    order_info_obj = get_order_info(trading_mode, account_id, open_order_id)
+                    order_info_obj["pm_data"] = row.to_dict()
+                    transaction_data.append(order_info_obj)
+                    db.create_dynamo_record(trading_mode, row, order_info_obj, open_order_id, trade_datetime[i], transaction_ids[i], position_ids[i], 
+                        Trading_Strategy[i], Option_Name[i], CP_Label[i], Strike_Price[i], Contract_Expiry[i],
+                        trade_open_outcome[i],Qty_of_Contracts[i] cash_balance[i], order_status[i])
+                else:
+                    temp = {
+                        "quantity_executed": "none"}
+                    order_print_quantity_executed.append("None")
+                    order_print_average_fill_price.append("None")
+                    order_print_last_fill_price.append("None")
+                    order_print_created_dt.append("None")
+                    order_print_transaction_dt.append("None")
+                    failed_trades.append(temp)
+        
+        for trade_obj in executed_trades.iterrows():
+            create_ids(trade_obj["symbol"], row["option_contract"], row["trading_strategy"], d.strftime("%Y-%m-%d %H:%M:%S"))
+            dynamo_response = db.create_dynamo_record(trade_obj)
    
-Live_or_Paper("Paper")
-
         
 df_transaction_id = pd.DataFrame(transaction_ids, columns= ['Transaction_ID'])
 df_position_id = pd.DataFrame(position_ids, columns= ['Position_ID'])
 df_final_csv = pd.concat([df, df_outcome, df_status, df_balance, df_contractqty, df_date, df_datetime, df_orderid, df_order_average_fill_price, df_order_last_fill_price, df_order_qty_executed, df_order_created_datetime, df_order_transaction_datetime, df_transaction_id, df_position_id], axis=1)
 
 df_final_csv.to_csv(f'/Users/ogdiz/Projects/APE-Executor/Portfolio-Manager-v0/PM-Tradier/Executor_Exports/PM-Exec-{datetime_csv}.csv')
+
+
+db.create_dynamo_record(trading_mode, open_order_id[i], trade_datetime[i], transaction_ids[i], position_ids[i], 
+                        Trading_Strategy[i], Option_Name[i], CP_Label[i], Strike_Price[i], Contract_Expiry[i],
+                        trade_open_outcome[i], order_print_average_fill_price[i], order_print_last_fill_price[i],
+                        Qty_of_Contracts[i], order_print_quantity_executed[i], order_print_created_dt[i], 
+                        order_print_transaction_dt[i], cash_balance[i], order_status[i])

@@ -15,14 +15,18 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 d = datetime.datetime.now() #Today's date
 current_date = d.strftime("%Y-%m-%d")
 
+order_side = "sell_to_close"
+order_type = "market"
+duration = "gtc"
+
 
 def manage_portfolio(event, context):
     access_token, base_url, account_id = get_tradier_credentials()
     new_trades_df = pull_data()
-    open_trades_df = get_account_positions(access_token, base_url, account_id)
-    orders_to_close = evaluate_open_trades(open_trades_df, access_token, base_url, account_id)
-    
-    account_balance = get_account_balance(access_token, base_url, account_id)
+    open_trades_df = get_account_positions(base_url, account_id, access_token)
+    orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
+    trade_response = close_orders(orders_to_close, base_url, account_id, access_token)
+    account_balance = get_account_balance(access_token, base_url, account_id, access_token)
 
 
 def pull_data():
@@ -55,10 +59,6 @@ closed_orderid = []
 closed_datetime_position_closed = []
 closed_datetime_position_opened = []
 
-order_side = "sell_to_close"
-order_type = "market"
-duration = "gtc"
-
 
 
 
@@ -70,14 +70,17 @@ trade_close_outcome = []
 successful_trades = []
 failed_trades = []
 
-def evaluate_open_trades(df):
+def evaluate_open_trades(df,base_url, access_token):
     orders_to_close = []
     for index, row in df.iterrows():
-        close_order, order_dict = date_performance_check(row)
+        close_order, order_dict = date_performance_check(row, base_url, access_token)
         if close_order:
             orders_to_close.append(order_dict)
     return orders_to_close
 
+def close_orders(orders_list):
+    for order in orders_list:
+        position_exit(order['underlying_symbol'], order['contract'], order_side, order['quantity'], order_type, duration)
 
 def get_tradier_credentials():
     if trading_mode == "PAPER":
@@ -133,7 +136,7 @@ def get_account_positions(base_url: str, account_id: str, access_token: str) -> 
     except:
         return "Account Positions pull unsuccessful"
     
-def get_last_price(base_url: str, account_id: str, access_token: str, symbol:str) -> dict:
+def get_last_price(base_url: str, access_token: str, symbol:str) -> dict:
     try:
         response = requests.get(f'{base_url}markets/quotes', params={'symbols': symbol, 'greeks': 'false'}, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
         if response.status_code == 200:
@@ -155,14 +158,14 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
         trading_days_to_add -= 1
     return current_date
     
-def date_performance_check(row, base_url, account_id, access_token):
-    date_delta = current_date - row['position_open_date']
-    # sellby_date = calculate_sellby_date(row['position_open_date'], 3)
-    current_strike = get_last_price(row['underlying_symbol'], base_url, account_id, access_token)
+def date_performance_check(row, base_url, access_token):
+    # date_delta = current_date - row['position_open_date']
+    sellby_date = calculate_sellby_date(row['position_open_date'], 3)
+    current_strike = get_last_price(row['underlying_symbol'], base_url, access_token)
     price_delta = current_strike - row['purchase_strike']
     percent_change = int((price_delta / row['purchase_strike']) * 100)
     
-    if percent_change >= 5 or percent_change <= -5 or date_delta >= 3:
+    if percent_change >= 5 or percent_change <= -5 or current_date > sellby_date:
         order_dict = {
             "contract": row['contract'],
             "underlying_symbol": row['underlying_symbol'],
@@ -173,7 +176,7 @@ def date_performance_check(row, base_url, account_id, access_token):
     else:
         return False, {}
 
-def position_exit(base_url: str, access_token: str, account_id: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str) -> dict:
+def position_exit(base_url: str, account_id: str, access_token: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str) -> dict:
     response = requests.post(f'{base_url}{account_id}/orders', 
                                  params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": side, "quantity": quantity, "type": order_type, "duration": duration}, 
                                  json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
@@ -187,15 +190,6 @@ def position_exit(base_url: str, access_token: str, account_id: str, symbol: str
         failed_trades.append(option_symbol)
         trade_close_outcome.append("Failed")
         return response.status_code
-
-for i, row in df.iterrows():
-    date_performance_check
-
-df_closed_option_name = pd.DataFrame(closed_option_name, columns = ['Option_Name'])
-df_closed_option_symbol = pd.DataFrame(closed_option_symbol, columns= ['Option_Symbol'])
-df_closed_contract_qty = pd.DataFrame(closed_contract_qty, columns= ['Contract_Qty'])
-
-df_exitlist = pd.concat([df_closed_option_name, df_closed_option_symbol, df_closed_contract_qty], axis=1)
 
 for i, row in df_exitlist.iterrows():
     position_exit("PAPER", PAPER_ACCOUNTID, closed_option_symbol[i], closed_option_name[i], order_side, closed_contract_qty[i], order_type, duration)
