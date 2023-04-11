@@ -28,7 +28,7 @@ def account_value_checkpoint(current_balance) -> dict:
         return False
     
 def execute_new_trades(data, account_id, trading_mode):
-    transaction_data = []
+    # transaction_data = []
     for i, row in data.iterrows():
         account_balance = trade.get_account_balance(trading_mode, account_id)
         is_valid = account_value_checkpoint(account_balance)
@@ -39,7 +39,10 @@ def execute_new_trades(data, account_id, trading_mode):
                 transactions_list = []
                 contract_valid = trade.verify_contract(trade["contractSymbol"])
                 if contract_valid:
-                    open_order_id, trade_result, status = trade.place_order(trading_mode, account_id, row['symbol'], trade["contractSymbol"], order_side, trade['quantity'], order_type, duration)
+                    open_order_id, trade_result, status = trade.place_order(trading_mode, account_id, row['symbol'], 
+                                                                            trade["contractSymbol"], order_side, trade['quantity'], 
+                                                                            order_type, duration)
+                    orders_list.append(open_order_id)
                     if open_order_id != "None":
                         order_info_obj = trade.get_order_info(trading_mode, account_id, open_order_id)
                         transaction_id = f'{trade["contractSymbol"]}_{dt}'
@@ -51,15 +54,17 @@ def execute_new_trades(data, account_id, trading_mode):
                         order_info_obj['account_balance'] = account_balance
                         order_info_obj['order_status'] = status
                         order_info_obj['trade_result'] = trade_result
-                        transaction_data.append(order_info_obj)
+                        db.create_new_dynamo_record_transaction(order_info_obj, trading_mode)
+                        db.create_new_dynamo_record_order(order_info_obj, [transaction_id], trading_mode)
                     else:
                         order_info_obj['status'] = "failed"
                         order_info_obj["pm_data"] = row.to_dict()
+        db.create_new_dynamo_record_position(order_info_obj, transactions_list, orders_list, trading_mode)
         
-    for trade_obj in transaction_data:
-        full_order_list = []
-        response, order_items = db.create_dynamo_record(trade_obj, trading_mode)
-        full_order_list.append(order_items)
+    # for trade_obj in transaction_data:
+    #     full_order_list = []
+    #     response, order_items = db.create_dynamo_record(trade_obj, trading_mode)
+    #     full_order_list.append(order_items)
 
     
     df = pd.DataFrame.from_dict(full_order_list)
