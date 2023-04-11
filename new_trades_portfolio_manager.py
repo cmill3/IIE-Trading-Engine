@@ -1,5 +1,5 @@
 import helpers.tradier as trade
-import helpers
+import helpers.dynamo_helper as db
 import pandas as pd
 from datetime import datetime, timedelta
 import urllib3
@@ -22,14 +22,15 @@ duration = "gtc"
 
 def manage_portfolio(event, context):
     access_token, base_url, account_id = trade.get_tradier_credentials()
-    new_trades_df = pull_data()
+    new_trades_df = pull_new_trades()
     open_trades_df = trade.get_account_positions(base_url, account_id, access_token)
+    open_trades_df = get_open_positions(base_url, account_id, access_token)
     orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
     trade_response = close_orders(orders_to_close, base_url, account_id, access_token)
     account_balance = trade.get_account_balance(access_token, base_url, account_id, access_token)
 
 
-def pull_data():
+def pull_new_trades():
     keys = s3.list_objects(Bucket="yqalerts-potential-trades")["Contents"]
     key = keys[-1]['Key']
     dataset = s3.get_object(Bucket="yqalerts-potential-trades", Key=key)
@@ -37,6 +38,9 @@ def pull_data():
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
     return df
+
+def pull_open_trades():
+    open_trades_df = db.get_open_orders()
 
 def evaluate_open_trades(df,base_url, access_token):
     orders_to_close = []
@@ -46,9 +50,15 @@ def evaluate_open_trades(df,base_url, access_token):
             orders_to_close.append(order_dict)
     return orders_to_close
 
-def close_orders(orders_list):
+def close_orders(orders_list, account_id, base_url, access_token):
     for order in orders_list:
-        trade.position_exit(order['underlying_symbol'], order['contract'], order_side, order['quantity'], order_type, duration)
+        id, status_code, status, result = trade.place_order(order['underlying_symbol'], order['contract'], order_side, order['quantity'], order_type, duration)
+        if status_code == 200:
+            order_info_obj = trade.get_order_info(base_url, account_id, access_token, order['open_order_id'])
+            order_info_obj['pm_data'] = order
+            db.create_dynamo_record(order_info_obj)
+
+
 
 def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days later for the data set built to include just trading days, but doesnt filter holiday
     while trading_days_to_add > 0:
@@ -75,6 +85,3 @@ def date_performance_check(row, base_url, access_token):
         return True, order_dict
     else:
         return False, {}
-
-for i, row in df_exitlist.iterrows():
-    position_exit("PAPER", PAPER_ACCOUNTID, closed_option_symbol[i], closed_option_name[i], order_side, closed_contract_qty[i], order_type, duration)

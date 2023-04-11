@@ -1,6 +1,12 @@
 import tradier as trade
 import pandas as pd
 from helpers import dynamo_helper as db
+import os 
+import boto3
+from datetime import datetime
+
+s3 = boto3.client('s3')
+trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 
 order_side = "buy_to_open"
 order_type = "market"
@@ -48,5 +54,8 @@ def execute_trade(data, account_id, trading_mode):
         
     for trade_obj in transaction_data:
         db.create_dynamo_record(trade_obj)
-   
-    df_final_csv.to_csv(f'/Users/ogdiz/Projects/APE-Executor/Portfolio-Manager-v0/PM-Tradier/Executor_Exports/PM-Exec-{datetime_csv}.csv')
+    df = pd.DataFrame.from_dict(transaction_data)
+    final_csv = pd.to_csv(df)
+
+    date = datetime.now().strftime("%Y-%m-%d_%H")
+    s3.put_object(Bucket=trading_data_bucket, Key=f"execution_data/{date}.csv", Body=final_csv)
