@@ -6,25 +6,25 @@ orders_table = ddb.Table('icarus-orders-table')
 positions_table = ddb.Table('icarus-positions-table')
 
 
-def create_dynamo_record(order_info_obj):    
+def create_new_dynamo_record_transaction(order_info_obj, trading_mode):    
 
-
+    pm_data = order_info_obj['pm_data']
     ## FILL IN
     transaction_item ={
         'transaction_id': order_info_obj['transaction_id'],
-        'trade_type': order_info_obj['Trade_Type'],
+        'trading_mode': trading_mode,
         'order_id': order_info_obj['order_id'],
-        'datetimestamp': datetime_stamp,
-        'position_id': position_id,
-        'trading_strategy': trading_strategy,
-        'option_name': option_name,
-        'trade_open_outcome': open_outcome,
-        'avg_fill_price_open': avg_fill_price_open,
-        'last_fill_price_open': last_fill_price_open,
-        'qty_placed_open': qty_placed_open,
-        'qty_executed_open': qty_executed_open,
-        'order_creation_dt': order_created_datetime,
-        'order_transaction_dt': order_transaction_datetime,
+        # 'datetimestamp': datetime_stamp,
+        'position_id': order_info_obj['position_id'],
+        'trading_strategy': pm_data['trading_strategy'],
+        'option_name': order_info_obj['option_name'],
+        'trade_open_outcome': order_info_obj['trade_result'],
+        'avg_fill_price_open': order_info_obj['avg_fill_price_open'],
+        'last_fill_price_open': order_info_obj['last_fill_price_open'],
+        'qty_placed_open': order_info_obj['qty_placed_open'],
+        'qty_executed_open': order_info_obj['qty_executed_open'],
+        'order_creation_date': order_info_obj['order_created_datetime'],
+        'order_transaction_date': order_info_obj['order_transaction_datetime'],
         'closing_order_id': None,
         'avg_fill_price_open': None,
         'last_fill_price_open': None,
@@ -32,57 +32,64 @@ def create_dynamo_record(order_info_obj):
         'qty_executed_open': None,
         'order_status': order_info_obj['order_status']
     }
+
+
+    response = transactions_table.put_item(
+            Item=transaction_item
+        )
+    return response, transaction_item
+
+def create_new_dynamo_record_order(order_info_obj,transaction_ids, trading_mode):    
+    pm_data = order_info_obj['pm_data']
     order_item ={
         'order_id': order_info_obj['order_id'],
-        'trade_type': Trade_Type,
-        'datetimestamp': datetime_stamp,
-        'transaction_ids': transaction_id,
-        'position_id': position_id,
-        'trading_strategy': trading_strategy,
-        'option_name': option_name,
-        'option_side': option_side,
-        'strike_price': strike_price,
-        'two_week_contract_expiry': contract_expiry,
-        'trade_open_outcome': open_outcome,
-        'avg_fill_price_open': avg_fill_price_open,
-        'last_fill_price_open': last_fill_price_open,
-        'qty_placed_open': qty_placed_open,
-        'qty_executed_open': qty_executed_open,
-        'order_creation_dt': order_created_datetime,
-        'order_transaction_dt': order_transaction_datetime,
+        'trading_mode': trading_mode,
+        # 'datetimestamp': datetime_stamp,
+        'transaction_ids': transaction_ids,
+        'position_id': order_info_obj['position_id'],
+        'trading_strategy': pm_data['trading_strategy'],
+        'option_name': order_info_obj['option_name'],
+        'option_side': pm_data['Call/Put'],
+        'strike_price': pm_data['strike'],
+        'two_week_contract_expiry': pm_data['expiry_2wk'],
+        'trade_open_outcome': order_info_obj['trade_result'],
+        'avg_fill_price_open': order_info_obj['avg_fill_price_open'],
+        'last_fill_price_open': order_info_obj['last_fill_price_open'],
+        'qty_placed_open': order_info_obj['qty_placed_open'],
+        'qty_executed_open': order_info_obj['qty_executed_open'],
+        'order_creation_date': order_info_obj['order_created_datetime'],
+        'order_transaction_date': order_info_obj['order_transaction_datetime'],
         'trade_close_outcome': None,
         'closing_order_id': None,
         'avg_fill_price_open': None,
         'last_fill_price_open': None,
         'qty_placed_open': None,
         'qty_executed_open': None,
-        'PITM_Balance': bp_balance,
-        'order_status': order_status
+        'PITM_Balance': order_info_obj['account_balance'],
+        'order_status': order_info_obj['order_status']
     }
-    position_item ={
-        'position_id': position_id,
-        'trade_type': Trade_Type,
-        'order_ids': order_id,
-        'datetimestamp': datetime_stamp,
-        'transaction_ids': transaction_id,
-        'trading_strategy': trading_strategy,
-        'option_names': option_name,
-        'two_week_contract_expiry': contract_expiry,
-        'closing_order_ids': None,
-        'position_order_status': order_status
-    }
-
-    print(position_item)
-    response = transactions_table.put_item(
-            Item=transaction_item
-        )
     print(order_item)
     response = orders_table.put_item(
             Item=order_item
         )   
-    print(position_item)
+    return response, order_item
+
+def create_new_dynamo_record_position(order_info_obj,transaction_ids, order_ids, trading_mode):
+    pm_data = order_info_obj['pm_data']    
+    position_item = {
+        'position_id': order_info_obj['position_id'],
+        'trading_mode': trading_mode,
+        'order_ids': order_ids,
+        # 'datetimestamp': datetime_stamp,
+        'transaction_ids': transaction_ids,
+        'trading_strategy': pm_data['trading_strategy'],
+        # 'option_names': option_name,
+        'two_week_contract_expiry': pm_data['expiry_2wk'],
+        'closing_order_ids': None,
+        'position_order_status': order_info_obj['order_status']
+    }
+
     response = positions_table.put_item(
             Item=position_item
-        )
-
-    return response, order_item
+        )   
+    return response, position_item
