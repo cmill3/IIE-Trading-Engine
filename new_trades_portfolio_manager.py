@@ -14,7 +14,7 @@ trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
-d = datetime.datetime.now() #Today's date
+d = datetime.now() #Today's date
 current_date = d.strftime("%Y-%m-%d")
 
 order_side = "sell_to_close"
@@ -23,7 +23,7 @@ duration = "gtc"
 
 
 def manage_portfolio(event, context):
-    access_token, base_url, account_id = trade.get_tradier_credentials()
+    access_token, base_url, account_id = trade.get_tradier_credentials(trading_mode)
     new_trades_df = pull_new_trades()
     open_trades_df = get_open_trades(base_url, account_id, access_token)
     orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
@@ -32,9 +32,9 @@ def manage_portfolio(event, context):
 
 
 def pull_new_trades():
-    keys = s3.list_objects(Bucket="yqalerts-potential-trades")["Contents"]
+    keys = s3.list_objects(Bucket=trading_data_bucket,Prefix='yqalerts_potential_trades/')["Contents"]
     key = keys[-1]['Key']
-    dataset = s3.get_object(Bucket="yqalerts-potential-trades", Key=key)
+    dataset = s3.get_object(Bucket=trading_data_bucket, Key=key)
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
@@ -128,3 +128,6 @@ def date_performance_check(row, base_url, access_token):
         return True, order_dict
     else:
         return False, {}
+    
+if __name__ == "__main__":
+    manage_portfolio(None, None)

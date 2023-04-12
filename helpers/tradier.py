@@ -1,6 +1,9 @@
 import requests
 import json
-from credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL   
+import os
+from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PAPER_ACCESSTOKENCM3, PAPER_ACCOUNTIDCM3
+
+user = os.getenv('USER')
 
 def get_account_balance(base_url: str, account_id: str, access_token:str) -> dict:
     try:
@@ -19,8 +22,12 @@ def get_account_balance(base_url: str, account_id: str, access_token:str) -> dic
 def get_tradier_credentials(trading_mode: str):
     if trading_mode == "PAPER":
         base_url = PAPER_BASE_URL
-        access_token = PAPER_ACCESSTOKEN
-        account_id = PAPER_ACCOUNTID
+        if user == "CM3":
+            access_token = PAPER_ACCESSTOKENCM3
+            account_id = PAPER_ACCOUNTIDCM3
+        else:
+            access_token = PAPER_ACCESSTOKEN
+            account_id = PAPER_ACCOUNTID
     elif trading_mode == "LIVE":
         base_url = LIVE_BASE_URL
         access_token = ACCESSTOKEN
@@ -46,7 +53,7 @@ def verify_contract(symbol: str, access_token: str) -> dict:
     return response
 
 
-def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str) -> Dict:
+def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str):
 
     response = requests.post(f'{base_url}{account_id}/orders', 
             params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": side, "quantity": quantity, "type": order_type, "duration": duration}, 

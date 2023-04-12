@@ -1,4 +1,4 @@
-import tradier as trade
+import helpers.tradier as trade
 import pandas as pd
 from helpers import dynamo_helper as db
 import os 

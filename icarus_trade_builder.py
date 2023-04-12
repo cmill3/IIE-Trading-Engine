@@ -4,9 +4,13 @@ from datetime import datetime, timedelta
 from yahooquery import Ticker
 from helpers import strategy_helper
 import boto3
+import os
 
 s3 = boto3.client('s3')
 d = datetime.now().date() # Monday
+
+trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
 
 def build_trade(event, context):
     df, key = pull_data()
@@ -14,7 +18,8 @@ def build_trade(event, context):
     print(results_df)
     # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
     csv = results_df.to_csv()
-    s3.put_object(Body=csv, Bucket="yqalerts-potential-trades", Key=key)
+    key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
+    s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
     return {
         'statusCode': 200
     }
@@ -25,14 +30,14 @@ def build_trade(event, context):
 #Sym = Symbol (used to repesent the symbol of the value that we are analyzing)
 
 def pull_data():
-    keys = s3.list_objects(Bucket="yqalerts-model-results",Prefix="yqalerts_full_results/")["Contents"]
+    keys = s3.list_objects(Bucket=model_results_bucket,Prefix="yqalerts_full_results/")["Contents"]
     key = keys[-1]['Key']
     print(key)
-    dataset = s3.get_object(Bucket="yqalerts-model-results", Key=key)
+    dataset = s3.get_object(Bucket=model_results_bucket, Key=key)
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
-    return df
+    return df, key
 
 def process_data(df):
     df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
