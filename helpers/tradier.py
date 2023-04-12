@@ -2,7 +2,6 @@ import requests
 import json
 import os
 from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PAPER_ACCESSTOKENCM3, PAPER_ACCOUNTIDCM3
-
 user = os.getenv('USER')
 
 def get_account_balance(base_url: str, account_id: str, access_token:str) -> dict:
@@ -23,6 +22,7 @@ def get_tradier_credentials(trading_mode: str):
     if trading_mode == "PAPER":
         base_url = PAPER_BASE_URL
         if user == "CM3":
+            print(user)
             access_token = PAPER_ACCESSTOKENCM3
             account_id = PAPER_ACCOUNTIDCM3
         else:
@@ -55,14 +55,13 @@ def verify_contract(symbol: str, base_url:str, access_token: str) -> dict:
 
 
 def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str):
-
-    response = requests.post(f'{base_url}{account_id}/orders', 
-            params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": side, "quantity": quantity, "type": order_type, "duration": duration}, 
-            json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})    
-    
-    response_json = json.loads(response.json())
-    if response_json.status_code == 200:
-        id = response_json['order']['id']
+    print(account_id)
+    response = requests.post(f'{base_url}accounts/{account_id}/orders', 
+            data={"class": 'option', "symbol": symbol, "option_symbol": option_symbol, "side": side, "quantity": quantity, "type": order_type, "duration": duration}, 
+            headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})   
+    if response.status_code == 200:
+        json_response = response.json()
+        id = json_response['order']['id']
         # successful_trades.append(option_symbol)
         return id, "Success", "Open", response
     else:
@@ -71,12 +70,13 @@ def place_order(base_url: str, account_id: str, access_token:str, symbol: str, o
 
 def get_order_info(base_url: str, account_id: str, access_token:str, order_id: str):
     
-    response = requests.post(f'{base_url}{account_id}/orders/{order_id}', 
+    response = requests.post(f'{base_url}accounts/{account_id}/orders/{order_id}', 
         params={"account_id": account_id, "id": order_id, "includeTags": True}, 
-        json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+        headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+    print(response.status_code)
 
     if response.status_code == 200:
-        response_json = json.loads(response.json())
+        response_json = response.json()
         exec_quantity = response_json['order']['exec_quantity']
         average_fill_price = response_json['order']['avg_fill_price']
         last_fill_price = response_json['order']['last_fill_price']
@@ -84,8 +84,8 @@ def get_order_info(base_url: str, account_id: str, access_token:str, order_id: s
         created_dt = response_json['order']['create_date']
         return {"average_fill_price": average_fill_price, "last_fill_price": last_fill_price, "exec_quantity": exec_quantity, "transaction_date": transaction_dt, "created_date": created_dt, "status": "Success"}
     else:
-        print("Order information for order_id:" + order_id + " has failed. Review option contract availability and code.")
-        return response.status_code
+        print(f"Order information for order_id: {order_id} has failed. Review option contract availability and code.")
+        return {"status": "Does not exist."}
     
 # def get_order_info(base_url: str, account_id: str, access_token:str, order_id: str):
     

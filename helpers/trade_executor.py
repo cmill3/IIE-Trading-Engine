@@ -48,7 +48,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
                     print(response)
                     orders_list.append(open_order_id)
                     if open_order_id != "None":
-                        order_info_obj = detail.get_order_info(trading_mode, account_id, open_order_id)
+                        order_info_obj = trade.get_order_info(base_url, account_id, access_token,open_order_id)
                         transaction_id = f'{detail["contractSymbol"]}_{dt}'
                         order_info_obj['transaction_id'] = transaction_id
                         transactions_list.append(transaction_id)

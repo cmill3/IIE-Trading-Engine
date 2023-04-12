@@ -44,6 +44,7 @@ def process_data(df):
     df['expiry_1wk'] = Date_1wk()
     df['expiry_2wk'] = Date_2wk()
     df['trade_details'] = df.apply(lambda row: build_trade_structure(row), axis=1)
+    df['sellby_date'] = calculate_sellby_date(d, 3)
 
     return df
 
@@ -55,6 +56,15 @@ def infer_CP(strategy):
         return "puts"
     
 
+def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days later for the data set built to include just trading days, but doesnt filter holiday
+    while trading_days_to_add > 0:
+        current_date += timedelta(days=1)
+        weekday = current_date.weekday()
+        if weekday >= 5: # sunday = 6
+            continue
+        trading_days_to_add -= 1
+    return current_date
+
 def build_trade_structure(row):
     try:
         Tick = Ticker(str(row['symbol']))
@@ -62,11 +72,11 @@ def build_trade_structure(row):
         df_optionchain_2wk = df_ocraw.loc[row['symbol'], row['expiry_2wk'], row['Call/Put']]
         if row['strategy'] == 'day_losers':
             if len(df_optionchain_2wk) < 12:
-                contracts = []
+                contracts = None
                 return contracts
         elif row['strategy'] == 'day_gainers' or row['strategy'] == 'most_actives' or row['strategy'] == 'maP':
             if len(df_optionchain_2wk) < 20:
-                contracts = []
+                contracts = None
                 return contracts
         contracts = strategy_helper.build_spread(df_optionchain_2wk, spread_length=3)
     except Exception as e:
