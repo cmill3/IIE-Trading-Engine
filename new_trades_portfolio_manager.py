@@ -51,12 +51,12 @@ def get_open_trades(base_url, account_id, access_token):
     return open_trades_df
 
 
-def pull_open_orders_df():
-    keys = s3.list_objects(Bucket=trading_data_bucket, Prefix="open_orders_data/")["Contents"]
-    query_key = keys[-1]['Key']
-    data = s3.get_object(Bucket=trading_data_bucket, Key=query_key)
-    df = pd.read_csv(data.get("Body"))
-    return df
+# def pull_open_orders_df():
+#     keys = s3.list_objects(Bucket=trading_data_bucket, Prefix="open_orders_data/")["Contents"]
+#     query_key = keys[-1]['Key']
+#     data = s3.get_object(Bucket=trading_data_bucket, Key=query_key)
+#     df = pd.read_csv(data.get("Body"))
+#     return df
 
 def evaluate_open_trades(df,base_url, access_token):
     orders_to_close = []
@@ -66,14 +66,40 @@ def evaluate_open_trades(df,base_url, access_token):
             orders_to_close.append(order_dict)
     return orders_to_close
 
-def close_orders(orders_list, account_id, base_url, access_token):
-
-    for order in orders_list:
-        id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, order['underlying_symbol'], order['contract'], order_side, order['quantity'], order_type, duration)
+def close_orders(orders_df, account_id, base_url, access_token):
+    # position_ids = orders_df['position_id'].unique()
+    total_transactions = []
+    for index, row in orders_df.iterrows():
+        id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['contract'], order_side, row['quantity'], order_type, duration)
         if status_code == 200:
-            order_info_obj = trade.get_order_info(base_url, account_id, access_token, order['open_order_id'])
-            order_info_obj['pm_data'] = order
-            db.create_dynamo_record(order_info_obj)
+            transaction_id = f'{row["option_name"]}_{dt}'
+            transactions = row['transaction_ids']
+            transactions.append(transaction_id)
+            total_transactions.append({row['position_id']:transactions})
+            order_info_obj = trade.get_order_info(base_url, account_id, access_token, id)
+            order_info_obj['order_id'] = row['order_id']
+            order_info_obj['pm_data'] = row
+            order_info_obj['closed_order_id'] = id
+            order_info_obj['order_status'] = status
+            order_info_obj['trade_result'] = result
+            order_info_obj['transaction_ids'] = transactions
+            db.close_dynamo_record_order(order_info_obj)
+            db.close_dynamo_record_transaction(order_info_obj)
+    final_positions_dict = create_positions_list(total_transactions)
+    for position_id, transaction_list in final_positions_dict.items():
+        db.close_dynamo_record_position(position_id, transaction_list)
+    return "success"
+
+
+def create_positions_list(total_transactions):
+    positions_dict = {}
+    for position in total_transactions:
+        for key, value in position.items():
+            if key in positions_dict:
+                positions_dict[key].extend(value)
+            else:
+                positions_dict[key] = value
+    return positions_dict
 
 
 

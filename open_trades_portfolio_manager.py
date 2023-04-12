@@ -1,4 +1,4 @@
-import helpers.trade_executor as trade_executor
+# import helpers.trade_executor as te
 import helpers.tradier as trade
 import helpers.dynamo_helper as db
 import pandas as pd
@@ -13,8 +13,8 @@ trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
-d = datetime.datetime.now() #Today's date
-current_date = d.strftime("%Y-%m-%d")
+dt = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+current_date = datetime.now().strftime("%Y-%m-%d")
 
 order_side = "sell_to_close"
 order_type = "market"
@@ -26,6 +26,7 @@ def manage_portfolio(event, context):
     open_trades_df = get_open_trades(base_url, account_id, access_token)
     orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
     trade_response = close_orders(orders_to_close, base_url, account_id, access_token)
+    return trade_response
 
 
 def pull_new_trades():
@@ -67,13 +68,39 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     return orders_to_close
 
 def close_orders(orders_df, account_id, base_url, access_token):
+    # position_ids = orders_df['position_id'].unique()
+    total_transactions = []
     for index, row in orders_df.iterrows():
         id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['contract'], order_side, row['quantity'], order_type, duration)
         if status_code == 200:
-            order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['open_order_id'])
+            transaction_id = f'{row["option_name"]}_{dt}'
+            transactions = row['transaction_ids']
+            transactions.append(transaction_id)
+            total_transactions.append({row['position_id']:transactions})
+            order_info_obj = trade.get_order_info(base_url, account_id, access_token, id)
+            order_info_obj['order_id'] = row['order_id']
             order_info_obj['pm_data'] = row
-            db.create_dynamo_record(order_info_obj)
+            order_info_obj['closed_order_id'] = id
+            order_info_obj['order_status'] = status
+            order_info_obj['trade_result'] = result
+            order_info_obj['transaction_ids'] = transactions
+            db.close_dynamo_record_order(order_info_obj)
+            db.close_dynamo_record_transaction(order_info_obj)
+    final_positions_dict = create_positions_list(total_transactions)
+    for position_id, transaction_list in final_positions_dict.items():
+        db.close_dynamo_record_position(position_id, transaction_list)
+    return "success"
 
+
+def create_positions_list(total_transactions):
+    positions_dict = {}
+    for position in total_transactions:
+        for key, value in position.items():
+            if key in positions_dict:
+                positions_dict[key].extend(value)
+            else:
+                positions_dict[key] = value
+    return positions_dict
 
 
 def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days later for the data set built to include just trading days, but doesnt filter holiday

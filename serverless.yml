@@ -15,6 +15,7 @@ provider:
 
 plugins:
   - serverless-step-functions
+  - serverless-ignore
 
 functions:
   icarus-trade-builder:
