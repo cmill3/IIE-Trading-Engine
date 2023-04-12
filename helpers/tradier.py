@@ -79,16 +79,32 @@ def get_order_info(base_url: str, account_id: str, access_token:str, order_id: s
         print("Order information for order_id:" + order_id + " has failed. Review option contract availability and code.")
         return response.status_code
     
+# def get_order_info(base_url: str, account_id: str, access_token:str, order_id: str):
+    
+#     response = requests.post(f'{base_url}{account_id}/orders/{order_id}', 
+#         params={"account_id": account_id, "id": order_id, "includeTags": True}, 
+#         json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
 
-## NEEDS WORK
+#     if response.status_code == 200:
+#         response_json = json.loads(response.json())
+#         exec_quantity = response_json['order']['exec_quantity']
+#         average_fill_price = response_json['order']['avg_fill_price']
+#         last_fill_price = response_json['order']['last_fill_price']
+#         transaction_dt = response_json['order']['transaction_date']
+#         created_dt = response_json['order']['create_date']
+#         return {"average_fill_price": average_fill_price, "last_fill_price": last_fill_price, "exec_quantity": exec_quantity, "transaction_date": transaction_dt, "created_date": created_dt, "status": "Success"}
+#     else:
+#         print("Order information for order_id:" + order_id + " has failed. Review option contract availability and code.")
+#         return response.status_code
+    
+
 def get_account_positions(base_url: str, account_id: str, access_token: str) -> dict:
     try:
         response = requests.get(f'{base_url}accounts/{account_id}positions', params=account_id, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
         if response.status_code == 200:
             response_json = response.json()
-            option_buying_power = response_json['balances']['margin']['option_buying_power']
-            active_positions.append(int(option_buying_power))    
-            return response
+            positions_list = response_json['positions']['position']
+            return positions_list
         else:
             print("Buying power pull for live trader failed")
             return response
