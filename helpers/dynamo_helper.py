@@ -78,7 +78,7 @@ def create_new_dynamo_record_order(order_info_obj,transaction_ids, trading_mode)
         'order_transaction_date': order_info_obj['order_transaction_datetime'],
         'order_status': order_info_obj['order_status']
     }
-    print(order_item)
+
     response = orders_table.put_item(
             Item=order_item
         )   
@@ -98,7 +98,7 @@ def close_dynamo_record_order(order_info_obj):
         'qty_executed_close': order_info_obj['exec_quantity'],
         'order_status': order_info_obj['order_status']
     }
-    print(order_item)
+    
     response = orders_table.put_item(
             Item=order_item
         )   
