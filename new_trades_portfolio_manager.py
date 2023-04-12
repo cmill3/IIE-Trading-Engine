@@ -14,8 +14,8 @@ trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
-d = datetime.now() #Today's date
-current_date = d.strftime("%Y-%m-%d")
+dt = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+current_date = datetime.now().strftime("%Y-%m-%d")
 
 order_side = "sell_to_close"
 order_type = "market"
@@ -23,12 +23,13 @@ duration = "gtc"
 
 
 def manage_portfolio(event, context):
-    access_token, base_url, account_id = trade.get_tradier_credentials(trading_mode)
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     new_trades_df = pull_new_trades()
     open_trades_df = get_open_trades(base_url, account_id, access_token)
-    orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
-    trade_response = close_orders(orders_to_close, base_url, account_id, access_token)
-    trade_executor.execute_new_trades(new_trades_df, base_url, access_token, account_id)
+    if open_trades_df != None:
+        orders_to_close = evaluate_open_trades(open_trades_df, base_url, access_token)
+        trade_response = close_orders(orders_to_close, base_url, account_id, access_token)
+    trade_executor.run_executor(new_trades_df, trading_mode)
 
 
 def pull_new_trades():
@@ -43,9 +44,10 @@ def pull_new_trades():
 def get_open_trades(base_url, account_id, access_token):
     order_id_list = []
     open_trades_list = trade.get_account_positions(base_url, account_id, access_token)
-
-    for trade in open_trades_list:
-        order_id_list.append(trade['open_order_id'])
+    if open_trades_list == "No Positions":
+        return None
+    for open_trade in open_trades_list:
+        order_id_list.append(open_trade['open_order_id'])
 
     open_trades_df = db.get_open_trades_by_orderid(order_id_list)
     return open_trades_df
@@ -58,7 +60,7 @@ def get_open_trades(base_url, account_id, access_token):
 #     df = pd.read_csv(data.get("Body"))
 #     return df
 
-def evaluate_open_trades(df,base_url, access_token):
+def evaluate_open_trades(df, base_url, access_token):
     orders_to_close = []
     for index, row in df.iterrows():
         close_order, order_dict = date_performance_check(row, base_url, access_token)

@@ -60,7 +60,15 @@ def build_trade_structure(row):
         Tick = Ticker(str(row['symbol']))
         df_ocraw = Tick.option_chain #pulling the data into a data frame (optionchainraw = ocraw)
         df_optionchain_2wk = df_ocraw.loc[row['symbol'], row['expiry_2wk'], row['Call/Put']]
-        contracts = strategy_helper.build_spread(df_optionchain_2wk, spread_length=5)
+        if row['strategy'] == 'day_losers':
+            if len(df_optionchain_2wk) < 12:
+                contracts = []
+                return contracts
+        elif row['strategy'] == 'day_gainers' or row['strategy'] == 'most_actives' or row['strategy'] == 'maP':
+            if len(df_optionchain_2wk) < 20:
+                contracts = []
+                return contracts
+        contracts = strategy_helper.build_spread(df_optionchain_2wk, spread_length=3)
     except Exception as e:
         contracts = None
         print(e)

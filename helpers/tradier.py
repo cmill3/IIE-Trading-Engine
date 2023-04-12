@@ -47,10 +47,11 @@ def option_lookup(symbol: str) -> dict:
      the first value is for the SPDR ETF, so the [0] will work here -- this has opportunity to be troublesome in the future"""
      return
 
-def verify_contract(symbol: str, access_token: str) -> dict:
+def verify_contract(symbol: str, base_url:str, access_token: str) -> dict:
 
-    response = requests.post('https://api.tradier.com/v1/markets/quotes', params={"symbols": symbol}, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
-    return response
+    response = requests.post(f'{base_url}markets/quotes', params={"symbols": symbol}, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+    # response = response.json()
+    return response.status_code
 
 
 def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str):
@@ -59,13 +60,13 @@ def place_order(base_url: str, account_id: str, access_token:str, symbol: str, o
             params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": side, "quantity": quantity, "type": order_type, "duration": duration}, 
             json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})    
     
-    if response.status_code == 200:
-        response_json = json.loads(response.json())
+    response_json = json.loads(response.json())
+    if response_json.status_code == 200:
         id = response_json['order']['id']
         # successful_trades.append(option_symbol)
-        return id, "Success", "Open"
+        return id, "Success", "Open", response
     else:
-        return "None", "Failed", "Failed"
+        return "None", "Failed", "Failed", response
     
 
 def get_order_info(base_url: str, account_id: str, access_token:str, order_id: str):
@@ -107,16 +108,18 @@ def get_order_info(base_url: str, account_id: str, access_token:str, order_id: s
 
 def get_account_positions(base_url: str, account_id: str, access_token: str) -> dict:
     try:
-        response = requests.get(f'{base_url}accounts/{account_id}positions', params=account_id, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+        response = requests.get(f'{base_url}accounts/{account_id}/positions', params=account_id, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+        response_json = response.json()
         if response.status_code == 200:
-            response_json = response.json()
+            if response_json['positions'] == "null":
+                return "No Positions"
             positions_list = response_json['positions']['position']
             return positions_list
         else:
             print("Buying power pull for live trader failed")
             return response
-    except:
-        return "Account Positions pull unsuccessful"
+    except Exception as e:
+        return e
     
 def get_last_price(base_url: str, access_token: str, symbol:str) -> dict:
     try:

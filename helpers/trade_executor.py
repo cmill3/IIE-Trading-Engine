@@ -4,6 +4,7 @@ from helpers import dynamo_helper as db
 import os 
 import boto3
 from datetime import datetime
+import ast
 
 s3 = boto3.client('s3')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
@@ -17,7 +18,7 @@ acct_balance_min = 20000
 
 def run_executor(data, trading_mode):
     base_url, access_token, account_id = trade.get_tradier_credentials(trading_mode)
-    execute_new_trades(data, base_url, access_token, account_id)
+    execute_new_trades(data, base_url, access_token, account_id, trading_mode)
 
      
 #The portion that takes the account balance and allocates a certain amount will be below - currently unweighted**
@@ -27,25 +28,28 @@ def account_value_checkpoint(current_balance) -> dict:
     else:
         return False
     
-def execute_new_trades(data, account_id, trading_mode):
+def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
     transaction_data = []
     for i, row in data.iterrows():
-        account_balance = trade.get_account_balance(trading_mode, account_id)
+        account_balance = trade.get_account_balance(base_url, account_id, access_token)
         is_valid = account_value_checkpoint(account_balance)
         if is_valid:
             orders_list = []
-            position_id = f"{row['symbol']}_{row['trading_strategy']}_{dt}"
-            for trade in row['trade_details']:
+            position_id = f"{row['symbol']}_{row['strategy']}_{dt}"
+            row['trade_details'] = ast.literal_eval(row['trade_details'])
+            for detail in row['trade_details']:
                 transactions_list = []
-                contract_valid = trade.verify_contract(trade["contractSymbol"])
-                if contract_valid:
-                    open_order_id, trade_result, status = trade.place_order(trading_mode, account_id, row['symbol'], 
-                                                                            trade["contractSymbol"], order_side, trade['quantity'], 
+                print(detail)
+                status_code = trade.verify_contract(detail["contractSymbol"],base_url,access_token)
+                if status_code == 200:
+                    open_order_id, trade_result, status, response = trade.place_order(base_url, account_id, access_token, row['symbol'], 
+                                                                            detail["contractSymbol"], order_side, detail['quantity'], 
                                                                             order_type, duration)
+                    print(response)
                     orders_list.append(open_order_id)
                     if open_order_id != "None":
-                        order_info_obj = trade.get_order_info(trading_mode, account_id, open_order_id)
-                        transaction_id = f'{trade["contractSymbol"]}_{dt}'
+                        order_info_obj = detail.get_order_info(trading_mode, account_id, open_order_id)
+                        transaction_id = f'{detail["contractSymbol"]}_{dt}'
                         order_info_obj['transaction_id'] = transaction_id
                         transactions_list.append(transaction_id)
                         order_info_obj['position_id'] = position_id
@@ -57,6 +61,7 @@ def execute_new_trades(data, account_id, trading_mode):
                         db.create_new_dynamo_record_transaction(order_info_obj, trading_mode)
                         db.create_new_dynamo_record_order(order_info_obj, [transaction_id], trading_mode)
                     else:
+                        order_info_obj = {}
                         order_info_obj['status'] = "failed"
                         order_info_obj["pm_data"] = row.to_dict()
         db.create_new_dynamo_record_position(order_info_obj, transactions_list, orders_list, trading_mode)
