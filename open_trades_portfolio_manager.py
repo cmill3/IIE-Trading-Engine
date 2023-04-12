@@ -118,3 +118,6 @@ def date_performance_check(row, base_url, access_token):
         return True, order_dict
     else:
         return False, {}
+    
+if __name__ == "__main__":
+    manage_portfolio(None, None)
