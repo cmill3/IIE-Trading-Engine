@@ -9,10 +9,12 @@ s3 = boto3.client('s3')
 d = datetime.now().date() # Monday
 
 def build_trade(event, context):
-    df = pull_data()
+    df, key = pull_data()
     results_df = process_data(df)
     print(results_df)
-    csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
+    # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
+    csv = results_df.to_csv()
+    s3.put_object(Body=csv, Bucket="yqalerts-potential-trades", Key=key)
     return {
         'statusCode': 200
     }

@@ -28,7 +28,7 @@ def account_value_checkpoint(current_balance) -> dict:
         return False
     
 def execute_new_trades(data, account_id, trading_mode):
-    # transaction_data = []
+    transaction_data = []
     for i, row in data.iterrows():
         account_balance = trade.get_account_balance(trading_mode, account_id)
         is_valid = account_value_checkpoint(account_balance)
@@ -60,6 +60,7 @@ def execute_new_trades(data, account_id, trading_mode):
                         order_info_obj['status'] = "failed"
                         order_info_obj["pm_data"] = row.to_dict()
         db.create_new_dynamo_record_position(order_info_obj, transactions_list, orders_list, trading_mode)
+        transaction_data.append(order_info_obj)
         
     # for trade_obj in transaction_data:
     #     full_order_list = []
@@ -67,11 +68,12 @@ def execute_new_trades(data, account_id, trading_mode):
     #     full_order_list.append(order_items)
 
     
-    df = pd.DataFrame.from_dict(full_order_list)
+    df = pd.DataFrame.from_dict(transaction_data)
     final_csv = pd.to_csv(df)
 
     date = datetime.now().strftime("%Y-%m-%d_%H")
-    s3.put_object(Bucket=trading_data_bucket, Key=f"open_orders_data/{date}.csv", Body=final_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"orders_data/{date}.csv", Body=final_csv)
+    return "process complete"
 
 def pull_open_orders_df():
     keys = s3.list_objects(Bucket=trading_data_bucket, Prefix="open_orders_data/")["Contents"]
