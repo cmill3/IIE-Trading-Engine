@@ -10,6 +10,11 @@ client = boto3.client('dynamodb')
 
 execution_strategy = os.getenv("EXECUTION_STRATEGY")
 
+# Define a function to extract values from dict objects
+def extract_values_from_dict(d):
+    return list(d.values())[0] if isinstance(d, dict) else d
+    
+
 
 def get_open_trades_by_orderid(order_id_list):
     response = client.batch_get_item(
@@ -19,9 +24,10 @@ def get_open_trades_by_orderid(order_id_list):
             }
         }
     )
+    
     items = response['Responses']['icarus-orders-table']
     result_df = pd.DataFrame(items)
-
+    result_df = result_df.applymap(extract_values_from_dict)
     return result_df
 
 def create_new_dynamo_record_position(order_info_obj,transaction_ids, order_ids, trading_mode):
@@ -98,7 +104,7 @@ def close_dynamo_record_order(order_info_obj):
         'qty_executed_close': order_info_obj['exec_quantity'],
         'order_status': order_info_obj['order_status']
     }
-    
+
     response = orders_table.put_item(
             Item=order_item
         )   
