@@ -2,6 +2,7 @@ import boto3
 import pandas as pd
 import os
 import helpers.tradier as trade
+import ast
 
 ddb = boto3.resource('dynamodb','us-east-1')
 transactions_table = ddb.Table('icarus-transaction-table')
@@ -163,24 +164,33 @@ def close_dynamo_record_transaction(order_info_obj):
     return response, transaction_item
 
 
-def process_opened_orders(full_transactions_data, base_url, access_token, account_id, trading_mode):
-    for position_id in full_transactions_data:
-        position = full_transactions_data[position_id]
-        position_transactions_list = []
-        order_id_list = []
-        for order in position['orders']:
-            for order_id in order:
+def process_opened_orders(data, position_id, base_url, access_token, account_id, trading_mode):
+    position_transactions_list = []
+    order_id_list = []
+    unfulfilled_orders = []
+    fulfilled_orders = []
+    data['orders'] = ast.literal_eval(data['orders'])
+
+    for order in data['orders']:
+        for order_id in order:
+            try:
                 order_info_obj = trade.get_order_info(base_url, account_id, access_token, order_id)
                 order_id_list.append(order_id)
-                order_info_obj['account_balance'] = position['account_balance']
+                # order_info_obj['account_balance'] = data['account_balance']
                 order_info_obj['order_status'] = "open"
                 order_info_obj['trade_result'] = "success"
                 transactions = order[order_id]
-                create_new_dynamo_record_order(order_info_obj, position, transactions, trading_mode)
+                create_new_dynamo_record_order(order_info_obj, data, transactions, trading_mode)
                 for transaction in transactions:
-                    create_new_dynamo_record_transaction(transaction, position_id, order_id, order_info_obj, position, trading_mode)
+                    create_new_dynamo_record_transaction(transaction, position_id, order_id, order_info_obj, data, trading_mode)
                     position_transactions_list.append(transaction)
-        create_new_dynamo_record_position(position_id, position, order_id_list, position_transactions_list, trading_mode)
+                fulfilled_orders.append(order_id)
+            except Exception as e:
+                print(e)
+                unfulfilled_orders.append(order_id)
+    if len(unfulfilled_orders) == 0:
+        create_new_dynamo_record_position(position_id, data, order_id_list, position_transactions_list, trading_mode)
+    return fulfilled_orders, unfulfilled_orders
 
 def process_closed_orders(full_transactions_data, base_url, access_token, account_id, position_ids, trading_mode):
     for transaction in full_transactions_data:

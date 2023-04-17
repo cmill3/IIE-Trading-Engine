@@ -29,13 +29,14 @@ def manage_portfolio(event, context):
     open_trades_df, open_trades_list = get_open_trades(base_url, account_id, access_token)
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
-    # TO-DO create an alarm mechanism to repor this 
+    # TO-DO create an alarm mechanism to report this 
     if len(open_trades_df) > 1:
         print("in")
         orders_to_close = evaluate_open_trades(open_trades_df, base_url, access_token)
         trade_response = trade_executor.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
     new_trades_response = evaluate_new_trades(new_trades_df, trading_mode)
     return "Portfolio Manager Complete"
+
 
 def pull_new_trades():
     keys = s3.list_objects(Bucket=trading_data_bucket,Prefix='yqalerts_potential_trades/')["Contents"]
@@ -46,10 +47,12 @@ def pull_new_trades():
     df.reset_index(inplace= True, drop = True)
     return df
 
+
 def evaluate_new_trades(new_trades_df, trading_mode):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    execution_result = trade_executor.run_executor(approved_trades_df, trading_mode)
-    return execution_result
+    execution_result = trade_executor.run_executor(approved_trades_df.iloc[1:3], trading_mode)
+    return 'success'
+
 
 def get_open_trades(base_url, account_id, access_token):
     order_id_list = []
@@ -63,13 +66,6 @@ def get_open_trades(base_url, account_id, access_token):
     return open_trades_df, order_id_list
 
 
-# def pull_open_orders_df():
-#     keys = s3.list_objects(Bucket=trading_data_bucket, Prefix="open_orders_data/")["Contents"]
-#     query_key = keys[-1]['Key']
-#     data = s3.get_object(Bucket=trading_data_bucket, Key=query_key)
-#     df = pd.read_csv(data.get("Body"))
-#     return df
-
 def evaluate_open_trades(orders_df,base_url, access_token):
     df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')
     positions_to_close = []
@@ -80,6 +76,7 @@ def evaluate_open_trades(orders_df,base_url, access_token):
 
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
+
 
 def close_orders(orders_df, account_id, base_url, access_token):
     position_ids = orders_df['position_id'].unique()
@@ -97,23 +94,7 @@ def close_orders(orders_df, account_id, base_url, access_token):
             total_transactions.append(row_data)
     db_success = db.process_closed_orders(total_transactions, base_url, access_token, account_id, position_ids, trading_mode)
     return db_success
+    
 
-    
-# def date_performance_check(row, base_url, access_token):
-#     # date_delta = current_date - row['position_open_date']
-#     current_strike = trade.get_last_price(row['underlying_symbol'], base_url, access_token)
-#     price_delta = current_strike - row['purchase_strike']
-#     percent_change = int((price_delta / row['purchase_strike']) * 100)
-    
-#     if percent_change >= 5 or percent_change <= -5 or current_date > row['sellby_date']:
-#         order_dict = {
-#             "contract": row['contract'],
-#             "underlying_symbol": row['underlying_symbol'],
-#             "quantity": row['quantity'], 
-#         }
-#         return True, order_dict
-#     else:
-#         return False, {}
-    
 if __name__ == "__main__":
     manage_portfolio(None, None)
