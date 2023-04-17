@@ -1,7 +1,7 @@
 import requests
 import json
 import os
-from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PAPER_ACCESSTOKENCM3, PAPER_ACCOUNTIDCM3
+from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL
 
 user = os.getenv('USER')
 
@@ -22,13 +22,13 @@ def get_account_balance(base_url: str, account_id: str, access_token:str) -> dic
 def get_tradier_credentials(trading_mode: str):
     if trading_mode == "PAPER":
         base_url = PAPER_BASE_URL
-        if user == "CM3":
-            print(user)
-            access_token = PAPER_ACCESSTOKENCM3
-            account_id = PAPER_ACCOUNTIDCM3
-        else:
-            access_token = PAPER_ACCESSTOKEN
-            account_id = PAPER_ACCOUNTID
+        # if user == "CM3":
+        #     print(user)
+        #     access_token = PAPER_ACCESSTOKENCM3
+        #     account_id = PAPER_ACCOUNTIDCM3
+        # else:
+        access_token = PAPER_ACCESSTOKEN
+        account_id = PAPER_ACCOUNTID
     elif trading_mode == "LIVE":
         base_url = LIVE_BASE_URL
         access_token = ACCESSTOKEN
@@ -55,10 +55,10 @@ def verify_contract(symbol: str, base_url:str, access_token: str) -> dict:
     return response.status_code
 
 
-def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str):
+def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, quantity: str, order_type: str, duration: str):
     print(account_id)
     response = requests.post(f'{base_url}accounts/{account_id}/orders', 
-            data={"class": 'option', "symbol": symbol, "option_symbol": option_symbol, "side": side, "quantity": quantity, "type": order_type, "duration": duration}, 
+            data={"class": 'option', "symbol": symbol, "option_symbol": option_symbol, "side": "buy_to_open", "quantity": quantity, "type": order_type, "duration": duration}, 
             headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})   
     if response.status_code == 200:
         json_response = response.json()
@@ -137,7 +137,7 @@ def get_last_price(base_url: str, access_token: str, symbol:str) -> dict:
     
 def position_exit(base_url: str, account_id: str, access_token: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str) -> dict:
     response = requests.post(f'{base_url}{account_id}/orders', 
-                                 params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": side, "quantity": quantity, "type": order_type, "duration": duration}, 
+                                 params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": "sell_to_close", "quantity": quantity, "type": order_type, "duration": duration}, 
                                  json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
  
     if response.status_code == 200:

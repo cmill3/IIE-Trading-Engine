@@ -15,7 +15,6 @@ model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
 def build_trade(event, context):
     df, key = pull_data()
     results_df = process_data(df)
-    print(results_df)
     # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
     csv = results_df.to_csv()
     key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
