@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+import pandas as pd
 from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL
 
 user = os.getenv('USER')
@@ -55,26 +56,30 @@ def verify_contract(symbol: str, base_url:str, access_token: str) -> dict:
     return response.status_code
 
 
-def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, quantity: str, order_type: str, duration: str):
-    print(account_id)
+def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, quantity: str, order_type: str, duration: str, position_id:str):
+    print(position_id)
     response = requests.post(f'{base_url}accounts/{account_id}/orders', 
-            data={"class": 'option', "symbol": symbol, "option_symbol": option_symbol, "side": "buy_to_open", "quantity": quantity, "type": order_type, "duration": duration}, 
-            headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})   
+            data={"class": 'option', "symbol": symbol, "option_symbol": option_symbol, "side": "buy_to_open", "quantity": quantity, "type": order_type, "duration": duration, "tag": position_id}, 
+            headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+    print(response.text)   
     if response.status_code == 200:
         json_response = response.json()
         id = json_response['order']['id']
         # successful_trades.append(option_symbol)
-        return id, "Success", "Open", response
+        return id, "Success", "Open", response.status_code
     else:
-        return "None", "Failed", "Failed", response
+        print(response.json())
+        print(response.status_code)     
+        return "None", "Failed", "Failed", response.status_code
     
 
-def get_order_info(base_url: str, account_id: str, access_token:str, order_id: str):
+def get_order_info(base_url: str, account_id: str, access_token: str, order_id: str):
     
-    response = requests.post(f'{base_url}accounts/{account_id}/orders/{order_id}', 
-        params={"account_id": account_id, "id": order_id, "includeTags": True}, 
+    response = requests.get(f'{base_url}/accounts/{account_id}/orders/{order_id}', 
+        params={"includeTags": 'true'}, 
         headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
     print(response.status_code)
+    print(response.json())
 
     if response.status_code == 200:
         response_json = response.json()
@@ -83,10 +88,12 @@ def get_order_info(base_url: str, account_id: str, access_token:str, order_id: s
         last_fill_price = response_json['order']['last_fill_price']
         transaction_dt = response_json['order']['transaction_date']
         created_dt = response_json['order']['create_date']
-        return {"average_fill_price": average_fill_price, "last_fill_price": last_fill_price, "exec_quantity": exec_quantity, "transaction_date": transaction_dt, "created_date": created_dt, "status": "Success"}
+        return {"id":response_json['order']['id'],"average_fill_price": average_fill_price, "last_fill_price": last_fill_price, 
+                "exec_quantity": exec_quantity, "transaction_date": transaction_dt, "created_date": created_dt, 
+                "option_symbol": response_json['order']['option_symbol'],"status":response_json['order']['status'],"position_id": response_json['order']['tag']}
     else:
         print(f"Order information for order_id: {order_id} has failed. Review option contract availability and code.")
-        return {"status": "Does not exist."}
+        return "Order not filled"
     
 # def get_order_info(base_url: str, account_id: str, access_token:str, order_id: str):
     
@@ -135,9 +142,9 @@ def get_last_price(base_url: str, access_token: str, symbol:str) -> dict:
     except:
         return "Account Positions pull unsuccessful"
     
-def position_exit(base_url: str, account_id: str, access_token: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str) -> dict:
-    response = requests.post(f'{base_url}{account_id}/orders', 
-                                 params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": "sell_to_close", "quantity": quantity, "type": order_type, "duration": duration}, 
+def position_exit(base_url: str, account_id: str, access_token: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str, position_id: str) -> dict:
+    response = requests.post(f'{base_url}accounts/{account_id}/orders', 
+                                 params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": "sell_to_close", "quantity": quantity, "type": order_type, "duration": duration, "tag": position_id}, 
                                  json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
  
     if response.status_code == 200:
@@ -145,3 +152,19 @@ def position_exit(base_url: str, account_id: str, access_token: str, symbol: str
     else:
         print("Order placement for " + option_symbol + " has failed. Review option contract availability and code.")
         return "Failed"
+
+
+def get_account_orders(base_url: str, account_id: str, access_token: str) -> dict:
+    try:
+        response = requests.get(f'{base_url}accounts/{account_id}/orders', params=account_id, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+        response_json = response.json()
+        if response.status_code == 200:
+            if response_json['orders'] == "null":
+                return "No Positions"
+            positions_list = response_json['orders']['order']
+            return positions_list
+        else:
+            print("Buying power pull for live trader failed")
+            return response
+    except Exception as e:
+        return e

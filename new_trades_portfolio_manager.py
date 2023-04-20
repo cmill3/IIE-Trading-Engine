@@ -15,7 +15,7 @@ trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
 
-dt = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 current_date = datetime.now().strftime("%Y-%m-%d")
 
 order_side = "sell_to_close"
@@ -26,7 +26,7 @@ duration = "gtc"
 def manage_portfolio(event, context):
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     new_trades_df = pull_new_trades()
-    open_trades_df, open_trades_list = get_open_trades(base_url, account_id, access_token)
+    open_trades_df = db.get_all_orders_from_dynamo(base_url, account_id, access_token)
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
@@ -34,8 +34,8 @@ def manage_portfolio(event, context):
         print("in")
         orders_to_close = evaluate_open_trades(open_trades_df, base_url, access_token)
         trade_response = trade_executor.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
-    new_trades_response = evaluate_new_trades(new_trades_df, trading_mode)
-    return "Portfolio Manager Complete"
+    trades_placed = evaluate_new_trades(new_trades_df, trading_mode)
+    return trades_placed
 
 
 def pull_new_trades():
@@ -50,8 +50,8 @@ def pull_new_trades():
 
 def evaluate_new_trades(new_trades_df, trading_mode):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    execution_result = trade_executor.run_executor(approved_trades_df.iloc[1:3], trading_mode)
-    return 'success'
+    execution_result = trade_executor.run_executor(approved_trades_df, trading_mode)
+    return execution_result
 
 
 def get_open_trades(base_url, account_id, access_token):
@@ -78,22 +78,22 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     return orders_to_close
 
 
-def close_orders(orders_df, account_id, base_url, access_token):
-    position_ids = orders_df['position_id'].unique()
-    total_transactions = []
-    for index, row in orders_df.iterrows():
-        id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['contract'], order_side, row['quantity'], order_type, duration)
-        if status_code == 200:
-            transaction_id = f'{row["option_name"]}_{dt}'
-            transactions = row['transaction_ids']
-            transactions.append(transaction_id)
-            row_data = row.to_dict()
-            row_data['transaction_ids'] = transactions
-            row_data['closing_transaction'] = transaction_id
-            row_data['closing_order_id'] = id
-            total_transactions.append(row_data)
-    db_success = db.process_closed_orders(total_transactions, base_url, access_token, account_id, position_ids, trading_mode)
-    return db_success
+# def close_orders(orders_df, account_id, base_url, access_token):
+#     position_ids = orders_df['position_id'].unique()
+#     total_transactions = []
+#     for index, row in orders_df.iterrows():
+#         id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['contract'], order_side, row['quantity'], order_type, duration)
+#         if status_code == 200:
+#             transaction_id = f'{row["option_name"]}_{dt}'
+#             transactions = row['transaction_ids']
+#             transactions.append(transaction_id)
+#             row_data = row.to_dict()
+#             row_data['transaction_ids'] = transactions
+#             row_data['closing_transaction'] = transaction_id
+#             row_data['closing_order_id'] = id
+#             total_transactions.append(row_data)
+#     db_success = db.process_closed_orders(total_transactions, base_url, access_token, account_id, position_ids, trading_mode)
+#     return db_success
     
 
 if __name__ == "__main__":

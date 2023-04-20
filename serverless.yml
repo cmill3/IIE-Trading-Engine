@@ -19,7 +19,7 @@ plugins:
 
 functions:
   icarus-trade-builder:
-    handler: icarus_trade_builder.run
+    handler: icarus_trade_builder.build_trade
     environment:
       MODEL_RESULTS_BUCKET: "yqalerts-model-results"
       TRADING_DATA_BUCKET: "icarus-trading-data"
@@ -48,6 +48,16 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-portfolio-manager-paper
+  open-trades-reconciliation:
+    handler: order_reconciliation.run_reconciliation
+    environment:
+      TRADING_MODE: "PAPER"
+      TRADING_DATA_BUCKET: "icarus-trading-data"
+      USER: "CM3"
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: open-trades-reconciliation
         
   
  
