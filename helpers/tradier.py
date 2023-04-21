@@ -139,8 +139,8 @@ def get_last_price(base_url: str, access_token: str, symbol:str) -> dict:
         else:
             print("Buying power pull for live trader failed")
             return response
-    except:
-        return "Account Positions pull unsuccessful"
+    except Exception as e:
+        return print(e)
     
 def position_exit(base_url: str, account_id: str, access_token: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str, position_id: str) -> dict:
     response = requests.post(f'{base_url}accounts/{account_id}/orders', 

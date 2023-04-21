@@ -101,6 +101,8 @@ def close_orders(orders_df, account_id, base_url, access_token, trading_mode):
     position_ids = orders_df['position_id'].unique()
     total_transactions = []
     for index, row in orders_df.iterrows():
+        print("CLOSING TIME")
+        print(row)
         id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['contract'], 'sell_to_close', row['quantity'], order_type, duration, row['position_id'])
         if status_code == 200:
             # transaction_id = f'{row["option_name"]}_{dt}'

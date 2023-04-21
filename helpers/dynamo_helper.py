@@ -22,6 +22,10 @@ def extract_values_from_dict(d):
 def get_all_orders_from_dynamo():
     response = orders_table.scan()
     data = response['Items']
+
+    while 'LastEvaluatedKey' in response:
+        response = orders_table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+        data.extend(response['Items'])
     df = pd.DataFrame(data)
     return df
 
@@ -98,7 +102,8 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         'qty_executed_open': str(order_info_obj['exec_quantity']),
         'order_creation_date': str(order_info_obj['created_date']),
         'order_transaction_date': str(order_info_obj['transaction_date']),
-        'order_status': order_info_obj['status']
+        'order_status': order_info_obj['status'],
+        'sellby_date': position['sellby_date']
     }
 
     response = orders_table.put_item(
@@ -106,28 +111,27 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         )   
     return response, order_item
 
-def create_new_dynamo_record_closed_order(order_info_obj, position, position_id, transactions, trading_mode):    
+def create_new_dynamo_record_closed_order(order_info_obj, transaction, trading_mode):    
     # details = ast.literal_eval(position['trade_details'])[0]
 
     order_item ={
-        'order_id': str(order_info_obj['order_id']),
+        'order_id': str(transaction['order_id']),
+        'closing_order_id': str(order_info_obj['id']),
         'trading_mode': trading_mode,
         'execution_strategy': execution_strategy,
         # 'datetimestamp': datetime_stamp,
-        'transaction_ids': transactions,
-        'underlying_symbol': position['symbol'],
-        'position_id': position_id,
-        'trading_strategy': position['strategy'],
+        'underlying_symbol': transaction['symbol'],
+        'position_id': transaction['position_id'],
+        'trading_strategy': transaction['strategy'],
         'option_symbol': order_info_obj['option_symbol'],
-        'option_side': position['Call/Put'],
+        'option_side': transaction['Call/Put'],
         # 'strike_price': details['strike'],
-        'two_week_contract_expiry': position['expiry_2wk'],
-        'trade_open_outcome': order_info_obj['trade_result'],
-        'avg_fill_price_open': str(order_info_obj['avg_fill_price_open']),
-        'last_fill_price_open': str(order_info_obj['last_fill_price_open']),
-        'qty_executed_open': str(order_info_obj['qty_executed_open']),
-        'order_creation_date': str(order_info_obj['order_creation_date']),
-        'order_transaction_date': str(order_info_obj['order_transaction_date']),
+        'two_week_contract_expiry': transaction['expiry_2wk'],
+        'avg_fill_price_open': str(transaction['avg_fill_price_open']),
+        'last_fill_price_open': str(transaction['last_fill_price_open']),
+        'qty_executed_open': str(transaction['qty_executed_open']),
+        'order_creation_date': str(transaction['order_creation_date']),
+        'order_transaction_date': str(transaction['order_transaction_date']),
         'closing_order_id': order_info_obj['closing_order_id'],
         'close_creation_date': order_info_obj['created_date'],
         'close_transaction_date': order_info_obj['transaction_date'],
