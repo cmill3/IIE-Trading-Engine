@@ -48,9 +48,7 @@ def manage_portfolio(event, context):
 #     return open_trades_df, order_id_list
 
 def evaluate_open_trades(orders_df, base_url, account_id, access_token):
-    print(orders_df)
     df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')
-    print(df_unique)
     positions_to_close = []
     close_reasons = []
     for index, row in df_unique.iterrows():
@@ -61,7 +59,6 @@ def evaluate_open_trades(orders_df, base_url, account_id, access_token):
             close_reasons.append(reason)
 
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
-    print(orders_to_close)
     return orders_to_close
 
     

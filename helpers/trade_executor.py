@@ -114,6 +114,12 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
             row_data['closing_order_id'] = id
             total_transactions.append(row_data)
 
+
+    df = pd.DataFrame.from_dict(total_transactions)
+    final_csv = df.to_csv()
+    date = datetime.now().strftime("%Y/%m/%d/%H_%M")
+    s3.put_object(Bucket=trading_data_bucket, Key=f"closed_orders_data/{date}.csv", Body=final_csv)
+    
     time.sleep(25)
     db_success = db.process_closed_orders(total_transactions, base_url, access_token, account_id, position_ids, trading_mode)
     return db_success
