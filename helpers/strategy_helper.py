@@ -1,10 +1,13 @@
 import pandas as pd
 import datetime 
 
-def build_spread(chain_df, spread_length):
+def build_spread(chain_df, spread_length, cp):
     contract_list = []
     chain_df = chain_df.loc[chain_df['inTheMoney'] == False].reset_index(drop=True)
-    chain_df = chain_df.iloc[:spread_length]
+    if cp == "calls":
+        chain_df = chain_df.iloc[:spread_length]
+    if cp == "puts":
+        chain_df = chain_df.iloc[-spread_length:]
     if len(chain_df) < spread_length:
         return contract_list
     for index, row in chain_df.iterrows():

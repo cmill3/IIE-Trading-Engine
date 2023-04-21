@@ -76,7 +76,7 @@ def build_trade_structure(row):
             if len(df_optionchain_2wk) < 20:
                 contracts = None
                 return contracts
-        contracts = strategy_helper.build_spread(df_optionchain_2wk, spread_length=3)
+        contracts = strategy_helper.build_spread(df_optionchain_2wk, 3, row['Call/Put'])
     except Exception as e:
         contracts = None
         print(e)
@@ -93,4 +93,6 @@ def Date_2wk():
     return Expiry_Date 
 
 if __name__ == "__main__":
-    build_trade(None, None)
+    row = {'symbol': 'RIVN', 'strategy': 'day_losers', 'Call/Put': 'puts', 'expiry_1wk': '2023-04-21', 'expiry_2wk': '2023-04-28', 'trade_details': None}
+    contracts = build_trade_structure(row)
+    print(contracts)
