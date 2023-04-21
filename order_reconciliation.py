@@ -32,7 +32,6 @@ def pull_pending_trades():
 def process_dynamo_orders(formatted_df, base_url, account_id, access_token):
     completed_trades = []
     for index, row in formatted_df.iterrows():
-        print(row)
         fulfilled_orders, unfulfilled_orders = db.process_opened_orders(row, index, base_url, account_id, access_token, trading_mode)
         if len(unfulfilled_orders) == 0:
             completed_trades.append(index)
@@ -42,7 +41,6 @@ def process_dynamo_orders(formatted_df, base_url, account_id, access_token):
     return pending_df
 
 def format_pending_df(df):
-    print(df)
     columns = df['Unnamed: 0'].values
     indexes = df.columns.values[1:]
 

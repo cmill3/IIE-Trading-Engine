@@ -31,7 +31,6 @@ def build_trade(event, context):
 def pull_data():
     keys = s3.list_objects(Bucket=model_results_bucket,Prefix="yqalerts_full_results/")["Contents"]
     key = keys[-1]['Key']
-    print(key)
     dataset = s3.get_object(Bucket=model_results_bucket, Key=key)
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)

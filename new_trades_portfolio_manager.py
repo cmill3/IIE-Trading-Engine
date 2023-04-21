@@ -26,14 +26,15 @@ duration = "gtc"
 def manage_portfolio(event, context):
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     new_trades_df = pull_new_trades()
-    open_trades_df = db.get_all_orders_from_dynamo(base_url, account_id, access_token)
+    open_trades_df = db.get_all_orders_from_dynamo()
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
     if len(open_trades_df) > 1:
         print("in")
         orders_to_close = evaluate_open_trades(open_trades_df, base_url, access_token)
-        trade_response = trade_executor.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
+        if len(orders_to_close) > 1:
+            trade_response = trade_executor.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
     trades_placed = evaluate_new_trades(new_trades_df, trading_mode)
     return trades_placed
 
@@ -70,12 +71,14 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')
     positions_to_close = []
     for index, row in df_unique.iterrows():
-        close_order = date_performance_check(row, base_url, access_token)
+        close_order, order_dict = date_performance_check(row, base_url, access_token)
+        print(close_order)
         if close_order:
             positions_to_close.append(row['position_id'])
 
-    orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
-    return orders_to_close
+    print(positions_to_close)
+    # orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
+    return []
 
 
 # def close_orders(orders_df, account_id, base_url, access_token):

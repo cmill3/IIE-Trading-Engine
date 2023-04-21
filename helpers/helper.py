@@ -5,16 +5,14 @@ dt = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 current_date = datetime.now().strftime("%Y-%m-%d")
 
 def date_performance_check(row, base_url, access_token):
-    print("START CHECK")
-    print()
-    print(row)
     # date_delta = current_date - row['position_open_date']
     current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
     to_sell, reason = evaluate_performance(current_price, row)
     # sellby_date = calculate_sellby_date(current_date, 5)
+    print(to_sell, current_date, row['sellby_date'])
     if to_sell or current_date > row['sellby_date']:
         order_dict = {
-            "contract": row['contract'],
+            "contract": row['option_symbol'],
             "underlying_symbol": row['underlying_symbol'],
             "quantity": row['quantity'], 
             "reason": reason,

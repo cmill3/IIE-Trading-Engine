@@ -251,7 +251,7 @@ def process_opened_orders(data, position_id, base_url, account_id, access_token,
 def process_closed_orders(full_transactions_data, base_url, account_id, access_token,position_ids, trading_mode):
     for transaction in full_transactions_data:
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, transaction['closing_order_id'])
-        del_response = close_dynamo_record_order(transaction['order_id'])
+        del_response = delete_order_record(transaction['order_id'])
         create_response = create_new_dynamo_record_closed_order(order_info_obj, transaction, trading_mode)
         # close_dynamo_record_transaction(order_info_obj)
     final_positions_dict = create_positions_list(full_transactions_data)

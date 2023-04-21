@@ -148,10 +148,14 @@ def position_exit(base_url: str, account_id: str, access_token: str, symbol: str
                                  json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
  
     if response.status_code == 200:
-        return "Success"
+        json_response = response.json()
+        id = json_response['order']['id']
+        # successful_trades.append(option_symbol)
+        return id, "Success", "Open", response.status_code
     else:
-        print("Order placement for " + option_symbol + " has failed. Review option contract availability and code.")
-        return "Failed"
+        print(response.json())
+        print(response.status_code)     
+        return "None", "Failed", "Failed", response.status_code
 
 
 def get_account_orders(base_url: str, account_id: str, access_token: str) -> dict:

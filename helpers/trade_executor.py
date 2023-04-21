@@ -97,13 +97,13 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
 #     df = pd.read_csv(data.get("Body"))
 #     return df
 
-def close_orders(orders_df, account_id, base_url, access_token, trading_mode):
+def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     position_ids = orders_df['position_id'].unique()
     total_transactions = []
     for index, row in orders_df.iterrows():
         print("CLOSING TIME")
         print(row)
-        id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['contract'], 'sell_to_close', row['quantity'], order_type, duration, row['position_id'])
+        id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
         if status_code == 200:
             # transaction_id = f'{row["option_name"]}_{dt}'
             # transactions = row['transaction_ids']
