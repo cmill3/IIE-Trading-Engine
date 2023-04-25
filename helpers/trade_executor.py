@@ -105,8 +105,8 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     for index, row in orders_df.iterrows():
         print("CLOSING TIME")
         print(row)
-        id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
-        if status_code == 200:
+        id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
+        if error_json == None:
             # transaction_id = f'{row["option_name"]}_{dt}'
             # transactions = row['transaction_ids']
             # transactions.append(transaction_id)
@@ -117,6 +117,7 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
             accepted_orders.append(row_data)
         else:
             row_data = row.to_dict()
+            row_data['response'] = error_json
             rejected_orders.append(row_data)
 
     date = datetime.now().strftime("%Y/%m/%d/%H_%M")
