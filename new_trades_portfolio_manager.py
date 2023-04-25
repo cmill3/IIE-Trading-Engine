@@ -31,7 +31,6 @@ def manage_portfolio(event, context):
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
     if len(open_trades_df) > 1:
-        print("in")
         orders_to_close = evaluate_open_trades(open_trades_df, base_url, access_token)
         if len(orders_to_close) > 1:
             trade_response = trade_executor.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
@@ -76,7 +75,6 @@ def evaluate_open_trades(orders_df,base_url, access_token):
         if close_order:
             positions_to_close.append(row['position_id'])
 
-    print(positions_to_close)
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
 
