@@ -36,8 +36,9 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
     order_ids = []
     print(data)
     for i, row in data.iterrows():
-        account_balance = trade.get_account_balance(base_url, account_id, access_token)
-        is_valid = account_value_checkpoint(account_balance)
+        # account_balance = trade.get_account_balance(base_url, account_id, access_token)
+        # is_valid = account_value_checkpoint(account_balance)
+        is_valid = True
         if is_valid:
             orders_list = []
             position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt}"

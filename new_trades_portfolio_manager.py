@@ -99,8 +99,8 @@ def evaluate_open_trades(orders_df,base_url, access_token):
 #     return db_success
     
 
-if __name__ == "__main__":
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
-    open_trades_df = db.get_all_orders_from_dynamo()
-    df = evaluate_open_trades(open_trades_df, base_url, access_token)
-    print(df)
+# if __name__ == "__main__":
+#     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
+#     open_trades_df = db.get_all_orders_from_dynamo()
+#     df = evaluate_open_trades(open_trades_df, base_url, access_token)
+#     print(df)

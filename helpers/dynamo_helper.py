@@ -113,34 +113,39 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
 
 def create_new_dynamo_record_closed_order(order_info_obj, transaction, trading_mode):    
     # details = ast.literal_eval(position['trade_details'])[0]
+    print()
+    print("in dynamo helper")
+    # print(order_info_obj)
+    # print(transaction)
 
     order_item ={
         'order_id': str(transaction['order_id']),
         'closing_order_id': str(order_info_obj['id']),
         'trading_mode': trading_mode,
-        'execution_strategy': execution_strategy,
+        'execution_strategy': str(execution_strategy),
         # 'datetimestamp': datetime_stamp,
-        'underlying_symbol': transaction['symbol'],
+        'underlying_symbol': transaction['underlying_symbol'],
         'position_id': transaction['position_id'],
-        'trading_strategy': transaction['strategy'],
+        'trading_strategy': transaction['trading_strategy'],
         'option_symbol': order_info_obj['option_symbol'],
-        'option_side': transaction['Call/Put'],
+        'open_option_symbol': transaction['option_symbol'],
+        'option_side': transaction['option_side'],
         # 'strike_price': details['strike'],
-        'two_week_contract_expiry': transaction['expiry_2wk'],
+        'two_week_contract_expiry': transaction['two_week_contract_expiry'],
         'avg_fill_price_open': str(transaction['avg_fill_price_open']),
         'last_fill_price_open': str(transaction['last_fill_price_open']),
         'qty_executed_open': str(transaction['qty_executed_open']),
         'order_creation_date': str(transaction['order_creation_date']),
         'order_transaction_date': str(transaction['order_transaction_date']),
-        'closing_order_id': order_info_obj['closing_order_id'],
-        'close_creation_date': order_info_obj['created_date'],
-        'close_transaction_date': order_info_obj['transaction_date'],
-        'avg_fill_price_close': order_info_obj['average_fill_price'],
-        'last_fill_price_close': order_info_obj['last_fill_price'],
-        'qty_executed_close': order_info_obj['exec_quantity'],
+        'close_creation_date': str(order_info_obj['created_date']),
+        'close_transaction_date': str(order_info_obj['transaction_date']),
+        'avg_fill_price_close': str(order_info_obj['average_fill_price']),
+        'last_fill_price_close': str(order_info_obj['last_fill_price']),
+        'qty_executed_close': str(order_info_obj['exec_quantity']),
     }
+    print(order_item)
 
-    response = orders_table.put_item(
+    response = closed_orders_table.put_item(
             Item=order_item
         )   
     return response, order_item
@@ -211,7 +216,7 @@ def close_dynamo_record_transaction(order_info_obj):
 def delete_order_record(order_id):
     response = orders_table.delete_item(
         Key={
-            'order_id': order_id
+            'order_id': str(order_id)
         }
     )
     return response
@@ -248,15 +253,17 @@ def process_opened_orders(data, position_id, base_url, account_id, access_token,
     return fulfilled_orders, unfulfilled_orders
 
 
-def process_closed_orders(full_transactions_data, base_url, account_id, access_token,position_ids, trading_mode):
-    for transaction in full_transactions_data:
-        order_info_obj = trade.get_order_info(base_url, account_id, access_token, transaction['closing_order_id'])
-        del_response = delete_order_record(transaction['order_id'])
-        create_response = create_new_dynamo_record_closed_order(order_info_obj, transaction, trading_mode)
+def process_closed_orders(full_transactions_data, base_url, account_id, access_token, position_ids, trading_mode):
+    for index, row  in full_transactions_data.iterrows():
+        print(row)
+        order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['closing_order_id'])
+        # print(order_info_obj)
+        del_response = delete_order_record(row['order_id'])
+        create_response = create_new_dynamo_record_closed_order(order_info_obj, row, trading_mode)
         # close_dynamo_record_transaction(order_info_obj)
-    final_positions_dict = create_positions_list(full_transactions_data)
-    for position_id, transaction_list in final_positions_dict.items():
-        close_dynamo_record_position(position_id, transaction_list)
+    # final_positions_dict = create_positions_list(full_transactions_data)
+    # for position_id, transaction_list in final_positions_dict.items():
+    #     close_dynamo_record_position(position_id, transaction_list)
 
 
 def create_positions_list(total_transactions):
