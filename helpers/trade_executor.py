@@ -132,7 +132,7 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     s3.put_object(Bucket=trading_data_bucket, Key=f"rejected_closed_orders_data/{date}.csv", Body=rejected_csv)
 
     time.sleep(25)
-    db_success = db.process_closed_orders(accepted_orders, base_url, access_token, account_id, position_ids, trading_mode)
+    db_success = db.process_closed_orders(accepted_df, base_url, access_token, account_id, position_ids, trading_mode)
     return db_success
 
 

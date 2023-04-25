@@ -66,10 +66,10 @@ def create_new_dynamo_record_position(position_id, position, order_ids, transact
     return response, position_item
 
 
-def close_dynamo_record_position(order_info_obj,transaction_ids):
+def close_dynamo_record_position(position_id,transaction_ids):
     # pm_data = order_info_obj['pm_data']    
     position_item = {
-        'position_id': order_info_obj['position_id'],
+        'position_id': position_id,
         'transaction_ids': transaction_ids,
         'position_order_status': "closed"
     }
@@ -255,24 +255,25 @@ def process_opened_orders(data, position_id, base_url, account_id, access_token,
 
 def process_closed_orders(full_transactions_data, base_url, account_id, access_token, position_ids, trading_mode):
     for index, row  in full_transactions_data.iterrows():
-        print(row)
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['closing_order_id'])
         # print(order_info_obj)
         del_response = delete_order_record(row['order_id'])
         create_response = create_new_dynamo_record_closed_order(order_info_obj, row, trading_mode)
-        # close_dynamo_record_transaction(order_info_obj)
-    # final_positions_dict = create_positions_list(full_transactions_data)
-    # for position_id, transaction_list in final_positions_dict.items():
-    #     close_dynamo_record_position(position_id, transaction_list)
+        close_dynamo_record_transaction(order_info_obj)
+    final_positions_dict = create_positions_list(full_transactions_data)
+    for position_id, transaction_list in final_positions_dict.items():
+        close_dynamo_record_position(position_id, transaction_list)
 
 
 def create_positions_list(total_transactions):
     positions_dict = {}
-    for position in total_transactions:
-        if position['position_id'] in positions_dict:
-            positions_dict[position['position_id']].append(position['closing_order_id'])
+    for index, row in total_transactions.iterrows():
+        print(row)
+        if row['position_id'] in positions_dict:
+            positions_dict[row['position_id']].append(row['closing_order_id'])
+            positions_dict[row['position_id']].append(row['order_id'])
         else:
-            positions_dict[position['position_id']] = [position['closing_order_id']]
+            positions_dict[row['position_id']] = [row['closing_order_id'],row['order_id']]
     return positions_dict
 
 

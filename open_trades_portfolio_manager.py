@@ -62,11 +62,11 @@ def evaluate_open_trades(orders_df, base_url, account_id, access_token):
     return orders_to_close
 
     
-# if __name__ == "__main__":
-#     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
-#     orders_to_close = pd.read_csv('/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test/closed_orders.csv')
-#     position_ids = ""
-#     db_success = db.process_closed_orders(orders_to_close, base_url, account_id, access_token, position_ids, trading_mode)
+if __name__ == "__main__":
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
+    orders_to_close = pd.read_csv('/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test/closed_orders.csv')
+    position_ids = ""
+    db_success = db.process_closed_orders(orders_to_close, base_url, account_id, access_token, position_ids, trading_mode)
 #     # base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
 #     # x = trade.get_account_positions(base_url, account_id, access_token)
 #     # print(x)
