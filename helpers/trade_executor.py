@@ -99,7 +99,9 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
 
 def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     position_ids = orders_df['position_id'].unique()
-    total_transactions = []
+    accepted_orders = []
+    rejected_orders = []
+
     for index, row in orders_df.iterrows():
         print("CLOSING TIME")
         print(row)
@@ -112,16 +114,23 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
             # row_data['transaction_ids'] = transactions
             # row_data['closing_transaction'] = transaction_id
             row_data['closing_order_id'] = id
-            total_transactions.append(row_data)
+            accepted_orders.append(row_data)
+        else:
+            row_data = row.to_dict()
+            rejected_orders.append(row_data)
 
-
-    df = pd.DataFrame.from_dict(total_transactions)
-    final_csv = df.to_csv()
     date = datetime.now().strftime("%Y/%m/%d/%H_%M")
-    s3.put_object(Bucket=trading_data_bucket, Key=f"closed_orders_data/{date}.csv", Body=final_csv)
+
+    accepted_df = pd.DataFrame.from_dict(accepted_orders)
+    accepted_csv = accepted_df.to_csv()
+    rejected_df = pd.DataFrame.from_dict(rejected_orders)
+    rejected_csv = rejected_df.to_csv()
     
+    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_closed_orders_data/{date}.csv", Body=accepted_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"rejected_closed_orders_data/{date}.csv", Body=rejected_csv)
+
     time.sleep(25)
-    db_success = db.process_closed_orders(total_transactions, base_url, access_token, account_id, position_ids, trading_mode)
+    db_success = db.process_closed_orders(accepted_orders, base_url, access_token, account_id, position_ids, trading_mode)
     return db_success
 
 

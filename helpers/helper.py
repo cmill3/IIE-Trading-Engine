@@ -5,23 +5,26 @@ dt = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 current_date = datetime.now().strftime("%Y-%m-%d")
 
 def date_performance_check(row, base_url, access_token):
+    print()
+    print("-----  START EVAL -----")
     # date_delta = current_date - row['position_open_date']
     current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
     to_sell, reason = evaluate_performance(current_price, row)
     # sellby_date = calculate_sellby_date(current_date, 5)
     print(to_sell, current_date, row['sellby_date'])
     if to_sell or current_date > row['sellby_date']:
-        order_dict = {
-            "contract": row['option_symbol'],
-            "underlying_symbol": row['underlying_symbol'],
-            "quantity": row['quantity'], 
-            "reason": reason,
-        }
-        return True, order_dict
+        # order_dict = {
+        #     "contract": row['option_symbol'],
+        #     "underlying_symbol": row['underlying_symbol'],
+        #     "quantity": row['quantity'], 
+        #     "reason": reason,
+        # }
+        return True, {}
     else:
         return False, {}
     
 def evaluate_performance(current_price, row):
+    print(f"Price difference for {row['underlying_symbol']} is PURCHASE: {row['underlying_purchase_price']} vs CURRENT: {current_price}")
     price_delta = (float(current_price) - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     print("PRICE_DIFF",price_delta)
     strategy = row['trading_strategy']

@@ -77,8 +77,8 @@ def evaluate_open_trades(orders_df,base_url, access_token):
             positions_to_close.append(row['position_id'])
 
     print(positions_to_close)
-    # orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
-    return []
+    orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
+    return orders_to_close
 
 
 # def close_orders(orders_df, account_id, base_url, access_token):
@@ -100,4 +100,7 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     
 
 if __name__ == "__main__":
-    manage_portfolio(None, None)
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
+    open_trades_df = db.get_all_orders_from_dynamo()
+    df = evaluate_open_trades(open_trades_df, base_url, access_token)
+    print(df)

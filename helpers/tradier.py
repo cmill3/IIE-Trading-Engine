@@ -151,7 +151,7 @@ def position_exit(base_url: str, account_id: str, access_token: str, symbol: str
         json_response = response.json()
         id = json_response['order']['id']
         # successful_trades.append(option_symbol)
-        return id, "Success", "Open", response.status_code
+        return id, response.status_code, "Success", "Open"
     else:
         print(response.json())
         print(response.status_code)     
