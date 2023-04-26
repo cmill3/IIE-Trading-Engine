@@ -9,11 +9,14 @@ from urllib3.exceptions import InsecureRequestWarning
 from yahooquery import Ticker
 import boto3
 import os
+import logging
 
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 current_date = datetime.now().strftime("%Y-%m-%d")

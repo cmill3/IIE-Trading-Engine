@@ -6,9 +6,13 @@ import boto3
 from datetime import datetime
 import time
 import ast
+import logging
 
 s3 = boto3.client('s3')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 dt = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 order_type = "market"
@@ -50,19 +54,21 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
                 try: 
                     # is_valid = trade.verify_contract(detail["contractSymbol"],base_url,access_token)
                     # print(is_valid)
-                    open_order_id, trade_result, status, status_code = trade.place_order(base_url, account_id, access_token, row['symbol'], 
+                    open_order_id, status_code, json_response = trade.place_order(base_url, account_id, access_token, row['symbol'], 
                                                                             detail["contractSymbol"], detail['quantity'], 
                                                                             order_type, duration, position_id)
                     
                     if status_code == 200:
                         orders_list.append(open_order_id)
+                        logger.info(f'Place order executed: {open_order_id}')
                     else:
                         trade_data = row.to_dict()
                         trade_data['response'] = status_code
                         failed_transactions.append(trade_data)
+                        logger.info(f'Place order did not return 200: {detail["contractSymbol"]} json:{json_response}')
                         continue
                 except Exception as e:
-                    print(e)
+                    logger.info(f'Place order failed: {e}')
                     trade_data = row.to_dict()
                     trade_data['response'] = is_valid
                     failed_transactions.append(trade_data)
@@ -116,10 +122,12 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
             # row_data['closing_transaction'] = transaction_id
             row_data['closing_order_id'] = id
             accepted_orders.append(row_data)
+            logger.info(f'Close order succesful {row["option_symbol"]} id:{id}')
         else:
             row_data = row.to_dict()
             row_data['response'] = error_json
             rejected_orders.append(row_data)
+            logger.info(f'Close order did not return 200: {row["option_symbol"]} json:{error_json}')
 
     date = datetime.now().strftime("%Y/%m/%d/%H_%M")
 

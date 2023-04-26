@@ -66,11 +66,11 @@ def place_order(base_url: str, account_id: str, access_token:str, symbol: str, o
         json_response = response.json()
         id = json_response['order']['id']
         # successful_trades.append(option_symbol)
-        return id, "Success", "Open", response.status_code
+        return id, response.status_code, json_response
     else:
         print(response.json())
         print(response.status_code)     
-        return "None", "Failed", "Failed", response.status_code
+        return "None", response.status_code, json_response
     
 
 def get_order_info(base_url: str, account_id: str, access_token: str, order_id: str):
