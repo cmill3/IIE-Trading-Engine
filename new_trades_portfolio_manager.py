@@ -103,5 +103,6 @@ def evaluate_open_trades(orders_df,base_url, access_token):
 # if __name__ == "__main__":
 #     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
 #     open_trades_df = db.get_all_orders_from_dynamo()
-#     df = evaluate_open_trades(open_trades_df, base_url, access_token)
-#     print(df)
+#     for index, row in open_trades_df.iterrows():
+#        order = trade.get_order_info(base_url, account_id, access_token, row['order_id'])
+#        db.create_new_dynamo_record_order(order, row, row['position_id'], row['order_id'], row['underlying_purchase_price'], "PAPER")

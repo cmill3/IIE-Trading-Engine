@@ -147,7 +147,6 @@ def position_exit(base_url: str, account_id: str, access_token: str, symbol: str
                                  params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": "sell_to_close", "quantity": quantity, "type": order_type, "duration": duration, "tag": position_id}, 
                                  json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
     print(response.status_code)
-    print(response.json())
     if response.status_code == 200:
         json_response = response.json()
         try:
@@ -155,11 +154,8 @@ def position_exit(base_url: str, account_id: str, access_token: str, symbol: str
             return id, response.status_code, None
         except:
             return None, response.status_code, json_response
-    else:
-        json_response = response.json()
-        print(response.json())
-        print(response.status_code)     
-        return None, response.status_code, json_response
+    else:   
+        return None, response.status_code, response.text
 
 
 def get_account_orders(base_url: str, account_id: str, access_token: str) -> dict:
