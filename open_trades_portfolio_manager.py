@@ -8,11 +8,14 @@ import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 import boto3
 import os
+import logging
 
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 dt = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 current_date = datetime.now().strftime("%Y-%m-%d")
@@ -23,6 +26,7 @@ duration = "gtc"
 
 
 def manage_portfolio(event, context):
+    logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     open_trades_df = db.get_all_orders_from_dynamo()
     orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)

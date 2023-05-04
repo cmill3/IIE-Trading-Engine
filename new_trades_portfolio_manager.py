@@ -27,6 +27,7 @@ duration = "gtc"
 
 
 def manage_portfolio(event, context):
+    logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     new_trades_df = pull_new_trades()
     open_trades_df = db.get_all_orders_from_dynamo()
@@ -61,6 +62,7 @@ def get_open_trades(base_url, account_id, access_token):
     order_id_list = []
     open_trades_list = trade.get_account_positions(base_url, account_id, access_token)
     if open_trades_list == "No Positions":
+        logger.info(f'Found no positions.')
         return None
     for open_trade in open_trades_list:
         order_id_list.append(open_trade['id'])
@@ -74,8 +76,8 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     positions_to_close = []
     for index, row in df_unique.iterrows():
         close_order, order_dict = date_performance_check(row, base_url, access_token)
-        print(close_order)
         if close_order:
+            logger.info(f'Closing order {row["option_symbol"]}')
             positions_to_close.append(row['position_id'])
 
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]

@@ -5,14 +5,18 @@ from yahooquery import Ticker
 from helpers import strategy_helper
 import boto3
 import os
+import logging
 
 s3 = boto3.client('s3')
 d = datetime.now().date() # Monday
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
 
 def build_trade(event, context):
+    logger.info('build_trade function started.')
     df, key = pull_data()
     results_df = process_data(df)
     # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
@@ -43,6 +47,8 @@ def process_data(df):
     df['expiry_2wk'] = Date_2wk()
     df['trade_details'] = df.apply(lambda row: build_trade_structure(row), axis=1)
     df['sellby_date'] = calculate_sellby_date(d, 3)
+    logger.info(f"Data processed successfully: {d}")
+
 
     return df
 
