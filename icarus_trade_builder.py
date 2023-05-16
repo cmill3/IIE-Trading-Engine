@@ -18,6 +18,7 @@ model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
 def build_trade(event, context):
     logger.info('build_trade function started.')
     df, key = pull_data()
+    logger.info(f'pulled key: {key}')
     results_df = process_data(df)
     # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
     csv = results_df.to_csv()
