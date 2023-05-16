@@ -1,18 +1,15 @@
 import helpers.tradier as trade
 from datetime import datetime, timedelta
+from trading_algorithms import time_decay_alpha_gainers_v0, time_decay_alpha_ma_v0, time_decay_alpha_losers_v0, time_decay_alpha_maP_v0
 
-dt = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-current_date = datetime.now().strftime("%Y-%m-%d")
+now = datetime.now()
+dt = now.strftime("%Y-%m-%d_%H:%M:%S")
+current_date = now.strftime("%Y-%m-%d")
 
 def date_performance_check(row, base_url, access_token):
-    print()
-    print("-----  START EVAL -----")
-    # date_delta = current_date - row['position_open_date']
     current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
-    to_sell, reason = evaluate_performance(current_price, row)
-    # sellby_date = calculate_sellby_date(current_date, 5)
-    print(to_sell, current_date, row['sellby_date'])
-    if to_sell or current_date > row['sellby_date']:
+    sell_code, reason = evaluate_performance(current_price, row)
+    if sell_code == 2 or current_date > row['sellby_date']:
         # order_dict = {
         #     "contract": row['option_symbol'],
         #     "underlying_symbol": row['underlying_symbol'],
@@ -24,38 +21,16 @@ def date_performance_check(row, base_url, access_token):
         return False, {}
     
 def evaluate_performance(current_price, row):
-    print(f"Price difference for {row['underlying_symbol']} is PURCHASE: {row['underlying_purchase_price']} vs CURRENT: {current_price}")
-    price_delta = (float(current_price) - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    print("PRICE_DIFF",price_delta)
     strategy = row['trading_strategy']
-    print(strategy)
     if strategy == 'maP':
-        if price_delta >= 0.05:
-            return True, "hit point of no confidence"
-        elif price_delta <= -0.05:
-            return True, "hit exit target"
-        else:
-            print("else")
-            return False, "no sale"
+        sell_code, reason = time_decay_alpha_maP_v0(row, current_price)
     elif strategy == 'day_losers':
-        if price_delta >= 0.06:
-            return True, "hit point of no confidence"
-        elif price_delta <= -0.06:
-            return True, "hit exit target"
-        else:
-            print("else")
-            return False, "no sale"
-    elif strategy == 'day_gainers' or strategy == 'most_actives':
-        if price_delta >= 0.05:
-            return True, "hit exit target"
-        elif price_delta <= -0.05:
-            return True, "hit point of no confidence"
-        else:
-            print("else")
-            return False, "no sale"
-    else:
-        print("else")
-        return False, "no sale"
+        sell_code, reason = time_decay_alpha_losers_v0(row, current_price)
+    elif strategy == 'day_gainers':
+        sell_code, reason = time_decay_alpha_gainers_v0(row, current_price)
+    elif strategy == 'most_actives':
+       sell_code, reason = time_decay_alpha_ma_v0(row, current_price)
+    return sell_code, reason
     
 
 def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days later for the data set built to include just trading days, but doesnt filter holiday
@@ -66,4 +41,11 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
             continue
         trading_days_to_add -= 1
     return current_date
+
+def calculate_hour_features(transaction_date, sell_by):
+    transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    sell_by_dt = datetime(int(sell_by[0:4]), int(sell_by[5:7]), int(sell_by[8:10]),20)
+    ho = abs((transaction_dt - now).total_seconds()/3600)
+    hc = abs((sell_by_dt - now).total_seconds()/3600)
+    return ho, hc
     

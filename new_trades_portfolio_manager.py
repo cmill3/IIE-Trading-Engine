@@ -18,15 +18,15 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-current_date = datetime.now().strftime("%Y-%m-%d")
-
-order_side = "sell_to_close"
-order_type = "market"
-duration = "gtc"
-
 
 def manage_portfolio(event, context):
+
+    dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
+    order_side = "sell_to_close"
+    order_type = "market"
+    duration = "gtc"
     logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     new_trades_df = pull_new_trades()

@@ -26,7 +26,7 @@ duration = "gtc"
 
 
 def manage_portfolio(event, context):
-    logger.info(f'Initializing new trades PM: {dt}')
+    logger.info(f'Initializing open trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     open_trades_df = db.get_all_orders_from_dynamo()
     orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
