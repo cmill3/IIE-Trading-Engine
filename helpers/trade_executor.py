@@ -15,6 +15,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 dt = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+dt_posId = datetime.now().strftime("%Y-%m-%dT%H-%M")
 order_type = "market"
 duration = "GTC"
 acct_balance_min = 20000
@@ -45,7 +46,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
         is_valid = True
         if is_valid:
             orders_list = []
-            position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt}"
+            position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
             if len(row['trade_details']) == 0:
                 print('no contracts to trade')
                 continue
