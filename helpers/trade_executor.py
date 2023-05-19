@@ -7,6 +7,8 @@ from datetime import datetime
 import time
 import ast
 import logging
+from helpers.trading_algorithms import time_decay_alpha_gainers_v0, time_decay_alpha_ma_v0, time_decay_alpha_losers_v0, time_decay_alpha_maP_v0
+
 
 s3 = boto3.client('s3')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
@@ -14,8 +16,12 @@ trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-dt = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-dt_posId = datetime.now().strftime("%Y-%m-%dT%H-%M")
+now = datetime.now()
+dt = now.strftime("%Y-%m-%dT%H-%M-%S")
+dt_posId = now.strftime("%Y-%m-%dT%H-%M")
+dt = now.strftime("%Y-%m-%d_%H:%M:%S")
+current_date = now.strftime("%Y-%m-%d")
+
 order_type = "market"
 duration = "GTC"
 acct_balance_min = 20000
@@ -143,6 +149,33 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     time.sleep(25)
     db_success = db.process_closed_orders(accepted_df, base_url, account_id, access_token, position_ids, trading_mode)
     return db_success
+
+def date_performance_check(row, base_url, access_token):
+    current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
+    sell_code, reason = evaluate_performance(current_price, row)
+    print(sell_code, reason)
+    if sell_code == 2 or current_date > row['sellby_date']:
+        # order_dict = {
+        #     "contract": row['option_symbol'],
+        #     "underlying_symbol": row['underlying_symbol'],
+        #     "quantity": row['quantity'], 
+        #     "reason": reason,
+        # }
+        return True, reason
+    else:
+        return False, reason
+    
+def evaluate_performance(current_price, row):
+    strategy = row['trading_strategy']
+    if strategy == 'maP':
+        sell_code, reason = time_decay_alpha_maP_v0(row, current_price)
+    elif strategy == 'day_losers':
+        sell_code, reason = time_decay_alpha_losers_v0(row, current_price)
+    elif strategy == 'day_gainers':
+        sell_code, reason = time_decay_alpha_gainers_v0(row, current_price)
+    elif strategy == 'most_actives':
+       sell_code, reason = time_decay_alpha_ma_v0(row, current_price)
+    return sell_code, reason
 
 
 # if __name__ == "__main__":

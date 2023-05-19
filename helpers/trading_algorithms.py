@@ -1,6 +1,6 @@
 import datetime
 import logging
-from helper import calculate_hour_features
+from helpers.helper import calculate_hour_features
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -9,10 +9,12 @@ def time_decay_alpha_gainers_v0(row, current_price):
     Ipct = -2
     Tpct = 5
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    ho, hc = calculate_hour_features(row['transaction_date'], row['sellby_date'])
+    ho, hc = calculate_hour_features(row['order_transaction_date'], row['sellby_date'])
     sell_code = 0
     reason = ""
-
+    print(f"$$$$$$$$$$$$$$$$$$$$$    {row['strategy']}")
+    print(row['underlying_symbol'])
+    print(pct_change)
     if ho < 8:
         if pct_change < Tpct and pct_change > Ipct:
             sell_code = 0
@@ -31,7 +33,7 @@ def time_decay_alpha_gainers_v0(row, current_price):
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif (pct_change * .5(hc)) < ho:
+        elif (pct_change * (.5*(hc))) < ho:
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
@@ -46,10 +48,12 @@ def time_decay_alpha_ma_v0(row, current_price):
     Ipct = -2
     Tpct = 5
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    ho, hc = calculate_hour_features(row['transaction_date'], row['sellby_date'])
+    ho, hc = calculate_hour_features(row['order_transaction_date'], row['sellby_date'])
     sell_code = 0
     reason = ""
-
+    print(f"$$$$$$$$$$$$$$$$$$$$$    {row['strategy']}")
+    print(row['underlying_symbol'])
+    print(pct_change)
     if ho < 8:
         if pct_change < Tpct and pct_change > Ipct:
             sell_code = 0
@@ -68,7 +72,7 @@ def time_decay_alpha_ma_v0(row, current_price):
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif (pct_change * .5(hc)) < ho:
+        elif (pct_change * (.5*(hc))) < ho:
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
@@ -83,10 +87,12 @@ def time_decay_alpha_maP_v0(row, current_price):
     Ipct = -2
     Tpct = 5
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
-    ho, hc = calculate_hour_features(row['transaction_date'], row['sellby_date'])
+    ho, hc = calculate_hour_features(row['order_transaction_date'], row['sellby_date'])
     sell_code = 0
     reason = ""
-
+    print(f"$$$$$$$$$$$$$$$$$$$$$    {row['strategy']}")
+    print(row['underlying_symbol'])
+    print(pct_change)
     if ho < 8:
         if pct_change < Tpct and pct_change > Ipct:
             sell_code = 0
@@ -105,7 +111,7 @@ def time_decay_alpha_maP_v0(row, current_price):
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif (pct_change * .5(hc)) < ho:
+        elif (pct_change * (.5*(hc))) < ho:
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
@@ -120,10 +126,12 @@ def time_decay_alpha_losers_v0(row, current_price):
     Ipct = -2.5
     Tpct = 6
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
-    ho, hc = calculate_hour_features(row['transaction_date'], row['sellby_date'])
+    ho, hc = calculate_hour_features(row['order_transaction_date'], row['sellby_date'])
     sell_code = 0
     reason = ""
-
+    print(f"$$$$$$$$$$$$$$$$$$$$$    {row['strategy']}")
+    print(row['underlying_symbol'])
+    print(pct_change)
     if ho < 8:
         if pct_change < Tpct and pct_change > Ipct:
             sell_code = 0
@@ -142,7 +150,7 @@ def time_decay_alpha_losers_v0(row, current_price):
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif (pct_change * .5(hc)) < ho:
+        elif (pct_change * (.5*(hc))) < ho:
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")

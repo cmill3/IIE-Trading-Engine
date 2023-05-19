@@ -75,9 +75,9 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')
     positions_to_close = []
     for index, row in df_unique.iterrows():
-        close_order, order_dict = date_performance_check(row, base_url, access_token)
-        if close_order:
-            logger.info(f'Closing order {row["option_symbol"]}')
+        sell_code, reason = date_performance_check(row, base_url, access_token)
+        if sell_code == 2:
+            logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             positions_to_close.append(row['position_id'])
 
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
