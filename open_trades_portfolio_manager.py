@@ -31,24 +31,8 @@ def manage_portfolio(event, context):
     orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
     if len(orders_to_close) == 0:
         return {"message": "No open trades to close"}
-    # trade_response = trade_executor.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
-    return "trade_response"
-
-# def get_open_trades(base_url, account_id, access_token):
-#     keys = s3.list_objects(Bucket=trading_data_bucket,Prefix='currently_open_orders')["Contents"]
-#     key = keys[-1]['Key']
-#     dataset = s3.get_object(Bucket=trading_data_bucket, Key=key)
-#     open_trades = pd.read_csv(dataset.get("Body"))
-#     order_id_list = open_trades['order_id'].tolist()
-#     # order_id_list = []
-#     # open_trades_list = trade.get_account_positions(base_url, account_id, access_token)
-#     # if open_trades_list == "No Positions":
-#     #     return None
-#     # for open_trade in open_trades_list:
-#     #     order_id_list.append(open_trade['id'])
-
-#     open_trades_df = db.get_open_trades_by_orderid(order_id_list)
-#     return open_trades_df, order_id_list
+    trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
+    return trade_response
 
 def evaluate_open_trades(orders_df, base_url, account_id, access_token):
     df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')

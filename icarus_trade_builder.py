@@ -2,18 +2,20 @@
 import pandas as pd
 from datetime import datetime, timedelta
 from yahooquery import Ticker
-from helpers import strategy_helper
+from helpers import strategy_helper, trading_algorithms
 import boto3
 import os
 import logging
 
 s3 = boto3.client('s3')
-d = datetime.now().date() # Monday
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
+
+now = datetime.now()
+d = now.date() # Monday
 
 def build_trade(event, context):
     logger.info('build_trade function started.')
@@ -24,6 +26,7 @@ def build_trade(event, context):
     csv = results_df.to_csv()
     key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
     s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
+    print(results_df)
     return {
         'statusCode': 200
     }
@@ -84,10 +87,12 @@ def build_trade_structure(row):
                 contracts = None
                 return contracts
         contracts = strategy_helper.build_spread(df_optionchain_2wk, 3, row['Call/Put'])
+        trade_details = trading_algorithms.bet_sizer(contracts, now)
+        print()
     except Exception as e:
-        contracts = None
+        trade_details = None
         print(e)
-    return contracts
+    return trade_details
 
 def Date_1wk():
     t_1wk = timedelta((11 - d.weekday()) % 7)
@@ -100,6 +105,4 @@ def Date_2wk():
     return Expiry_Date 
 
 if __name__ == "__main__":
-    row = {'symbol': 'RIVN', 'strategy': 'day_losers', 'Call/Put': 'puts', 'expiry_1wk': '2023-04-21', 'expiry_2wk': '2023-04-28', 'trade_details': None}
-    contracts = build_trade_structure(row)
-    print(contracts)
+    build_trade(None, None)

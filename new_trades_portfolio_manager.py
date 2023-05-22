@@ -82,24 +82,6 @@ def evaluate_open_trades(orders_df,base_url, access_token):
 
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
-
-
-# def close_orders(orders_df, account_id, base_url, access_token):
-#     position_ids = orders_df['position_id'].unique()
-#     total_transactions = []
-#     for index, row in orders_df.iterrows():
-#         id, status_code, status, result = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['contract'], order_side, row['quantity'], order_type, duration)
-#         if status_code == 200:
-#             transaction_id = f'{row["option_name"]}_{dt}'
-#             transactions = row['transaction_ids']
-#             transactions.append(transaction_id)
-#             row_data = row.to_dict()
-#             row_data['transaction_ids'] = transactions
-#             row_data['closing_transaction'] = transaction_id
-#             row_data['closing_order_id'] = id
-#             total_transactions.append(row_data)
-#     db_success = db.process_closed_orders(total_transactions, base_url, access_token, account_id, position_ids, trading_mode)
-#     return db_success
     
 
 # if __name__ == "__main__":
