@@ -1,7 +1,6 @@
-import helpers.trade_executor as trade_executor
+import helpers.trade_executor as te
 import helpers.tradier as trade
 import helpers.dynamo_helper as db
-from helpers.helper import date_performance_check
 import pandas as pd
 from datetime import datetime, timedelta
 import urllib3
@@ -37,7 +36,7 @@ def manage_portfolio(event, context):
     if len(open_trades_df) > 1:
         orders_to_close = evaluate_open_trades(open_trades_df, base_url, access_token)
         if len(orders_to_close) > 1:
-            trade_response = trade_executor.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
+            trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
     trades_placed = evaluate_new_trades(new_trades_df, trading_mode)
     return trades_placed
 
@@ -54,7 +53,7 @@ def pull_new_trades():
 
 def evaluate_new_trades(new_trades_df, trading_mode):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    execution_result = trade_executor.run_executor(approved_trades_df, trading_mode)
+    execution_result = te.run_executor(approved_trades_df, trading_mode)
     return execution_result
 
 
@@ -75,7 +74,7 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')
     positions_to_close = []
     for index, row in df_unique.iterrows():
-        sell_code, reason = date_performance_check(row, base_url, access_token)
+        sell_code, reason = te.date_performance_check(row, base_url, access_token)
         if sell_code == 2:
             logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             positions_to_close.append(row['position_id'])
