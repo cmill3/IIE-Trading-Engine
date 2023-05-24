@@ -147,8 +147,12 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     s3.put_object(Bucket=trading_data_bucket, Key=f"rejected_closed_orders_data/{date}.csv", Body=rejected_csv)
 
     time.sleep(25)
-    db_success = db.process_closed_orders(accepted_df, base_url, account_id, access_token, position_ids, trading_mode)
-    return db_success
+    closed_orders = db.process_closed_orders(accepted_df, base_url, account_id, access_token, position_ids, trading_mode)
+
+    closed_df = pd.DataFrame.from_dict(closed_orders)
+    csv = closed_df.to_csv()
+    s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{date}.csv", Body=csv)
+    return s3_response
 
 def date_performance_check(row, base_url, access_token):
     current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])

@@ -244,15 +244,21 @@ def process_opened_orders(data, position_id, base_url, account_id, access_token,
 
 
 def process_closed_orders(full_transactions_data, base_url, account_id, access_token, position_ids, trading_mode):
+    closed_orders = []
     for index, row  in full_transactions_data.iterrows():
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['closing_order_id'])
         # print(order_info_obj)
         del_response = delete_order_record(row['order_id'])
-        create_response = create_new_dynamo_record_closed_order(order_info_obj, row, trading_mode)
+        create_response, full_order_record = create_new_dynamo_record_closed_order(order_info_obj, row, trading_mode)
+        closed_orders.append(full_order_record)
         # close_dynamo_record_transaction(order_info_obj)
     final_positions_dict = create_positions_list(full_transactions_data)
     for position_id, transaction_list in final_positions_dict.items():
         close_dynamo_record_position(position_id, transaction_list)
+    return closed_orders
+    
+
+    
 
 
 def create_positions_list(total_transactions):
