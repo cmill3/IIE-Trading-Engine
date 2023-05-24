@@ -157,6 +157,7 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
 def date_performance_check(row, base_url, access_token):
     current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
     sell_code, reason = evaluate_performance(current_price, row)
+    print(current_price, row['underlying_purchase_price'], row['trading_strategy'])
     print(sell_code, reason)
     if sell_code == 2 or current_date > row['sellby_date']:
         # order_dict = {
@@ -165,9 +166,9 @@ def date_performance_check(row, base_url, access_token):
         #     "quantity": row['quantity'], 
         #     "reason": reason,
         # }
-        return True, reason
+        return 2, reason
     else:
-        return False, reason
+        return 0, reason
     
 def evaluate_performance(current_price, row):
     strategy = row['trading_strategy']

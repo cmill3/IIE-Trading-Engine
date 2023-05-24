@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import logging
-from helpers.helper import calculate_hour_features, polygon_call    
+from helpers.helper import get_business_days, polygon_call    
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -8,67 +8,69 @@ logger.setLevel(logging.INFO)
 ### TRADING ALGORITHMS ###
 
 def time_decay_alpha_gainers_v0(row, current_price):
-    Ipct = -2
-    Tpct = 5
+    Floor_pct = -2
+    Target_pct = 5
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    ho, hc = calculate_hour_features(row['order_transaction_date'], row['sellby_date'])
+    day_diff = get_business_days(row['order_transaction_date'], row['sellby_date'])
+    print(f'day_diff: {day_diff}')
     sell_code = 0
     reason = ""
-    if ho < 8:
-        if pct_change < Tpct and pct_change > Ipct:
+    if day_diff < 2:
+        if pct_change < Target_pct and pct_change > Floor_pct:
             sell_code = 0
             reason = "Not enough movement, hold."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Tpct:
+        elif pct_change >= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-    elif ho >= 8:
-        if pct_change < Ipct:
+    elif day_diff >= 2:
+        if pct_change < Floor_pct:
             sell_code = 2
             reason = "Hit point of no confidence, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Tpct:
+        elif pct_change >= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif (pct_change * (.5*(hc))) < ho:
+        elif pct_change < (.5*(Target_pct)):
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
         else:
             sell_code = 0
-            reason = "Not enough movement, hold."
+            reason = "Hold."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
 
     return sell_code, reason
 
 def time_decay_alpha_ma_v0(row, current_price):
-    Ipct = -2
-    Tpct = 5
+    Floor_pct = -2
+    Target_pct = 5
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    ho, hc = calculate_hour_features(row['order_transaction_date'], row['sellby_date'])
+    day_diff = get_business_days(row['order_transaction_date'], row['sellby_date'])
+    print(f'day_diff: {day_diff}')
     sell_code = 0
     reason = ""
-    if ho < 8:
-        if pct_change < Tpct and pct_change > Ipct:
+    if day_diff < 2:
+        if pct_change < Target_pct and pct_change > Floor_pct:
             sell_code = 0
             reason = "Not enough movement, hold."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Tpct:
+        elif pct_change >= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-    elif ho >= 8:
-        if pct_change < Ipct:
+    elif day_diff >= 2:
+        if pct_change < Floor_pct:
             sell_code = 2
             reason = "Hit point of no confidence, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Tpct:
+        elif pct_change >= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif (pct_change * (.5*(hc))) < ho:
+        elif pct_change < (.5*(Target_pct)):
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
@@ -80,31 +82,33 @@ def time_decay_alpha_ma_v0(row, current_price):
     return sell_code, reason
 
 def time_decay_alpha_maP_v0(row, current_price):
-    Ipct = -2
-    Tpct = 5
+    Floor_pct = -2
+    Target_pct = 5
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
-    ho, hc = calculate_hour_features(row['order_transaction_date'], row['sellby_date'])
+    print(f'pct_change: {pct_change}')
+    day_diff = get_business_days(row['order_transaction_date'], row['sellby_date'])
+    print(f'day_diff: {day_diff}')
     sell_code = 0
     reason = ""
-    if ho < 8:
-        if pct_change < Tpct and pct_change > Ipct:
+    if day_diff < 2:
+        if pct_change < Target_pct and pct_change > Floor_pct:
             sell_code = 0
             reason = "Not enough movement, hold."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Tpct:
+        elif pct_change >= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-    elif ho >= 8:
-        if pct_change < Ipct:
+    elif day_diff >= 2:
+        if pct_change < Floor_pct:
             sell_code = 2
             reason = "Hit point of no confidence, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Tpct:
+        elif pct_change >= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif (pct_change * (.5*(hc))) < ho:
+        elif pct_change < (.5*(Target_pct)):
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
@@ -116,31 +120,32 @@ def time_decay_alpha_maP_v0(row, current_price):
     return sell_code, reason
 
 def time_decay_alpha_losers_v0(row, current_price):
-    Ipct = -2.5
-    Tpct = 6
+    Floor_pct = -2.5
+    Target_pct = 6
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
-    ho, hc = calculate_hour_features(row['order_transaction_date'], row['sellby_date'])
+    day_diff = get_business_days(row['order_transaction_date'], row['sellby_date'])
+    print(f'day_diff: {day_diff}')
     sell_code = 0
     reason = ""
-    if ho < 8:
-        if pct_change < Tpct and pct_change > Ipct:
+    if day_diff < 2:
+        if pct_change < Target_pct and pct_change > Floor_pct:
             sell_code = 0
             reason = "Not enough movement, hold."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Tpct:
+        elif pct_change >= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-    elif ho >= 8:
-        if pct_change < Ipct:
+    elif day_diff >= 2:
+        if pct_change < Floor_pct:
             sell_code = 2
             reason = "Hit point of no confidence, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Tpct:
+        elif pct_change >= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif (pct_change * (.5*(hc))) < ho:
+        elif pct_change < (.5*(Target_pct)):
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
