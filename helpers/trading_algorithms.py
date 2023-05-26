@@ -11,7 +11,7 @@ def time_decay_alpha_gainers_v0(row, current_price):
     Floor_pct = -2
     Target_pct = 5
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    day_diff = get_business_days(row['order_transaction_date'], row['sellby_date'])
+    day_diff = get_business_days(row['order_transaction_date'])
     print(f'day_diff: {day_diff}')
     sell_code = 0
     reason = ""
@@ -48,7 +48,7 @@ def time_decay_alpha_ma_v0(row, current_price):
     Floor_pct = -2
     Target_pct = 5
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    day_diff = get_business_days(row['order_transaction_date'], row['sellby_date'])
+    day_diff = get_business_days(row['order_transaction_date'])
     print(f'day_diff: {day_diff}')
     sell_code = 0
     reason = ""
@@ -86,7 +86,7 @@ def time_decay_alpha_maP_v0(row, current_price):
     Target_pct = 5
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
     print(f'pct_change: {pct_change}')
-    day_diff = get_business_days(row['order_transaction_date'], row['sellby_date'])
+    day_diff = get_business_days(row['order_transaction_date'])
     print(f'day_diff: {day_diff}')
     sell_code = 0
     reason = ""
@@ -123,7 +123,7 @@ def time_decay_alpha_losers_v0(row, current_price):
     Floor_pct = -2.5
     Target_pct = 6
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
-    day_diff = get_business_days(row['order_transaction_date'], row['sellby_date'])
+    day_diff = get_business_days(row['order_transaction_date'])
     print(f'day_diff: {day_diff}')
     sell_code = 0
     reason = ""
