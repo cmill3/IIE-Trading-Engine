@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import logging
-from helpers.helper import get_business_days, polygon_call    
+from helpers.helper import get_business_days, polygon_call, calculate_floor_pct  
+import numpy as np  
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -8,22 +9,21 @@ logger.setLevel(logging.INFO)
 ### TRADING ALGORITHMS ###
 
 def time_decay_alpha_gainers_v0(row, current_price):
-    Floor_pct = -.02
+    max_value = calculate_floor_pct(row)
     Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
+    Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02)
+    if type(Floor_pct) == float:
+        Floor_pct = -0.02
     day_diff = get_business_days(row['order_transaction_date'])
-    # print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change}')
+    print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change} + Floor_pct: {Floor_pct} + Target_pct: {Target_pct}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
-        if pct_change < Target_pct and pct_change > Floor_pct:
-            sell_code = 0
-            reason = "Not enough movement, hold."
-            logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Target_pct:
+        if pct_change <= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
-            logger.info(f"{reason} POSITION_ID: {row['position_id']}")
+            logger.info(f"{reason} POSITION_ID: {row['position_id']} pct_change: {pct_change}")
     elif day_diff >= 2:
         if pct_change < Floor_pct:
             sell_code = 2
@@ -45,22 +45,23 @@ def time_decay_alpha_gainers_v0(row, current_price):
     return sell_code, reason
 
 def time_decay_alpha_ma_v0(row, current_price):
-    Floor_pct = -.02
+    max_value = calculate_floor_pct(row)
     Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
+    Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02)
+    print(f'HERE: {Floor_pct}')
+    print(type(Floor_pct))
+    if type(Floor_pct) == float:
+        Floor_pct = -0.02
     day_diff = get_business_days(row['order_transaction_date'])
-    # print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change}')
+    print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change} + Floor_pct: {Floor_pct} + Target_pct: {Target_pct}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
-        if pct_change < Target_pct and pct_change > Floor_pct:
-            sell_code = 0
-            reason = "Not enough movement, hold."
-            logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Target_pct:
+        if pct_change <= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
-            logger.info(f"{reason} POSITION_ID: {row['position_id']}")
+            logger.info(f"{reason} POSITION_ID: {row['position_id']} pct_change: {pct_change}")
     elif day_diff >= 2:
         if pct_change < Floor_pct:
             sell_code = 2
@@ -82,22 +83,21 @@ def time_decay_alpha_ma_v0(row, current_price):
     return sell_code, reason
 
 def time_decay_alpha_maP_v0(row, current_price):
-    Floor_pct = -.02
+    max_value = calculate_floor_pct(row)
     Target_pct = .05
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
+    Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02) * -1
+    if type(Floor_pct) == float:
+        Floor_pct = -0.02
     day_diff = get_business_days(row['order_transaction_date'])
-    # print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change}')
+    print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change} + Floor_pct: {Floor_pct} + Target_pct: {Target_pct}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
-        if pct_change < Target_pct and pct_change > Floor_pct:
-            sell_code = 0
-            reason = "Not enough movement, hold."
-            logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Target_pct:
+        if pct_change <= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
-            logger.info(f"{reason} POSITION_ID: {row['position_id']}")
+            logger.info(f"{reason} POSITION_ID: {row['position_id']} pct_change: {pct_change}")
     elif day_diff >= 2:
         if pct_change < Floor_pct:
             sell_code = 2
@@ -119,22 +119,23 @@ def time_decay_alpha_maP_v0(row, current_price):
     return sell_code, reason
 
 def time_decay_alpha_losers_v0(row, current_price):
-    Floor_pct = -.025
+    max_value = calculate_floor_pct(row)
     Target_pct = .06
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
+    Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .025) * -1
+    print(f'HERE: {Floor_pct}')
+    print(type(Floor_pct))
+    if type(Floor_pct) == float:
+        Floor_pct = -0.025
     day_diff = get_business_days(row['order_transaction_date'])
-    # print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change}')
+    print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change} + Floor_pct: {Floor_pct} + Target_pct: {Target_pct} + {row["order_transaction_date"]}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
-        if pct_change < Target_pct and pct_change > Floor_pct:
-            sell_code = 0
-            reason = "Not enough movement, hold."
-            logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Target_pct:
+        if pct_change <= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
-            logger.info(f"{reason} POSITION_ID: {row['position_id']}")
+            logger.info(f"{reason} POSITION_ID: {row['position_id']} pct_change: {pct_change}")
     elif day_diff >= 2:
         if pct_change < Floor_pct:
             sell_code = 2

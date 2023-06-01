@@ -40,6 +40,17 @@ def polygon_call(contract, from_stamp, to_stamp, multiplier, timespan):
     res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
     return res_df
 
+def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
+    payload={}
+    headers = {}
+    url = f"https://api.polygon.io/v2/aggs/ticker/{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    res_df = pd.DataFrame(json.loads(response.text)['results'])
+    res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
+    res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
+    return res_df
+
 def get_business_days(transaction_date):
     """
     Returns the number of business days (excluding weekends) between two dates. For now we
@@ -73,6 +84,21 @@ def get_business_days(transaction_date):
     business_days = days - weekends
     return business_days 
 
+def calculate_floor_pct(row):
+   from_stamp = row['order_transaction_date'].split('T')[0]
+   time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+   prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "1", "hour")
+   trimmed_df = prices.loc[prices['t'] > time_stamp]
+   high_price = trimmed_df['h'].max()
+   low_price = trimmed_df['l'].min()
+   if row['trading_strategy'] in ['maP', 'day_losers']:
+       return low_price
+   elif row['trading_strategy'] in ['most_actives', 'day_gainers']:
+       return high_price
+   else:
+        return 0
+
 if __name__ == "__main__":
-    day = get_business_days("2023-05-18T17:03:29.283Z")
-    print(day)
+    x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})
+    print(x)
+    print(type(x))
