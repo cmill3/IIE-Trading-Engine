@@ -8,11 +8,11 @@ logger.setLevel(logging.INFO)
 ### TRADING ALGORITHMS ###
 
 def time_decay_alpha_gainers_v0(row, current_price):
-    Floor_pct = -2
-    Target_pct = 5
+    Floor_pct = -.02
+    Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     day_diff = get_business_days(row['order_transaction_date'])
-    print(f'day_diff: {day_diff}')
+    # print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
@@ -45,11 +45,11 @@ def time_decay_alpha_gainers_v0(row, current_price):
     return sell_code, reason
 
 def time_decay_alpha_ma_v0(row, current_price):
-    Floor_pct = -2
-    Target_pct = 5
+    Floor_pct = -.02
+    Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     day_diff = get_business_days(row['order_transaction_date'])
-    print(f'day_diff: {day_diff}')
+    # print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
@@ -82,12 +82,11 @@ def time_decay_alpha_ma_v0(row, current_price):
     return sell_code, reason
 
 def time_decay_alpha_maP_v0(row, current_price):
-    Floor_pct = -2
-    Target_pct = 5
+    Floor_pct = -.02
+    Target_pct = .05
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
-    print(f'pct_change: {pct_change}')
     day_diff = get_business_days(row['order_transaction_date'])
-    print(f'day_diff: {day_diff}')
+    # print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
@@ -120,11 +119,11 @@ def time_decay_alpha_maP_v0(row, current_price):
     return sell_code, reason
 
 def time_decay_alpha_losers_v0(row, current_price):
-    Floor_pct = -2.5
-    Target_pct = 6
+    Floor_pct = -.025
+    Target_pct = .06
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
     day_diff = get_business_days(row['order_transaction_date'])
-    print(f'day_diff: {day_diff}')
+    # print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
