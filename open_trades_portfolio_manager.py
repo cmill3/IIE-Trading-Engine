@@ -35,10 +35,7 @@ def manage_portfolio(event, context):
     return trade_response
 
 def evaluate_open_trades(orders_df, base_url, account_id, access_token):
-    print(len(orders_df))
     df_unique = orders_df.drop_duplicates(subset='position_id', keep='first')
-    print()
-    print(len(df_unique))
     positions_to_close = []
     close_reasons = []
     for index, row in df_unique.iterrows():
@@ -49,7 +46,6 @@ def evaluate_open_trades(orders_df, base_url, account_id, access_token):
             logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             ### figure out how to add reason to the order
             close_reasons.append(reason)
-    print(positions_to_close)
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
 
