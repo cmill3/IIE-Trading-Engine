@@ -203,20 +203,31 @@ def finalize_trade(contracts_details, spread_cost, target_cost):
             else:
                 return contracts_details[0:1]    
     elif spread_cost < (.9*target_cost):
-        if (2*spread_cost) < (.9*target_cost):
-            return (contracts_details * 2)
-        elif (1.1*target_cost) >= (2*spread_cost) >= (.9*target_cost):
-            return (contracts_details * 2)
-        elif (2*spread_cost) > (1.1*target_cost):
-            spread2_cost = calculate_spread_cost(contracts_details[0:2])
-            if (spread2_cost + spread_cost) < (1.1*target_cost):
-                return (contracts_details + contracts_details[0:2])
+        spread_cost, spread_multiplier, contracts_details = add_spread_cost(spread_cost, target_cost, contracts_details)
+        return contracts_details
+            
+def add_spread_cost(spread_cost, target_cost, contracts_details):
+    print("spread_cost",spread_cost,target_cost)
+    spread_multiplier = 1
+    total_cost = spread_cost
+    if spread_cost == 0:
+        print(contracts_details)
+        return 0, 0, []
+    else:
+        while total_cost <= (1.1*target_cost):
+            spread_multiplier += 1
+            total_cost = spread_cost * spread_multiplier
+        
+        if total_cost > (1.1*target_cost):
+            spread_multiplier -= 1
+            total_cost -= spread_cost
+
+        if total_cost < (.67*target_cost):
+            sized_contracts = contracts_details + contracts_details[0]
         else:
-            single_contract_cost = 100 * contracts_details[0]['lastPrice']
-            if (single_contract_cost + spread_cost) > (1.1*target_cost):
-                return contracts_details
-            else:
-                return (contracts_details[0:1] + contracts_details)
+            sized_contracts = contracts_details * spread_multiplier
+
+    return spread_cost, spread_multiplier, sized_contracts
 
 
     
