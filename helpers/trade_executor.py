@@ -45,7 +45,6 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
     full_transactions_data = {}
     failed_transactions = []
     order_ids = []
-    print(data)
     for i, row in data.iterrows():
         # account_balance = trade.get_account_balance(base_url, account_id, access_token)
         # is_valid = account_value_checkpoint(account_balance)
@@ -54,7 +53,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
             orders_list = []
             position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
             if len(row['trade_details']) == 0:
-                print('no contracts to trade')
+                logger.info(f'no contracts to trade: {position_id}')
                 continue
             row['trade_details'] = ast.literal_eval(row['trade_details'])
             for detail in row['trade_details']:
@@ -117,8 +116,6 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     rejected_orders = []
 
     for index, row in orders_df.iterrows():
-        print("CLOSING TIME")
-        print(row)
         id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
         if error_json == None:
             # transaction_id = f'{row["option_name"]}_{dt}'
@@ -157,8 +154,6 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
 def date_performance_check(row, base_url, access_token):
     current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
     sell_code, reason = evaluate_performance(current_price, row)
-    print(current_price, row['underlying_purchase_price'], row['trading_strategy'])
-    print(sell_code, reason)
     if sell_code == 2 or current_date > row['sellby_date']:
         # order_dict = {
         #     "contract": row['option_symbol'],
@@ -183,5 +178,16 @@ def evaluate_performance(current_price, row):
     return sell_code, reason
 
 
-# if __name__ == "__main__":
-#     db_success = db.process_opened_orders(full_transactions_data, base_url, access_token, account_id,trading_mode)
+if __name__ == "__main__":
+    trading_mode = 'PAPER'
+    date = '2023/06/08'
+    dataset1 = s3.get_object(Bucket=trading_data_bucket, Key="accepted_closed_orders_data/2023/06/08/14_10.csv")
+    df1 = pd.read_csv(dataset1.get("Body"))
+    dataset2 = s3.get_object(Bucket=trading_data_bucket, Key="accepted_closed_orders_data/2023/06/08/14_11.csv")
+    df2 = pd.read_csv(dataset2.get("Body"))
+    full_df = pd.concat([df1, df2])
+    position_ids = full_df['position_id'].unique()
+    closed_orders = db.process_closed_orders(full_df, "https://sandbox.tradier.com/v1/", "VA72174659", "ld0Mx4KbsOBYwmJApdowZdFcIxO7", position_ids, trading_mode)
+    closed_df = pd.DataFrame.from_dict(closed_orders)
+    csv = closed_df.to_csv()
+    s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/2023/06/08/14_11.csv", Body=csv)

@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import helpers.tradier as trade
 import ast
+import logging
 
 client = boto3.client('dynamodb')
 ddb = boto3.resource('dynamodb','us-east-1')
@@ -10,7 +11,7 @@ transactions_table = ddb.Table('icarus-transactions-table')
 orders_table = ddb.Table('icarus-orders-table')
 closed_orders_table = ddb.Table('icarus-closed-orders-table')
 positions_table = ddb.Table('icarus-posititons-table')
-
+logger = logging.getLogger()
 
 execution_strategy = os.getenv("EXECUTION_STRATEGY")
 
@@ -30,7 +31,6 @@ def get_all_orders_from_dynamo():
     return df
 
 def get_open_trades_by_orderid(order_id_list):
-    print(order_id_list)
     partitions = break_array_into_partitions(order_id_list)
     df_list = []
     for partition in partitions:
@@ -82,7 +82,6 @@ def close_dynamo_record_position(position_id,transaction_ids):
 
 def create_new_dynamo_record_order(order_info_obj, position, position_id, transactions, underlying_purchase_price, trading_mode):    
     # details = ast.literal_eval(position['trade_details'])[0]
-    print(order_info_obj)
     order_item ={
         'order_id': str(order_info_obj['id']),
         'trading_mode': trading_mode,
@@ -223,7 +222,6 @@ def process_opened_orders(data, position_id, base_url, account_id, access_token,
     # positions_df = pd.DataFrame(positions_list)
 
     for order_id in data['orders']:
-        print(order_id)
         try:
             order_info_obj = trade.get_order_info(base_url, account_id, access_token, order_id)
             if order_info_obj == "Order not filled":
@@ -236,7 +234,7 @@ def process_opened_orders(data, position_id, base_url, account_id, access_token,
             position_transactions_list.append(order_id)
             fulfilled_orders.append(order_info_obj)
         except Exception as e:
-            print("Fail",e)
+            logger.info(f"Error getting order info {order_id}: {e}")
             unfulfilled_orders.append(order_id)
     if len(unfulfilled_orders) == 0:
         create_new_dynamo_record_position(position_id, data, order_id_list, position_transactions_list, trading_mode)
@@ -247,7 +245,6 @@ def process_closed_orders(full_transactions_data, base_url, account_id, access_t
     closed_orders = []
     for index, row  in full_transactions_data.iterrows():
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['closing_order_id'])
-        # print(order_info_obj)
         del_response = delete_order_record(row['order_id'])
         create_response, full_order_record = create_new_dynamo_record_closed_order(order_info_obj, row, trading_mode)
         closed_orders.append(full_order_record)
@@ -264,7 +261,6 @@ def process_closed_orders(full_transactions_data, base_url, account_id, access_t
 def create_positions_list(total_transactions):
     positions_dict = {}
     for index, row in total_transactions.iterrows():
-        print(row)
         if row['position_id'] in positions_dict:
             positions_dict[row['position_id']].append(row['closing_order_id'])
             positions_dict[row['position_id']].append(row['order_id'])

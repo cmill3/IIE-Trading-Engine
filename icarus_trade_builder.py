@@ -26,7 +26,6 @@ def build_trade(event, context):
     csv = results_df.to_csv()
     key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
     s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
-    print(results_df)
     return {
         'statusCode': 200
     }
@@ -88,10 +87,9 @@ def build_trade_structure(row):
                 return contracts
         contracts = strategy_helper.build_spread(df_optionchain_2wk, 3, row['Call/Put'])
         trade_details = trading_algorithms.bet_sizer(contracts, now)
-        print()
     except Exception as e:
         trade_details = None
-        print(e)
+        logger.info(f"Could not build spread for {row['symbol']}: {e}")
     return trade_details
 
 def Date_1wk():

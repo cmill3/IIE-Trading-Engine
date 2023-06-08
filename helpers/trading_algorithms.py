@@ -13,14 +13,13 @@ def time_decay_alpha_gainers_v0(row, current_price):
     Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02)
-    
+
     if type(Floor_pct) == float:
         Floor_pct = -0.02
     if pct_change > 0.1:
         Floor_pct += 0.01
 
     day_diff = get_business_days(row['order_transaction_date'])
-    print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change} + Floor_pct: {Floor_pct} + Target_pct: {Target_pct}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
@@ -53,8 +52,7 @@ def time_decay_alpha_ma_v0(row, current_price):
     Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02)
-    print(f'HERE: {Floor_pct}')
-    print(type(Floor_pct))
+   
 
     if type(Floor_pct) == float:
         Floor_pct = -0.02
@@ -62,7 +60,6 @@ def time_decay_alpha_ma_v0(row, current_price):
         Floor_pct += 0.01
 
     day_diff = get_business_days(row['order_transaction_date'])
-    print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change} + Floor_pct: {Floor_pct} + Target_pct: {Target_pct}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
@@ -102,7 +99,6 @@ def time_decay_alpha_maP_v0(row, current_price):
         Floor_pct += 0.01
 
     day_diff = get_business_days(row['order_transaction_date'])
-    print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change} + Floor_pct: {Floor_pct} + Target_pct: {Target_pct}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
@@ -135,8 +131,6 @@ def time_decay_alpha_losers_v0(row, current_price):
     Target_pct = .06
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
     Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .025) * -1
-    print(f'HERE: {Floor_pct}')
-    print(type(Floor_pct))
 
     if type(Floor_pct) == float:
         Floor_pct = -0.025
@@ -144,7 +138,6 @@ def time_decay_alpha_losers_v0(row, current_price):
         Floor_pct += 0.01
 
     day_diff = get_business_days(row['order_transaction_date'])
-    print(f'day_diff: {day_diff} + {row["underlying_symbol"]} + {row["trading_strategy"]} + pct_change: {pct_change} + Floor_pct: {Floor_pct} + Target_pct: {Target_pct} + {row["order_transaction_date"]}')
     sell_code = 0
     reason = ""
     if day_diff < 2:
@@ -223,7 +216,6 @@ def finalize_trade(contracts_details, spread_cost, target_cost):
         return contracts_details
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):
-    print("spread_cost",spread_cost,target_cost)
     spread_multiplier = 1
     total_cost = spread_cost
     if spread_cost == 0:

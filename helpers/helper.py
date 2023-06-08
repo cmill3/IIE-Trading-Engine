@@ -21,7 +21,6 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
     return current_date
 
 def calculate_dt_features(transaction_date, sell_by):
-    print(transaction_date, sell_by)
     transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
     sell_by_dt = datetime(int(sell_by[0:4]), int(sell_by[5:7]), int(sell_by[8:10]),20)
     day_diff = transaction_dt - now
@@ -98,7 +97,7 @@ def calculate_floor_pct(row):
    else:
         return 0
 
-if __name__ == "__main__":
-    x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})
-    print(x)
-    print(type(x))
+# if __name__ == "__main__":
+#     x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})
+#     print(x)
+#     print(type(x))

@@ -37,7 +37,6 @@ def process_dynamo_orders(formatted_df, base_url, account_id, access_token):
             completed_trades.append(index)
     # response = update_currently_open_orders(fulfilled_orders, [])
     pending_df = formatted_df.drop(completed_trades)
-    print(pending_df)
     return pending_df
 
 def format_pending_df(df):

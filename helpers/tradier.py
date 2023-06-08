@@ -15,7 +15,7 @@ def get_account_balance(base_url: str, account_id: str, access_token:str) -> dic
             buying_power = response_json['balances']['margin']['option_buying_power']
             return buying_power
         else:
-            print("Buying power pull for live trader failed")
+            # print("Buying power pull for live trader failed")
             return response
     except:
         return "Account Balance pull unsuccessful"
@@ -40,8 +40,7 @@ def get_tradier_credentials(trading_mode: str):
 def option_lookup(symbol: str) -> dict:
 
      response = requests.get('https://api.tradier.com/v1/markets/options/lookup', params={"underlying": symbol}, json=None, verify=False, headers={'Authorization': f'Bearer {ACCESSTOKEN}', 'Accept': 'application/json'})
-     print(response.status_code)
-     print(response.json())
+     
     #  conid_init.append(conid_json.json()[0]['conid'])
     #  conid_init.append(conid_json.json())
      """This is not the cleanest method, but it works for now - reason being if the Symbol returns more than one contract type, then the
@@ -57,19 +56,15 @@ def verify_contract(symbol: str, base_url:str, access_token: str) -> dict:
 
 
 def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, quantity: str, order_type: str, duration: str, position_id:str):
-    print(position_id)
     response = requests.post(f'{base_url}accounts/{account_id}/orders', 
             data={"class": 'option', "symbol": symbol, "option_symbol": option_symbol, "side": "buy_to_open", "quantity": quantity, "type": order_type, "duration": duration, "tag": position_id}, 
             headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
-    print(response.text)   
     if response.status_code == 200:
         json_response = response.json()
         id = json_response['order']['id']
         # successful_trades.append(option_symbol)
         return id, response.status_code, json_response
-    else:
-        print(response.json())
-        print(response.status_code)     
+    else:    
         return "None", response.status_code, json_response
     
 
@@ -78,8 +73,6 @@ def get_order_info(base_url: str, account_id: str, access_token: str, order_id: 
     response = requests.get(f'{base_url}/accounts/{account_id}/orders/{order_id}', 
         params={"includeTags": 'true'}, 
         headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
-    print(response.status_code)
-    print(response.json())
 
     if response.status_code == 200:
         response_json = response.json()
@@ -146,7 +139,6 @@ def position_exit(base_url: str, account_id: str, access_token: str, symbol: str
     response = requests.post(f'{base_url}accounts/{account_id}/orders', 
                                  params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": "sell_to_close", "quantity": quantity, "type": order_type, "duration": duration, "tag": position_id}, 
                                  json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
-    print(response.status_code)
     if response.status_code == 200:
         json_response = response.json()
         try:

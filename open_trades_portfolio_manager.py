@@ -41,7 +41,6 @@ def evaluate_open_trades(orders_df, base_url, account_id, access_token):
     for index, row in df_unique.iterrows():
         sell_code, reason = te.date_performance_check(row, base_url, access_token)
         if sell_code == 2:
-            print(row)
             positions_to_close.append(row['position_id'])
             logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             ### figure out how to add reason to the order
