@@ -52,7 +52,6 @@ def time_decay_alpha_ma_v0(row, current_price):
     Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02)
-   
 
     if type(Floor_pct) == float:
         Floor_pct = -0.02
@@ -92,7 +91,6 @@ def time_decay_alpha_maP_v0(row, current_price):
     Target_pct = .05
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
     Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02) * -1
-
     if type(Floor_pct) == float:
         Floor_pct = -0.02
     if pct_change > 0.1:
@@ -169,7 +167,7 @@ def time_decay_alpha_losers_v0(row, current_price):
 ### BET SIZING FUNCTIONS ###
 
 def bet_sizer(contracts, date):
-    target_cost = (.0175* pull_trading_balance())
+    target_cost = (.01* pull_trading_balance())
     to_stamp = date.strftime("%Y-%m-%d")
     from_stamp = (date - timedelta(days=2)).strftime("%Y-%m-%d")
     # contracts_details = []
@@ -185,7 +183,7 @@ def bet_sizer(contracts, date):
 
 def pull_trading_balance():
     ### This is hardcoded for now, but will be replaced with a call to the tradier API
-    return 50000
+    return 100000
 
 def calculate_spread_cost(contracts_details):
     cost = 0

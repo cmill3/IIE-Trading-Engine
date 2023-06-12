@@ -83,10 +83,10 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
                     failed_transactions.append(trade_data)
                     continue
 
-        row_data = row.to_dict()
-        row_data['orders'] = orders_list
-        row_data['purchase_price'] = trade.get_last_price(base_url, access_token, row['symbol'])
-        full_transactions_data[position_id] = row_data
+            row_data = row.to_dict()
+            row_data['orders'] = orders_list
+            row_data['purchase_price'] = trade.get_last_price(base_url, access_token, row['symbol'])
+            full_transactions_data[position_id] = row_data
         
     # for trade_obj in transaction_data:
     #     full_order_list = []
@@ -181,16 +181,16 @@ def evaluate_performance(current_price, row):
     return sell_code, reason
 
 
-if __name__ == "__main__":
-    trading_mode = 'PAPER'
-    date = '2023/06/08'
-    dataset1 = s3.get_object(Bucket=trading_data_bucket, Key="accepted_closed_orders_data/2023/06/08/14_10.csv")
-    df1 = pd.read_csv(dataset1.get("Body"))
-    dataset2 = s3.get_object(Bucket=trading_data_bucket, Key="accepted_closed_orders_data/2023/06/08/14_11.csv")
-    df2 = pd.read_csv(dataset2.get("Body"))
-    full_df = pd.concat([df1, df2])
-    position_ids = full_df['position_id'].unique()
-    closed_orders = db.process_closed_orders(full_df, "https://sandbox.tradier.com/v1/", "VA72174659", "ld0Mx4KbsOBYwmJApdowZdFcIxO7", position_ids, trading_mode)
-    closed_df = pd.DataFrame.from_dict(closed_orders)
-    csv = closed_df.to_csv()
-    s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/2023/06/08/14_11.csv", Body=csv)
+# if __name__ == "__main__":
+#     trading_mode = 'PAPER'
+#     date = '2023/06/08'
+#     dataset1 = s3.get_object(Bucket=trading_data_bucket, Key="accepted_closed_orders_data/2023/06/09/13_42.csv")
+#     df1 = pd.read_csv(dataset1.get("Body"))
+#     # dataset2 = s3.get_object(Bucket=trading_data_bucket, Key="accepted_closed_orders_data/2023/06/08/14_11.csv")
+#     # df2 = pd.read_csv(dataset2.get("Body"))
+#     # full_df = pd.concat([df1, df2])
+#     position_ids = df1['position_id'].unique()
+#     closed_orders = db.process_closed_orders(df1, "https://sandbox.tradier.com/v1/", "VA72174659", "ld0Mx4KbsOBYwmJApdowZdFcIxO7", position_ids, trading_mode)
+#     closed_df = pd.DataFrame.from_dict(closed_orders)
+#     csv = closed_df.to_csv()
+#     s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/2023/06/09/13_43..csv", Body=csv)
