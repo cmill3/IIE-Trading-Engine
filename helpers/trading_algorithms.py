@@ -52,12 +52,12 @@ def time_decay_alpha_ma_v0(row, current_price):
     Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02)
-
     if type(Floor_pct) == float:
         Floor_pct = -0.02
     if pct_change > 0.1:
         Floor_pct += 0.01
 
+    print(f"Floor_pct: {Floor_pct} max_value: {pct_change} purchase_price: {float(row['underlying_purchase_price'])} for {row['underlying_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
@@ -95,6 +95,7 @@ def time_decay_alpha_maP_v0(row, current_price):
         Floor_pct = -0.02
     if pct_change > 0.1:
         Floor_pct += 0.01
+    print(f"Floor_pct: {Floor_pct} max_value: {pct_change} purchase_price: {float(row['underlying_purchase_price'])} for {row['underlying_symbol']}")
 
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0

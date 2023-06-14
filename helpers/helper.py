@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 import requests
 import pandas as pd
 import json
+import boto3
+
 
 now = datetime.now()
 dt = now.strftime("%Y-%m-%d_%H:%M:%S")
@@ -85,7 +87,7 @@ def get_business_days(transaction_date):
 
 def calculate_floor_pct(row):
    from_stamp = row['order_transaction_date'].split('T')[0]
-   time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+   time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() - timedelta(hours=4).total_seconds()
    prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "1", "hour")
    trimmed_df = prices.loc[prices['t'] > time_stamp]
    high_price = trimmed_df['h'].max()
@@ -96,6 +98,51 @@ def calculate_floor_pct(row):
        return high_price
    else:
         return 0
+
+
+def pull_opened_data_s3(path, bucket,date_prefix):
+    dfs = []
+    keys = s3.list_objects(Bucket=bucket,Prefix=f"{path}/{date_prefix}")["Contents"]
+    for object in keys:
+        key = object['Key']
+        dataset = s3.get_object(Bucket=bucket,Key=f"{key}")
+        df = pd.read_csv(dataset.get("Body"))
+        df = format_pending_df(df)
+        if len(df) > 0:
+            dfs.append(df)
+    full_df = pd.concat(dfs)
+    full_df.reset_index(drop=True)
+    return full_df
+
+def pull_data_s3(path, bucket,date_prefix):
+    dfs = []
+    keys = s3.list_objects(Bucket=bucket,Prefix=f"{path}/{date_prefix}")["Contents"]
+    for object in keys:
+        key = object['Key']
+        dataset = s3.get_object(Bucket=bucket,Key=f"{key}")
+        df = pd.read_csv(dataset.get("Body"))
+        if len(df) > 0:
+            dfs.append(df)
+    full_df = pd.concat(dfs)
+    full_df.reset_index(drop=True)
+    return full_df
+
+def calculate_date_prefix():
+    now = datetime.now()
+    date_prefix = now.strftime("%Y/%m/%d")
+    return date_prefix
+
+def format_pending_df(df):
+    columns = df['Unnamed: 0'].values
+    indexes = df.columns.values[1:]
+
+    unpacked_data = []
+    for index in indexes:
+        data = df[index].values
+        unpacked_data.append(data)
+    
+    formatted_df = pd.DataFrame(unpacked_data,indexes,columns)
+    return formatted_df
 
 # if __name__ == "__main__":
 #     x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})

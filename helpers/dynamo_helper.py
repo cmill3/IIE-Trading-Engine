@@ -108,6 +108,35 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         )   
     return response, order_item
 
+def create_new_dynamo_record_order_reconciliation(order_info_obj, trading_mode):    
+    # details = ast.literal_eval(position['trade_details'])[0]
+    order_item ={
+        'order_id': str(order_info_obj['id']),
+        'trading_mode': trading_mode,
+        'execution_strategy': execution_strategy,
+        # 'underlying_purchase_price': underlying_purchase_price,
+        # 'transaction_ids': transactions,
+        # 'underlying_symbol': position['symbol'],
+        # 'position_id': position_id,
+        # 'trading_strategy': position['strategy'],
+        'option_symbol': order_info_obj['option_symbol'],
+        # 'option_side': position['Call/Put'],
+        # 'two_week_contract_expiry': position['expiry_2wk'],
+        'avg_fill_price_open': str(order_info_obj['average_fill_price']),
+        'last_fill_price_open': str(order_info_obj['last_fill_price']),
+        'qty_executed_open': str(order_info_obj['exec_quantity']),
+        'order_creation_date': str(order_info_obj['created_date']),
+        'order_transaction_date': str(order_info_obj['transaction_date']),
+        'order_status': order_info_obj['status'],
+        # 'sellby_date': position['sellby_date'],
+        'reconciliation': 'True'
+    }
+
+    response = orders_table.put_item(
+            Item=order_item 
+        )   
+    return response, order_item
+
 def create_new_dynamo_record_closed_order(order_info_obj, transaction, trading_mode):    
 
     order_item ={
@@ -132,6 +161,38 @@ def create_new_dynamo_record_closed_order(order_info_obj, transaction, trading_m
         'avg_fill_price_close': str(order_info_obj['average_fill_price']),
         'last_fill_price_close': str(order_info_obj['last_fill_price']),
         'qty_executed_close': str(order_info_obj['exec_quantity']),
+    }
+
+    response = closed_orders_table.put_item(
+            Item=order_item
+        )   
+    return response, order_item
+
+def create_new_dynamo_record_closed_order_reconciliation(order_info_obj, trading_mode):    
+
+    order_item ={
+        'order_id': str(order_info_obj['id']),
+        'closing_order_id': str(order_info_obj['id']),
+        'trading_mode': trading_mode,
+        'execution_strategy': str(execution_strategy),
+        # 'underlying_symbol': transaction['underlying_symbol'],
+        # 'position_id': transaction['position_id'],
+        # 'trading_strategy': transaction['trading_strategy'],
+        'option_symbol': order_info_obj['option_symbol'],
+        # 'open_option_symbol': transaction['option_symbol'],
+        # 'option_side': transaction['option_side'],
+        # 'two_week_contract_expiry': transaction['two_week_contract_expiry'],
+        # 'avg_fill_price_open': str(transaction['avg_fill_price_open']),
+        # 'last_fill_price_open': str(transaction['last_fill_price_open']),
+        # 'qty_executed_open': str(transaction['qty_executed_open']),
+        # 'order_creation_date': str(transaction['order_creation_date']),
+        # 'order_transaction_date': str(transaction['order_transaction_date']),
+        'close_creation_date': str(order_info_obj['created_date']),
+        'close_transaction_date': str(order_info_obj['transaction_date']),
+        'avg_fill_price_close': str(order_info_obj['average_fill_price']),
+        'last_fill_price_close': str(order_info_obj['last_fill_price']),
+        'qty_executed_close': str(order_info_obj['exec_quantity']),
+        'reconciliation': "True"
     }
 
     response = closed_orders_table.put_item(

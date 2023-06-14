@@ -157,6 +157,7 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
 def date_performance_check(row, base_url, access_token):
     current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
     sell_code, reason = evaluate_performance(current_price, row)
+    logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
     if sell_code == 2 or current_date > row['sellby_date']:
         # order_dict = {
         #     "contract": row['option_symbol'],
