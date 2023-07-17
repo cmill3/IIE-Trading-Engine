@@ -17,6 +17,10 @@ urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+base_url = os.getenv("BASE_URL")
+account_id = os.getenv("ACCOUNT_ID")
+access_token = os.getenv("ACCESS_TOKEN")
+
 
 def manage_portfolio(event, context):
 
@@ -29,14 +33,9 @@ def manage_portfolio(event, context):
     logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     new_trades_df = pull_new_trades()
-    open_trades_df = db.get_all_orders_from_dynamo()
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
-    if len(open_trades_df) > 1:
-        orders_to_close = evaluate_open_trades(open_trades_df, base_url, access_token)
-        if len(orders_to_close) > 1:
-            trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
     trades_placed = evaluate_new_trades(new_trades_df, trading_mode)
     return trades_placed
 

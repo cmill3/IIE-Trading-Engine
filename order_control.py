@@ -16,9 +16,8 @@ logger = logging.getLogger()
 
 
 def run_order_control(event, context):
-    # date_prefix = helper.calculate_date_prefix()
+    date_prefix = helper.calculate_date_prefix()
     base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode=trading_mode)
-    date_prefix = '2023/06/12'
     closed_orders_df = helper.pull_data_s3(path='enriched_closed_orders_data',bucket=bucket,date_prefix=date_prefix)
     opened_orders_df = helper.pull_opened_data_s3(path='orders_data',bucket=bucket,date_prefix=date_prefix)
     tradier_orders = tradier.get_account_orders(base_url, account_id, access_token)

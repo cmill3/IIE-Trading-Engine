@@ -25,11 +25,23 @@ def build_trade(event, context):
     # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
     csv = results_df.to_csv()
     key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
-    s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
+    # s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
     return {
         'statusCode': 200
     }
 
+def build_trade_inv(event, context):
+    logger.info('build_trade function started.')
+    df, key = pull_data_inv()
+    logger.info(f'pulled key: {key}')
+    results_df = process_data(df)
+    # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
+    csv = results_df.to_csv()
+    key = key.replace("invalerts_full_results", "yqalerts_potential_trades")
+    # s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
+    return {
+        'statusCode': 200
+    }
 
 #Non-Explanatory Variables Explained Below:
 #CP = Call/Put (used to represent the Call/Put Trend Value)
@@ -43,6 +55,16 @@ def pull_data():
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
     return df, key
+
+def pull_data_inv():
+    keys = s3.list_objects(Bucket=model_results_bucket,Prefix="invalerts_full_results/")["Contents"]
+    key = keys[-1]['Key']
+    dataset = s3.get_object(Bucket=model_results_bucket, Key=key)
+    df = pd.read_csv(dataset.get("Body"))
+    df.dropna(inplace = True)
+    df.reset_index(inplace= True, drop = True)
+    return df, key
+
 
 def process_data(df):
     df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
@@ -90,6 +112,7 @@ def build_trade_structure(row):
     except Exception as e:
         trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
+        print(f"Could not build spread for {row['symbol']}: {e}")
     return trade_details
 
 def Date_1wk():

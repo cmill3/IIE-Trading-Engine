@@ -86,14 +86,14 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         'order_id': str(order_info_obj['id']),
         'trading_mode': trading_mode,
         'execution_strategy': execution_strategy,
-        'underlying_purchase_price': underlying_purchase_price,
+        'underlying_purchase_price': str(underlying_purchase_price),
         'transaction_ids': transactions,
         'underlying_symbol': position['symbol'],
         'position_id': position_id,
         'trading_strategy': position['strategy'],
         'option_symbol': order_info_obj['option_symbol'],
         'option_side': position['Call/Put'],
-        'two_week_contract_expiry': position['expiry_2wk'],
+        # 'two_week_contract_expiry': position['expiry_2wk'],
         'avg_fill_price_open': str(order_info_obj['average_fill_price']),
         'last_fill_price_open': str(order_info_obj['last_fill_price']),
         'qty_executed_open': str(order_info_obj['exec_quantity']),
@@ -150,7 +150,7 @@ def create_new_dynamo_record_closed_order(order_info_obj, transaction, trading_m
         'option_symbol': order_info_obj['option_symbol'],
         'open_option_symbol': transaction['option_symbol'],
         'option_side': transaction['option_side'],
-        'two_week_contract_expiry': transaction['two_week_contract_expiry'],
+        # 'two_week_contract_expiry': transaction['two_week_contract_expiry'],
         'avg_fill_price_open': str(transaction['avg_fill_price_open']),
         'last_fill_price_open': str(transaction['last_fill_price_open']),
         'qty_executed_open': str(transaction['qty_executed_open']),
@@ -291,7 +291,6 @@ def process_opened_orders(data, position_id, base_url, account_id, access_token,
             # order_info_obj['order_status'] = "open"
             order_info_obj['trade_result'] = "success"
             create_new_dynamo_record_order(order_info_obj, data, position_id, order_id, underlying_purchase_price, trading_mode)
-            # create_new_dynamo_record_transaction(order_id, position_id, temp['id'], order_info_obj, data, trading_mode)
             position_transactions_list.append(order_id)
             fulfilled_orders.append(order_info_obj)
         except Exception as e:
@@ -301,6 +300,18 @@ def process_opened_orders(data, position_id, base_url, account_id, access_token,
         create_new_dynamo_record_position(position_id, data, order_id_list, position_transactions_list, trading_mode)
     return fulfilled_orders, unfulfilled_orders
 
+def process_opened_ordersv2(orders_data, base_url, account_id, access_token, trading_mode):
+    pending_orders = []
+    for index, row  in orders_data.iterrows():
+        order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['order_id'])
+        if order_info_obj['status'] == "filled":
+            create_new_dynamo_record_order(order_info_obj, row, row['position_id'], row['order_id'], row['underlying_purchase_price'], trading_mode)
+        else:
+            pending_orders.append(row.to_dict())
+    # final_positions_dict = create_positions_list(full_transactions_data)
+    # for position_id, transaction_list in final_positions_dict.items():
+    #     close_dynamo_record_position(position_id, transaction_list)
+    return pending_orders
 
 def process_closed_orders(full_transactions_data, base_url, account_id, access_token, position_ids, trading_mode):
     closed_orders = []
@@ -309,15 +320,11 @@ def process_closed_orders(full_transactions_data, base_url, account_id, access_t
         del_response = delete_order_record(row['order_id'])
         create_response, full_order_record = create_new_dynamo_record_closed_order(order_info_obj, row, trading_mode)
         closed_orders.append(full_order_record)
-        # close_dynamo_record_transaction(order_info_obj)
     final_positions_dict = create_positions_list(full_transactions_data)
     for position_id, transaction_list in final_positions_dict.items():
         close_dynamo_record_position(position_id, transaction_list)
     return closed_orders
     
-
-    
-
 
 def create_positions_list(total_transactions):
     positions_dict = {}

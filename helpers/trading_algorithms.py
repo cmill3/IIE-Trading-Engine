@@ -51,13 +51,15 @@ def time_decay_alpha_ma_v0(row, current_price):
     max_value = calculate_floor_pct(row)
     Target_pct = .05
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02)
+    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .02)
+    print(row['underlying_purchase_price'])
     if type(Floor_pct) == float:
         Floor_pct = -0.02
     if pct_change > 0.1:
         Floor_pct += 0.01
 
-    print(f"Floor_pct: {Floor_pct} max_value: {pct_change} purchase_price: {float(row['underlying_purchase_price'])} for {row['underlying_symbol']}")
+    logger.info(f"Floor_pct: {Floor_pct} pct_change: {pct_change} max_value:{max_value} purchase_price: {float(row['underlying_purchase_price'])} for {row['underlying_symbol']}")
+    print(f"Floor_pct: {Floor_pct} pct_change: {pct_change} max_value:{max_value} current price: {current_price} purchase_price: {float(row['underlying_purchase_price'])} for {row['underlying_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
@@ -88,33 +90,35 @@ def time_decay_alpha_ma_v0(row, current_price):
 
 def time_decay_alpha_maP_v0(row, current_price):
     max_value = calculate_floor_pct(row)
-    Target_pct = .05
-    pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
-    Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .02) * -1
+    Target_pct = -.05
+    pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
+    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .02)
+    print(row['underlying_purchase_price'])
     if type(Floor_pct) == float:
-        Floor_pct = -0.02
+        Floor_pct = 0.02
     if pct_change > 0.1:
-        Floor_pct += 0.01
-    print(f"Floor_pct: {Floor_pct} max_value: {pct_change} purchase_price: {float(row['underlying_purchase_price'])} for {row['underlying_symbol']}")
+        Floor_pct -= 0.01
 
+    logger.info(f"Floor_pct: {Floor_pct} pct_change: {pct_change} max_value:{max_value} purchase_price: {float(row['underlying_purchase_price'])} for {row['underlying_symbol']}")
+    print(f"Floor_pct: {Floor_pct} pct_change: {pct_change} max_value:{max_value} current price: {current_price} purchase_price: {float(row['underlying_purchase_price'])} for {row['underlying_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
     if day_diff < 2:
-        if pct_change <= Floor_pct:
+        if pct_change >= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']} pct_change: {pct_change}")
     elif day_diff >= 2:
-        if pct_change < Floor_pct:
+        if pct_change > Floor_pct:
             sell_code = 2
             reason = "Hit point of no confidence, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change >= Target_pct:
+        elif pct_change <= Target_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
-        elif pct_change < (.5*(Target_pct)):
+        elif pct_change > (.5*(Target_pct)):
             sell_code = 2
             reason = "Failed momentum gate, sell."
             logger.info(f"{reason} POSITION_ID: {row['position_id']}")
@@ -230,7 +234,8 @@ def add_spread_cost(spread_cost, target_cost, contracts_details):
             total_cost -= spread_cost
 
         if total_cost < (.67*target_cost):
-            sized_contracts = contracts_details + contracts_details[0]
+            print(contracts_details)
+            sized_contracts = contracts_details.append(contracts_details[0])
         else:
             sized_contracts = contracts_details * spread_multiplier
 

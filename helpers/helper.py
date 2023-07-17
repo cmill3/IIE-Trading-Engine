@@ -50,6 +50,7 @@ def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
     res_df = pd.DataFrame(json.loads(response.text)['results'])
     res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
     res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
+    res_df['hour'] = res_df['date'].apply(lambda x: x.hour)
     return res_df
 
 def get_business_days(transaction_date):
@@ -86,12 +87,18 @@ def get_business_days(transaction_date):
     return business_days 
 
 def calculate_floor_pct(row):
+   trading_hours = [9,10,11,12,13,14,15]
    from_stamp = row['order_transaction_date'].split('T')[0]
-   time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() - timedelta(hours=4).total_seconds()
-   prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "1", "hour")
+   time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() - timedelta(hours=3).total_seconds()
+   prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "10", "minute")
    trimmed_df = prices.loc[prices['t'] > time_stamp]
+   trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
+   trimmed_df = trimmed_df.iloc[1:]
+   print(trimmed_df)
    high_price = trimmed_df['h'].max()
    low_price = trimmed_df['l'].min()
+   if len(trimmed_df) == 0:
+       return float(row['underlying_purchase_price'])
    if row['trading_strategy'] in ['maP', 'day_losers']:
        return low_price
    elif row['trading_strategy'] in ['most_actives', 'day_gainers']:

@@ -26,9 +26,12 @@ order_type = "market"
 duration = "GTC"
 acct_balance_min = 20000
 
+base_url = os.getenv("BASE_URL")
+account_id = os.getenv("ACCOUNT_ID")
+access_token = os.getenv("ACCESS_TOKEN")
+
 
 def run_executor(data, trading_mode):
-    base_url, access_token, account_id = trade.get_tradier_credentials(trading_mode)
     order_ids = execute_new_trades(data, base_url, access_token, account_id, trading_mode)
     return order_ids
 
@@ -44,7 +47,8 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
     # transaction_data = []
     full_transactions_data = {}
     failed_transactions = []
-    order_ids = []
+    orders_list = []
+    accepted_orders = []
     for i, row in data.iterrows():
         # account_balance = trade.get_account_balance(base_url, account_id, access_token)
         # is_valid = account_value_checkpoint(account_balance)
@@ -53,13 +57,13 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
         else:
             is_valid = True
         if is_valid:
-            orders_list = []
             position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
             if len(row['trade_details']) == 0:
                 logger.info(f'no contracts to trade: {position_id}')
                 continue
             row['trade_details'] = ast.literal_eval(row['trade_details'])
             for detail in row['trade_details']:
+                print(row)
                 try: 
                     # is_valid = trade.verify_contract(detail["contractSymbol"],base_url,access_token)
                     # print(is_valid)
@@ -68,7 +72,12 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
                                                                             order_type, duration, position_id)
                     
                     if status_code == 200:
+                        row['order_id'] = open_order_id
+                        row['position_id'] = position_id
+                        underlying_purchase_price = trade.get_last_price(base_url, access_token, row['symbol'])
+                        row['underlying_purchase_price'] = underlying_purchase_price
                         orders_list.append(open_order_id)
+                        accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price})
                         logger.info(f'Place order executed: {open_order_id}')
                     else:
                         trade_data = row.to_dict()
@@ -97,14 +106,25 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
     df = pd.DataFrame.from_dict(full_transactions_data)
     final_csv = df.to_csv()
 
+    accepted_df = pd.DataFrame.from_dict(accepted_orders)
+    accepted_csv = accepted_df.to_csv()
+
     failed_df = pd.DataFrame(failed_transactions)
     failed_csv = failed_df.to_csv()
 
     date = datetime.now().strftime("%Y/%m/%d/%H_%M")
     s3.put_object(Bucket=trading_data_bucket, Key=f"orders_data/{date}.csv", Body=final_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_orders_data/{date}.csv", Body=accepted_csv)
     s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders/{date}.csv", Body=final_csv)
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_orders/{date}.csv", Body=failed_csv)
-    return order_ids
+
+
+    time.sleep(15)
+    pending_orders = process_dynamo_orders(accepted_df, base_url, account_id, access_token, trading_mode)
+    pending_df = pd.DataFrame.from_dict(pending_orders)
+    pending_csv = pending_df.to_csv()
+    s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders_enriched/{date}.csv", Body=pending_csv)
+    return accepted_df
 
 # def pull_open_orders_df():
 #     keys = s3.list_objects(Bucket=trading_data_bucket, Prefix="open_orders_data/")["Contents"]
@@ -112,6 +132,13 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
 #     data = s3.get_object(Bucket=trading_data_bucket, Key=query_key)
 #     df = pd.read_csv(data.get("Body"))
 #     return df
+
+def process_dynamo_orders(formatted_df, base_url, account_id, access_token, trading_mode):
+    # for index, row in formatted_df.iterrows():
+    pending_orders = db.process_opened_ordersv2(formatted_df, base_url, account_id, access_token, trading_mode)
+    # response = update_currently_open_orders(fulfilled_orders, [])
+    pending_df = pd.DataFrame.from_dict(pending_orders)
+    return pending_df
 
 def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     position_ids = orders_df['position_id'].unique()
@@ -121,12 +148,7 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     for index, row in orders_df.iterrows():
         id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
         if error_json == None:
-            # transaction_id = f'{row["option_name"]}_{dt}'
-            # transactions = row['transaction_ids']
-            # transactions.append(transaction_id)
             row_data = row.to_dict()
-            # row_data['transaction_ids'] = transactions
-            # row_data['closing_transaction'] = transaction_id
             row_data['closing_order_id'] = id
             accepted_orders.append(row_data)
             logger.info(f'Close order succesful {row["option_symbol"]} id:{id}')
@@ -158,6 +180,7 @@ def date_performance_check(row, base_url, access_token):
     current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
     sell_code, reason = evaluate_performance(current_price, row)
     logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
+    print(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
     if sell_code == 2 or current_date > row['sellby_date']:
         # order_dict = {
         #     "contract": row['option_symbol'],
@@ -182,16 +205,12 @@ def evaluate_performance(current_price, row):
     return sell_code, reason
 
 
-# if __name__ == "__main__":
-#     trading_mode = 'PAPER'
-#     date = '2023/06/08'
-#     dataset1 = s3.get_object(Bucket=trading_data_bucket, Key="accepted_closed_orders_data/2023/06/09/13_42.csv")
-#     df1 = pd.read_csv(dataset1.get("Body"))
-#     # dataset2 = s3.get_object(Bucket=trading_data_bucket, Key="accepted_closed_orders_data/2023/06/08/14_11.csv")
-#     # df2 = pd.read_csv(dataset2.get("Body"))
-#     # full_df = pd.concat([df1, df2])
-#     position_ids = df1['position_id'].unique()
-#     closed_orders = db.process_closed_orders(df1, "https://sandbox.tradier.com/v1/", "VA72174659", "ld0Mx4KbsOBYwmJApdowZdFcIxO7", position_ids, trading_mode)
-#     closed_df = pd.DataFrame.from_dict(closed_orders)
-#     csv = closed_df.to_csv()
-#     s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/2023/06/09/13_43..csv", Body=csv)
+if __name__ == "__main__":
+    trading_mode = "PAPER"
+    account_id = "VA72174659"
+    access_token = "ld0Mx4KbsOBYwmJApdowZdFcIxO7"
+    base_url = "https://sandbox.tradier.com/v1/"
+    dataset = s3.get_object(Bucket="icarus-trading-data", Key="accepted_orders_data/2023/06/22/16_07.csv")
+    df = pd.read_csv(dataset.get("Body"))
+    pending_orders = process_dynamo_orders(df, base_url, account_id, access_token, trading_mode)
+    pending_df = pd.DataFrame.from_dict(pending_orders)

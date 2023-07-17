@@ -23,16 +23,24 @@ order_side = "sell_to_close"
 order_type = "market"
 duration = "gtc"
 
+base_url = os.getenv("BASE_URL")
+account_id = os.getenv("ACCOUNT_ID")
+access_token = os.getenv("ACCESS_TOKEN")
+
 
 def manage_portfolio(event, context):
     logger.info(f'Initializing open trades PM: {dt}')
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
     open_trades_df = db.get_all_orders_from_dynamo()
-    orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
+    open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: x.split("-")[0] + x.split("-")[1])
+    open_positions = open_trades_df['pos_id'].unique().tolist()
+    try:
+        orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
+    except Exception as e:
+        return "Orders to Close failed"
     if len(orders_to_close) == 0:
         return {"message": "No open trades to close"}
-    trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
-    return trade_response
+    # trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
+    return open_positions
 
 def evaluate_open_trades(orders_df, base_url, account_id, access_token):
     df_unique = orders_df.drop_duplicates(subset='position_id', keep='first')
