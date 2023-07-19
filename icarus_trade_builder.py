@@ -43,16 +43,14 @@ def pull_data():
     return df, key
 
 def process_data(df):
-    df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
+    #df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
     df['expiry_1wk'] = Date_1wk()
     df['expiry_2wk'] = Date_2wk()
     df['trade_details'] = df.apply(lambda row: build_trade_structure(row), axis=1)
+    df['sector'] = df['Sym'].apply(lambda Sym: strategy_helper.match_sector(Sym))
     df['sellby_date'] = calculate_sellby_date(d, 3)
     logger.info(f"Data processed successfully: {d}")
-
-
     return df
-
 
 def infer_CP(strategy):
     if strategy == "day_gainers" or strategy == "most_actives":
@@ -60,7 +58,6 @@ def infer_CP(strategy):
     elif strategy == "day_losers" or strategy == "maP":
         return "puts"
     
-
 def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days later for the data set built to include just trading days, but doesnt filter holiday
     while trading_days_to_add > 0:
         current_date += timedelta(days=1)
@@ -102,4 +99,3 @@ def Date_2wk():
 if __name__ == "__main__":
     row = {'symbol': 'RIVN', 'strategy': 'day_losers', 'Call/Put': 'puts', 'expiry_1wk': '2023-04-21', 'expiry_2wk': '2023-04-28', 'trade_details': None}
     contracts = build_trade_structure(row)
-    print(contracts)
