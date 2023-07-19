@@ -12,6 +12,8 @@ import logging
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+table = os.getenv('TABLE')
+close_table = os.getenv("CLOSE_TABLE")
 urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -23,31 +25,39 @@ order_side = "sell_to_close"
 order_type = "market"
 duration = "gtc"
 
-base_url = os.getenv("BASE_URL")
-account_id = os.getenv("ACCOUNT_ID")
-access_token = os.getenv("ACCESS_TOKEN")
+user = os.getenv("USER")
 
 
 def manage_portfolio(event, context):
+    account_id = "VA80685931"
+    access_token = "txhklwGnxNbFGNtryB1c4O8RAg5P" 
+    base_url = "https://sandbox.tradier.com/v1/"
     logger.info(f'Initializing open trades PM: {dt}')
-    open_trades_df = db.get_all_orders_from_dynamo()
-    open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: x.split("-")[0] + x.split("-")[1])
+    # base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
+    open_trades_df = db.get_all_orders_from_dynamo(table)
+    open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
+    orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
+
     try:
+        # open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
+        # open_positions = open_trades_df['pos_id'].unique().tolist()
         orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
     except Exception as e:
-        return "Orders to Close failed"
+        print(e)
+        print("no trades to close")
+        return {"open_positions": open_positions}
     if len(orders_to_close) == 0:
-        return {"message": "No open trades to close"}
-    # trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
-    return open_positions
+        return {"open_positions": open_positions}
+    trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
+    return {"open_positions": open_positions}
 
 def evaluate_open_trades(orders_df, base_url, account_id, access_token):
     df_unique = orders_df.drop_duplicates(subset='position_id', keep='first')
     positions_to_close = []
     close_reasons = []
     for index, row in df_unique.iterrows():
-        sell_code, reason = te.date_performance_check(row, base_url, access_token)
+        sell_code, reason = te.date_performance_check(base_url, access_token, row)
         if sell_code == 2:
             positions_to_close.append(row['position_id'])
             logger.info(f'Closing order {row["option_symbol"]}: {reason}')

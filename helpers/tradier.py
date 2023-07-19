@@ -2,9 +2,11 @@ import requests
 import json
 import os
 import pandas as pd
-from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL
+from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PAPER_ACCESSTOKEN_INV, PAPER_ACCOUNTID_INV
 
-user = os.getenv('USER')
+base_url = os.getenv("BASE_URL")
+account_id = os.getenv("ACCOUNT_ID")
+access_token = os.getenv("ACCESS_TOKEN")
 
 def get_account_balance(base_url: str, account_id: str, access_token:str) -> dict:
     try:
@@ -20,16 +22,16 @@ def get_account_balance(base_url: str, account_id: str, access_token:str) -> dic
     except:
         return "Account Balance pull unsuccessful"
     
-def get_tradier_credentials(trading_mode: str):
+def get_tradier_credentials(trading_mode: str, user):
     if trading_mode == "PAPER":
         base_url = PAPER_BASE_URL
-        # if user == "CM3":
-        #     print(user)
-        #     access_token = PAPER_ACCESSTOKENCM3
-        #     account_id = PAPER_ACCOUNTIDCM3
-        # else:
-        access_token = PAPER_ACCESSTOKEN
-        account_id = PAPER_ACCOUNTID
+        if user == "inv":
+            print(user)
+            access_token = PAPER_ACCESSTOKEN_INV
+            account_id = PAPER_ACCOUNTID_INV
+        else:
+            access_token = PAPER_ACCESSTOKEN
+            account_id = PAPER_ACCOUNTID
     elif trading_mode == "LIVE":
         base_url = LIVE_BASE_URL
         access_token = ACCESSTOKEN

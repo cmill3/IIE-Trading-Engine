@@ -12,9 +12,10 @@ date = datetime.now().strftime("%Y/%m/%d/%H_%M")
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 trading_mode = os.getenv('TRADING_MODE')
+user = os.getenv("USER")
 
 def run_reconciliation(event, context):
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
     trades_df = pull_pending_trades()
     # formatted_df = format_pending_df(trades_df)
     if len(trades_df) > 0:

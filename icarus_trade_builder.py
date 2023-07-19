@@ -17,14 +17,16 @@ model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
 now = datetime.now()
 d = now.date() # Monday
 
+trading_strategy = os.getenv("TRADING_STRATEGY")
+
 def build_trade(event, context):
-    logger.info('build_trade function started.')
-    df, key = pull_data()
-    logger.info(f'pulled key: {key}')
-    results_df = process_data(df)
-    # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
-    csv = results_df.to_csv()
-    key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
+    # logger.info('build_trade function started.')
+    # df, key = pull_data()
+    # logger.info(f'pulled key: {key}')
+    # results_df = process_data(df)
+    # # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
+    # csv = results_df.to_csv()
+    # key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
     # s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
     return {
         'statusCode': 200
@@ -34,11 +36,14 @@ def build_trade_inv(event, context):
     logger.info('build_trade function started.')
     df, key = pull_data_inv()
     logger.info(f'pulled key: {key}')
+    if trading_strategy != "all":
+        df = df.loc[df['strategy'] == trading_strategy]
     results_df = process_data(df)
     # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
     csv = results_df.to_csv()
-    key = key.replace("invalerts_full_results", "yqalerts_potential_trades")
-    # s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
+    key = key.replace("inv-alerts-full-results", "invalerts_potential_trades")
+    fix_key = key.split(".csv.csv")[0]
+    s3.put_object(Body=csv, Bucket=model_results_bucket, Key=f"{trading_strategy}/{fix_key}.csv")
     return {
         'statusCode': 200
     }
@@ -57,7 +62,7 @@ def pull_data():
     return df, key
 
 def pull_data_inv():
-    keys = s3.list_objects(Bucket=model_results_bucket,Prefix="invalerts_full_results/")["Contents"]
+    keys = s3.list_objects(Bucket="inv-alerts-trading-data",Prefix="inv-alerts-full-results/")["Contents"]
     key = keys[-1]['Key']
     dataset = s3.get_object(Bucket=model_results_bucket, Key=key)
     df = pd.read_csv(dataset.get("Body"))
@@ -79,9 +84,11 @@ def process_data(df):
 
 
 def infer_CP(strategy):
-    if strategy == "day_gainers" or strategy == "most_actives":
+    call_strategies = ["day_gainers", "most_actives","vdiff_gainC"]
+    put_strategies = ["day_losers", "maP","vdiff_gainP"]
+    if strategy in call_strategies:
         return "calls"
-    elif strategy == "day_losers" or strategy == "maP":
+    elif strategy in put_strategies:
         return "puts"
     
 

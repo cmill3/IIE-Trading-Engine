@@ -16,28 +16,37 @@ trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-base_url = os.getenv("BASE_URL")
-account_id = os.getenv("ACCOUNT_ID")
-access_token = os.getenv("ACCESS_TOKEN")
-
+user = os.getenv("USER")
+table = os.getenv("TABLE")
 
 def manage_portfolio(event, context):
-
+    current_positions = event[-1]['open_positions']   
     dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     current_date = datetime.now().strftime("%Y-%m-%d")
 
-    order_side = "sell_to_close"
-    order_type = "market"
-    duration = "gtc"
     logger.info(f'Initializing new trades PM: {dt}')
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
     new_trades_df = pull_new_trades()
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
-    trades_placed = evaluate_new_trades(new_trades_df, trading_mode)
-    return trades_placed
+    trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positions)
+    return "success"
+
+def manage_portfolio_inv(event, context):
+    current_positions = event['Payload'][-1]['open_positions']
+    print(current_positions)
+    dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
+    logger.info(f'Initializing new trades PM: {dt}')
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
+    new_trades_df = pull_new_trades_inv()
+    ## Future feature to deal with descrepancies between our records and tradier
+    # if len(open_trades_df) > len(open_trades_list):
+    # TO-DO create an alarm mechanism to report this 
+    trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positions)
+    return "success"
 
 
 def pull_new_trades():
@@ -49,10 +58,30 @@ def pull_new_trades():
     df.reset_index(inplace= True, drop = True)
     return df
 
+def pull_new_trades_inv():
+    trading_strategies = ["day_losers", "maP","vdiff_gainP","day_gainers", "most_actives","vdiff_gainC"]
+    year = datetime.now().year
+    keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f'day_gainers/invalerts_potential_trades/{year}')["Contents"]
+    key = keys[-1]['Key']
+    query_key = key.split("day_gainers/invalerts_potential_trades/")[1]
 
-def evaluate_new_trades(new_trades_df, trading_mode):
+    trade_dfs = []
+    for stratgey in trading_strategies:
+        try:
+            dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"{stratgey}/invalerts_potential_trades/{query_key}")
+            df = pd.read_csv(dataset.get("Body"))
+            df.dropna(inplace = True)
+            df.reset_index(inplace= True, drop = True)
+            trade_dfs.append(df)
+        except:
+            print(f"{stratgey}/invalerts_potential_trades/{query_key}")
+    full_df = pd.concat(trade_dfs)
+    return full_df
+
+
+def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    execution_result = te.run_executor(approved_trades_df, trading_mode)
+    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons)
     return execution_result
 
 
@@ -83,4 +112,18 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     
 
 if __name__ == "__main__":
-    manage_portfolio(None, None)
+    trading_strategies = ["day_losers", "maP","vdiff_gainP","day_gainers", "most_actives","vdiff_gainC"]
+    year = datetime.now().year
+    keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f'invalerts_potential_trades/day_gainers/{year}')["Contents"]
+    key = keys[-1]['Key']
+
+    trade_dfs = []
+    for strategy in trading_strategies:
+        print(strategy)
+        dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"{strategy}/invalerts_potential_trades/{key}")
+        df = pd.read_csv(dataset.get("Body"))
+        df.dropna(inplace = True)
+        df.reset_index(inplace= True, drop = True)
+        trade_dfs.append(df)
+    full_df = pd.concat(trade_dfs)
+    print(full_df)

@@ -23,10 +23,7 @@ functions:
     environment:
       MODEL_RESULTS_BUCKET: "yqalerts-model-results"
       TRADING_DATA_BUCKET: "icarus-trading-data"
-      USER: "CM3"
-      PAPER_ACCOUNTID: "VA72174659"
-      PAPER_ACCESSTOKEN: "ld0Mx4KbsOBYwmJApdowZdFcIxO7"
-      PAPER_BASE_URL: "https://sandbox.tradier.com/v1/"
+      USER: "yq"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
@@ -36,10 +33,8 @@ functions:
     environment:
       TRADING_MODE: "PAPER"
       TRADING_DATA_BUCKET: "icarus-trading-data"
-      USER: "CM3"
-      PAPER_ACCOUNTID: "VA72174659"
-      PAPER_ACCESSTOKEN: "ld0Mx4KbsOBYwmJApdowZdFcIxO7"
-      PAPER_BASE_URL: "https://sandbox.tradier.com/v1/"
+      USER: "yq"
+      TABLE: "icarus-orders-table"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
@@ -49,62 +44,108 @@ functions:
     environment:
       TRADING_MODE: "PAPER"
       TRADING_DATA_BUCKET: "icarus-trading-data"
-      USER: "CM3"
-      PAPER_ACCOUNTID: "VA72174659"
-      PAPER_ACCESSTOKEN: "ld0Mx4KbsOBYwmJApdowZdFcIxO7"
-      PAPER_BASE_URL: "https://sandbox.tradier.com/v1/"
+      TABLE: "icarus-orders-table"
+      CLOSE_TABLE: "icarus-closed-orders-table"
+      USER: "yq"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-portfolio-manager-paper
-  icarus-trade-builder-inv:
+  icarus-trade-builder-invDG:
     handler: icarus_trade_builder.build_trade_inv
     environment:
-      MODEL_RESULTS_BUCKET: "yqalerts-model-results"
+      MODEL_RESULTS_BUCKET: "inv-alerts-trading-data"
       TRADING_DATA_BUCKET: "icarus-trading-data"
-      USER: "CM3"
-      PAPER_ACCOUNTID: "VA80685931"
-      PAPER_ACCESSTOKEN: "txhklwGnxNbFGNtryB1c4O8RAg5P"
-      PAPER_BASE_URL: "https://sandbox.tradier.com/v1/"
+      USER: "inv"
+      TRADING_STRATEGY: "day_gainers"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: icarus-trade-builder-inv
+    name: icarus-trade-builder-paper-invDG
+  icarus-trade-builder-invDL:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: "inv-alerts-trading-data"
+      TRADING_DATA_BUCKET: "icarus-trading-data"
+      USER: "inv"
+      TRADING_STRATEGY: "day_losers"
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-paper-invDL
+  icarus-trade-builder-invMA:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: "inv-alerts-trading-data"
+      TRADING_DATA_BUCKET: "icarus-trading-data"
+      USER: "inv"
+      TRADING_STRATEGY: "most_actives"
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-paper-invMA
+  icarus-trade-builder-invMAP:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: "inv-alerts-trading-data"
+      TRADING_DATA_BUCKET: "icarus-trading-data"
+      USER: "inv"
+      TRADING_STRATEGY: "maP"
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-paper-invMAP
+  icarus-trade-builder-invVDGC:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: "inv-alerts-trading-data"
+      TRADING_DATA_BUCKET: "icarus-trading-data"
+      USER: "inv"
+      TRADING_STRATEGY: "vdiff_gainC"
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-paper-invVDGC
+  icarus-trade-builder-invVDGP:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: "inv-alerts-trading-data"
+      TRADING_DATA_BUCKET: "icarus-trading-data"
+      USER: "inv"
+      TRADING_STRATEGY: "vdiff_gainP"
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-paper-invVDGP
   new-trades-portfolio-manager-paper-inv:
-    handler: new_trades_portfolio_manager.manage_portfolio
+    handler: new_trades_portfolio_manager.manage_portfolio_inv
     environment:
       TRADING_MODE: "PAPER"
-      TRADING_DATA_BUCKET: "icarus-trading-data"
-      USER: "CM3"
-      PAPER_ACCOUNTID: "VA80685931"
-      PAPER_ACCESSTOKEN: "txhklwGnxNbFGNtryB1c4O8RAg5P"
-      PAPER_BASE_URL: "https://sandbox.tradier.com/v1/"
+      TRADING_DATA_BUCKET: "inv-alerts-trading-data"
+      USER: "inv"
+      TABLE: "icarus-orders-table-inv"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: new-trades-portfolio-manager-inv
+    name: new-trades-portfolio-manager-paper-inv
   open-trades-portfolio-manage-paper-inv:
     handler: open_trades_portfolio_manager.manage_portfolio
     environment:
       TRADING_MODE: "PAPER"
-      TRADING_DATA_BUCKET: "icarus-trading-data"
-      PAPER_ACCOUNTID: "VA80685931"
-      PAPER_ACCESSTOKEN: "txhklwGnxNbFGNtryB1c4O8RAg5P"
-      PAPER_BASE_URL: "https://sandbox.tradier.com/v1/"
-      USER: "CM3"
+      TRADING_DATA_BUCKET: "inv-alerts-trading-data"
+      USER: "inv"
+      TABLE: "icarus-orders-table-inv"
+      CLOSE_TABLE: "icarus-closed-orders-table-inv"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: open-trades-portfolio-manager-inv
+    name: open-trades-portfolio-manager-paper-inv
   open-trades-reconciliation:
     handler: order_reconciliation.run_reconciliation
     environment:
       TRADING_MODE: "PAPER"
       TRADING_DATA_BUCKET: "icarus-trading-data"
       USER: "CM3"
-      PAPER_ACCOUNTID: "VA80685931"
-      PAPER_ACCESSTOKEN: "txhklwGnxNbFGNtryB1c4O8RAg5P"
-      PAPER_BASE_URL: "https://sandbox.tradier.com/v1/"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
@@ -187,7 +228,7 @@ stepFunctions:
           End:
             Type: Succeed
     icarus-new-trades-inv:
-      name: icarus-new-trades
+      name: icarus-new-trades-inv
       role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
       alarms:
         topics:
@@ -200,16 +241,16 @@ stepFunctions:
         treatMissingData: missing
       definition:
         Comment: "This state machine constructs and executes trades based on results of the modeling engine"
-        StartAt: ParallelProcessor
+        StartAt: ParallelProcessorINV
         States:
-          ParallelProcessor:
+          ParallelProcessorINV:
             Type: Parallel
             Branches:
-              - StartAt: BuildTrade
+              - StartAt: BuildTradeDG
                 States:
-                  BuildTrade:
+                  BuildTradeDG:
                     Type: Task
-                    Resource: arn:aws:lambda:us-east-1:456201388658:function:icarus-trade-builder-inv
+                    Resource: arn:aws:lambda:us-east-1:456201388658:function:icarus-trade-builder-paper-invDG
                     Retry:
                     - ErrorEquals:
                       - Lambda.ServiceException
@@ -219,9 +260,79 @@ stepFunctions:
                       MaxAttempts: 3
                       BackoffRate: 2
                     End: True
-              - StartAt: open-trades-portfolio-manage-paper
+              - StartAt: BuildTradeDL
                 States:
-                  open-trades-portfolio-manage-paper:
+                  BuildTradeDL:
+                    Type: Task
+                    Resource: arn:aws:lambda:us-east-1:456201388658:function:icarus-trade-builder-paper-invDL
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: BuildTradeMA
+                States:
+                  BuildTradeMA:
+                    Type: Task
+                    Resource: arn:aws:lambda:us-east-1:456201388658:function:icarus-trade-builder-paper-invMA
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: BuildTradeMAP
+                States:
+                  BuildTradeMAP:
+                    Type: Task
+                    Resource: arn:aws:lambda:us-east-1:456201388658:function:icarus-trade-builder-paper-invMAP
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: BuildTradeVDGC
+                States:
+                  BuildTradeVDGC:
+                    Type: Task
+                    Resource: arn:aws:lambda:us-east-1:456201388658:function:icarus-trade-builder-paper-invVDGC
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: BuildTradeVDGP
+                States:
+                  BuildTradeVDGP:
+                    Type: Task
+                    Resource: arn:aws:lambda:us-east-1:456201388658:function:icarus-trade-builder-paper-invVDGP
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: open-trades-portfolio-manage-paperINV
+                States:
+                  open-trades-portfolio-manage-paperINV:
                     Type: Task
                     Resource:  "arn:aws:lambda:us-east-1:456201388658:function:open-trades-portfolio-manager-paper-inv:$LATEST"
                     Retry:
@@ -232,11 +343,14 @@ stepFunctions:
                       IntervalSeconds: 5
                       MaxAttempts: 3
                       BackoffRate: 2
+                    # ResultPath: $.open_positions
                     End: True
-            Next: PortfolioManager
-          PortfolioManager:
+            Next: PortfolioManagerINV
+          PortfolioManagerINV:
             Type: Task
             Resource: arn:aws:lambda:us-east-1:456201388658:function:new-trades-portfolio-manager-paper-inv
+            Parameters:
+              Payload.$: $
             Retry:
             - ErrorEquals:
               - Lambda.ServiceException

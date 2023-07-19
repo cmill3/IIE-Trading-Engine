@@ -7,11 +7,12 @@ from datetime import datetime
 import time
 import ast
 import logging
-from helpers.trading_algorithms import time_decay_alpha_gainers_v0, time_decay_alpha_ma_v0, time_decay_alpha_losers_v0, time_decay_alpha_maP_v0
+from helpers.trading_algorithms import *
 
 
 s3 = boto3.client('s3')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+user = os.getenv("USER")
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -26,13 +27,9 @@ order_type = "market"
 duration = "GTC"
 acct_balance_min = 20000
 
-base_url = os.getenv("BASE_URL")
-account_id = os.getenv("ACCOUNT_ID")
-access_token = os.getenv("ACCESS_TOKEN")
 
-
-def run_executor(data, trading_mode):
-    order_ids = execute_new_trades(data, base_url, access_token, account_id, trading_mode)
+def run_executor(data, trading_mode, base_url, account_id, access_token, table, current_positions):
+    order_ids = execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, current_positions)
     return order_ids
 
      
@@ -43,7 +40,7 @@ def account_value_checkpoint(current_balance) -> dict:
     else:
         return False
     
-def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
+def execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, current_positions):
     # transaction_data = []
     full_transactions_data = {}
     failed_transactions = []
@@ -52,12 +49,21 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
     for i, row in data.iterrows():
         # account_balance = trade.get_account_balance(base_url, account_id, access_token)
         # is_valid = account_value_checkpoint(account_balance)
-        if row['strategy'] == 'day_gainers' or row['strategy'] == 'day_losers':
+        position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
+        pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
+                                    
+        if pos_id in current_positions:
+            logger.info(pos_id)
+            logger.info(current_positions)
             is_valid = False
+            logger.info(is_valid)
         else:
+            logger.info(pos_id)
+            logger.info(current_positions)
             is_valid = True
+            logger.info(is_valid)
+
         if is_valid:
-            position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
             if len(row['trade_details']) == 0:
                 logger.info(f'no contracts to trade: {position_id}')
                 continue
@@ -102,7 +108,6 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
     #     response, order_items = db.create_dynamo_record(trade_obj, trading_mode)
     #     full_order_list.append(order_items)
 
-    
     df = pd.DataFrame.from_dict(full_transactions_data)
     final_csv = df.to_csv()
 
@@ -113,17 +118,17 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
     failed_csv = failed_df.to_csv()
 
     date = datetime.now().strftime("%Y/%m/%d/%H_%M")
-    s3.put_object(Bucket=trading_data_bucket, Key=f"orders_data/{date}.csv", Body=final_csv)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_orders_data/{date}.csv", Body=accepted_csv)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders/{date}.csv", Body=final_csv)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"failed_orders/{date}.csv", Body=failed_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"orders_data/{user}/{date}.csv", Body=final_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_orders_data/{user}/{date}.csv", Body=accepted_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders/{user}/{date}.csv", Body=final_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"failed_orders/{user}/{date}.csv", Body=failed_csv)
 
 
     time.sleep(15)
-    pending_orders = process_dynamo_orders(accepted_df, base_url, account_id, access_token, trading_mode)
+    pending_orders = process_dynamo_orders(accepted_df, base_url, account_id, access_token, trading_mode, table)
     pending_df = pd.DataFrame.from_dict(pending_orders)
     pending_csv = pending_df.to_csv()
-    s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders_enriched/{date}.csv", Body=pending_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders_enriched/{user}/{date}.csv", Body=pending_csv)
     return accepted_df
 
 # def pull_open_orders_df():
@@ -133,14 +138,14 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode):
 #     df = pd.read_csv(data.get("Body"))
 #     return df
 
-def process_dynamo_orders(formatted_df, base_url, account_id, access_token, trading_mode):
+def process_dynamo_orders(formatted_df, base_url, account_id, access_token, trading_mode, table):
     # for index, row in formatted_df.iterrows():
-    pending_orders = db.process_opened_ordersv2(formatted_df, base_url, account_id, access_token, trading_mode)
+    pending_orders = db.process_opened_ordersv2(formatted_df, base_url, account_id, access_token, trading_mode, table)
     # response = update_currently_open_orders(fulfilled_orders, [])
     pending_df = pd.DataFrame.from_dict(pending_orders)
     return pending_df
 
-def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
+def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, table, close_table):
     position_ids = orders_df['position_id'].unique()
     accepted_orders = []
     rejected_orders = []
@@ -165,22 +170,24 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode):
     rejected_df = pd.DataFrame.from_dict(rejected_orders)
     rejected_csv = rejected_df.to_csv()
     
-    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_closed_orders_data/{date}.csv", Body=accepted_csv)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"rejected_closed_orders_data/{date}.csv", Body=rejected_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_closed_orders_data/{user}/{date}.csv", Body=accepted_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"rejected_closed_orders_data/{user}/{date}.csv", Body=rejected_csv)
 
     time.sleep(25)
-    closed_orders = db.process_closed_orders(accepted_df, base_url, account_id, access_token, position_ids, trading_mode)
+    closed_orders = db.process_closed_orders(accepted_df, base_url, account_id, access_token, position_ids, trading_mode, table, close_table)
 
     closed_df = pd.DataFrame.from_dict(closed_orders)
     csv = closed_df.to_csv()
-    s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{date}.csv", Body=csv)
+    s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{user}/{date}.csv", Body=csv)
     return s3_response
 
-def date_performance_check(row, base_url, access_token):
-    current_price = trade.get_last_price(base_url,access_token,row['underlying_symbol'])
-    sell_code, reason = evaluate_performance(current_price, row)
+def date_performance_check(base_url, access_token,row):
+    current_price = trade.get_last_price(base_url, access_token,row['underlying_symbol'])
+    if user == "yq":
+        sell_code, reason = evaluate_performance(current_price, row)
+    elif user == "inv":
+        sell_code, reason = evaluate_performance_inv(current_price, row)
     logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
-    print(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
     if sell_code == 2 or current_date > row['sellby_date']:
         # order_dict = {
         #     "contract": row['option_symbol'],
@@ -202,6 +209,22 @@ def evaluate_performance(current_price, row):
         sell_code, reason = time_decay_alpha_gainers_v0(row, current_price)
     elif strategy == 'most_actives':
        sell_code, reason = time_decay_alpha_ma_v0(row, current_price)
+    return sell_code, reason
+
+def evaluate_performance_inv(current_price, row):
+    strategy = row['trading_strategy']
+    if strategy == 'maP':
+        sell_code, reason = time_decay_alpha_maP_v0_inv(row, current_price)
+    elif strategy == 'day_losers':
+        sell_code, reason = time_decay_alpha_losers_v0_inv(row, current_price)
+    elif strategy == 'day_gainers':
+        sell_code, reason = time_decay_alpha_gainers_v0_inv(row, current_price)
+    elif strategy == 'vdiff_gainC':
+        sell_code, reason = time_decay_alpha_vdiffC_v0_inv(row, current_price)
+    elif strategy == 'vdiff_gainP':
+        sell_code, reason = time_decay_alpha_vdiffP_v0_inv(row, current_price)
+    elif strategy == 'most_actives':
+       sell_code, reason = time_decay_alpha_ma_v0_inv(row, current_price)
     return sell_code, reason
 
 
