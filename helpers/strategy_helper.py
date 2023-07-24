@@ -47,7 +47,7 @@ def match_sector(symbol):
         sector = office[0]
         pair = {
         'Symbol':symbol,
-        'Sector': office[0]
+        'Sector': sector
             }
     except:
         if (symbol in index_list) == True:
