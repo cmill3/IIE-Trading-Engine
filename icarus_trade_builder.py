@@ -20,14 +20,14 @@ d = now.date() # Monday
 trading_strategy = os.getenv("TRADING_STRATEGY")
 
 def build_trade(event, context):
-    # logger.info('build_trade function started.')
-    # df, key = pull_data()
-    # logger.info(f'pulled key: {key}')
-    # results_df = process_data(df)
-    # # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
-    # csv = results_df.to_csv()
-    # key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
-    # s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
+    logger.info('build_trade function started.')
+    df, key = pull_data()
+    logger.info(f'pulled key: {key}')
+    results_df = process_data(df)
+    # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
+    csv = results_df.to_csv()
+    key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
+    s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=key)
     return {
         'statusCode': 200
     }
@@ -43,7 +43,7 @@ def build_trade_inv(event, context):
     csv = results_df.to_csv()
     key = key.replace("inv-alerts-full-results", "invalerts_potential_trades")
     fix_key = key.split(".csv.csv")[0]
-    s3.put_object(Body=csv, Bucket=model_results_bucket, Key=f"{trading_strategy}/{fix_key}.csv")
+    s3.put_object(Body=csv, Bucket="inv-alerts-trading-data", Key=f"{trading_strategy}/{fix_key}.csv")
     return {
         'statusCode': 200
     }
@@ -53,9 +53,9 @@ def build_trade_inv(event, context):
 #Sym = Symbol (used to repesent the symbol of the value that we are analyzing)
 
 def pull_data():
-    keys = s3.list_objects(Bucket=model_results_bucket,Prefix="yqalerts_full_results/")["Contents"]
+    keys = s3.list_objects(Bucket="yqalerts-model-results",Prefix="yqalerts_full_results/")["Contents"]
     key = keys[-1]['Key']
-    dataset = s3.get_object(Bucket=model_results_bucket, Key=key)
+    dataset = s3.get_object(Bucket="yqalerts-model-results", Key=key)
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
@@ -64,7 +64,7 @@ def pull_data():
 def pull_data_inv():
     keys = s3.list_objects(Bucket="inv-alerts-trading-data",Prefix="inv-alerts-full-results/")["Contents"]
     key = keys[-1]['Key']
-    dataset = s3.get_object(Bucket=model_results_bucket, Key=key)
+    dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=key)
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
@@ -78,8 +78,6 @@ def process_data(df):
     df['trade_details'] = df.apply(lambda row: build_trade_structure(row), axis=1)
     df['sellby_date'] = calculate_sellby_date(d, 3)
     logger.info(f"Data processed successfully: {d}")
-
-
     return df
 
 
@@ -115,7 +113,8 @@ def build_trade_structure(row):
                 contracts = None
                 return contracts
         contracts = strategy_helper.build_spread(df_optionchain_2wk, 3, row['Call/Put'])
-        trade_details = trading_algorithms.bet_sizer(contracts, now)
+        trade_details = trading_algorithms.bet_sizer(contracts, now, spread_length=3)
+        print(trade_details)
     except Exception as e:
         trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
@@ -133,4 +132,4 @@ def Date_2wk():
     return Expiry_Date 
 
 if __name__ == "__main__":
-    build_trade(None, None)
+    build_trade_inv(None, None)

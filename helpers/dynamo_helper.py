@@ -8,10 +8,10 @@ import logging
 client = boto3.client('dynamodb')
 ddb = boto3.resource('dynamodb','us-east-1')
 transactions_table = ddb.Table('icarus-transactions-table')
-orders_table = ddb.Table('icarus-orders-table')
-closed_orders_table = ddb.Table('icarus-closed-orders-table')
-orders_table_inv = ddb.Table('icarus-orders-table')
-closed_orders_table_inv = ddb.Table('icarus-closed-orders-table')
+# orders_table = ddb.Table('icarus-orders-table')
+# closed_orders_table = ddb.Table('icarus-closed-orders-table')
+# orders_table_inv = ddb.Table('icarus-orders-table')
+# closed_orders_table_inv = ddb.Table('icarus-closed-orders-table')
 positions_table = ddb.Table('icarus-posititons-table')
 logger = logging.getLogger()
 user = os.getenv("USER")
@@ -273,7 +273,8 @@ def close_dynamo_record_transaction(order_info_obj):
     return response, transaction_item
 
 def delete_order_record(order_id, table):
-    response = orders_table.delete_item(
+    table = ddb.Table(table) 
+    response = table.delete_item(
         Key={
             'order_id': str(order_id)
         }

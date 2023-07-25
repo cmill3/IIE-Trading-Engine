@@ -27,6 +27,8 @@ order_type = "market"
 duration = "GTC"
 acct_balance_min = 20000
 
+leveraged_etfs = ["TQQQ","SQQQ","SPXS","SPXL","SOXL","SOXS"]
+
 
 def run_executor(data, trading_mode, base_url, account_id, access_token, table, current_positions):
     order_ids = execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, current_positions)
@@ -52,7 +54,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
                                     
-        if pos_id in current_positions:
+        if pos_id in current_positions or row['symbol'] in leveraged_etfs:
             logger.info(pos_id)
             logger.info(current_positions)
             is_valid = False

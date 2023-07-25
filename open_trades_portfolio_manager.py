@@ -29,11 +29,8 @@ user = os.getenv("USER")
 
 
 def manage_portfolio(event, context):
-    account_id = "VA80685931"
-    access_token = "txhklwGnxNbFGNtryB1c4O8RAg5P" 
-    base_url = "https://sandbox.tradier.com/v1/"
     logger.info(f'Initializing open trades PM: {dt}')
-    # base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
     open_trades_df = db.get_all_orders_from_dynamo(table)
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()

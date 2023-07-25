@@ -81,6 +81,7 @@ def pull_new_trades_inv():
 
 def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
+    # full_trades = approved_trades_df.loc[approved_trades_df['symbol'] not in leveraged_etfs]
     execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons)
     return execution_result
 

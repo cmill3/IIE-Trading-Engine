@@ -20,5 +20,4 @@ def build_spread(chain_df, spread_length, cp):
             "quantity": 1
         }
         contract_list.append(temp_object)
-    
     return contract_list

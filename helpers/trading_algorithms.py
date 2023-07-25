@@ -179,9 +179,7 @@ def time_decay_alpha_gainers_v0_inv(row, current_price):
     if type(Floor_pct) == float:
         Floor_pct = -0.02
     if pct_change > Target_pct:
-        Floor_pct += 0.0075
-
-    print(row)
+        Floor_pct += 0.01
 
     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")
     # logger.info(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['ticker']}")
@@ -260,7 +258,7 @@ def time_decay_alpha_ma_v0_inv(row, current_price):
     if type(Floor_pct) == float:
         Floor_pct = -0.02
     if pct_change > Target_pct:
-        Floor_pct += 0.005
+        Floor_pct += 0.008
 
     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")    
     day_diff = get_business_days(row['order_transaction_date'])
@@ -295,15 +293,15 @@ def time_decay_alpha_maP_v0_inv(row, current_price):
 
     if type(Floor_pct) == float:
         Floor_pct = 0.02
-    if pct_change > Target_pct:
-        Floor_pct -= 0.005
+    if pct_change < Target_pct:
+        Floor_pct -= 0.008
 
     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")    
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
     if day_diff < 2:
-        if pct_change <= Floor_pct:
+        if pct_change >= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
     elif day_diff >= 2:
@@ -326,13 +324,13 @@ def time_decay_alpha_maP_v0_inv(row, current_price):
 def time_decay_alpha_losers_v0_inv(row, current_price):
     max_value = calculate_floor_pct(row)    
     Target_pct = -.055
-    pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) * -1
-    Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .015) * -1
+    pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
+    Floor_pct = ((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) + .015)
 
     if type(Floor_pct) == float:
         Floor_pct = -0.015
-    if pct_change > Target_pct:
-        Floor_pct += 0.0075
+    if pct_change < Target_pct:
+        Floor_pct -= 0.01
 
     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")
     # logger.info(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['ticker']}")
@@ -340,7 +338,7 @@ def time_decay_alpha_losers_v0_inv(row, current_price):
     sell_code = 0
     reason = ""
     if day_diff < 2:
-        if pct_change <= Floor_pct:
+        if pct_change >= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
     elif day_diff >= 2:
@@ -405,14 +403,14 @@ def time_decay_alpha_losers_v0_inv(row, current_price):
 
 def time_decay_alpha_vdiffC_v0_inv(row, current_price):
     max_value = calculate_floor_pct(row)
-    Target_pct = .04
+    Target_pct = .035
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .0125)
 
     if type(Floor_pct) == float:
         Floor_pct = -0.0125
     if pct_change > Target_pct:
-        Floor_pct += 0.0075
+        Floor_pct += 0.008
 
     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
@@ -441,21 +439,21 @@ def time_decay_alpha_vdiffC_v0_inv(row, current_price):
 
 def time_decay_alpha_vdiffP_v0_inv(row, current_price):
     max_value = calculate_floor_pct(row)
-    Target_pct = -.04
+    Target_pct = -.035
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .0125)
 
     if type(Floor_pct) == float:
         Floor_pct = 0.0125
-    if pct_change > Target_pct:
-        Floor_pct -= 0.0075
+    if pct_change < Target_pct:
+        Floor_pct -= 0.008
 
     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
     if day_diff < 2:
-        if pct_change <= Floor_pct:
+        if pct_change >= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
     elif day_diff >= 2:
@@ -478,15 +476,24 @@ def time_decay_alpha_vdiffP_v0_inv(row, current_price):
 
 ### BET SIZING FUNCTIONS ###
 
-def bet_sizer(contracts, date):
+def bet_sizer(contracts, date, spread_length):
     target_cost = (.01* pull_trading_balance())
     to_stamp = date.strftime("%Y-%m-%d")
     from_stamp = (date - timedelta(days=2)).strftime("%Y-%m-%d")
+    volumes = []
+    transactions = []
     # contracts_details = []
     for contract in contracts:
         polygon_result = polygon_call(contract['contractSymbol'],from_stamp, to_stamp,30,"minute")
         contract['avg_volume'], contract['avg_transactions'] = build_volume_features(polygon_result)
+        volumes.append(contract['avg_volume'])
+        transactions.append(contract['avg_transactions'])
 
+    print(contracts)
+    total_vol = sum(volumes)/spread_length
+    print(total_vol)
+    if total_vol < 50:
+        return []
     spread_cost = calculate_spread_cost(contracts)
     sized_contracts = finalize_trade(contracts, spread_cost, target_cost)
     if sized_contracts != None:
