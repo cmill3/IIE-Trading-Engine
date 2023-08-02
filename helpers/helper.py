@@ -66,4 +66,16 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
             continue
         trading_days_to_add -= 1
     return current_date
+
+def pull_sym(symbol):
+    sym = " ".join(re.findall("[a-zA-Z]+", symbol))
+    final_symbol = sym[:-1]
+    return final_symbol
+    
+def dateandtime():
+    year = date.today().year
+    month = date.today().month
+    day = date.today().day
+    hour = datetime.datetime.now().hour
+    return year, month, day, hour
     
