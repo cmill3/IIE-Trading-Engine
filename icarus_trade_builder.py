@@ -43,7 +43,7 @@ def pull_data():
     return df, key
 
 def process_data(df):
-    #df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
+    df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
     df['expiry_1wk'] = Date_1wk()
     df['expiry_2wk'] = Date_2wk()
     df['trade_details'] = df.apply(lambda row: build_trade_structure(row), axis=1)

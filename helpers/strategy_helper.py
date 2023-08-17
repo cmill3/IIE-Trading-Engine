@@ -2,7 +2,6 @@ import pandas as pd
 import numpy
 import requests
 import boto3
-from io import StringIO
 from datetime import datetime
 
 def build_spread(chain_df, spread_length, cp):
