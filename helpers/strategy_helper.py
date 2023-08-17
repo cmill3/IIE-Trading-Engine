@@ -49,7 +49,7 @@ def match_sector(symbol):
         'Sector': sector
             }
     except:
-        if (symbol in index_list) == True:
+        if symbol in index_list == True:
             sector = 'Index Fund'
         else:
             sector = 'Failed'
