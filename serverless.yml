@@ -202,6 +202,11 @@ functions:
     #####
   dynamo-backup-15-min:
     handler: alt-storage.dynamo_backup.lambda_handler
+    events:
+      - eventBridge:
+          name: dynamo-15min-schedule
+          description: trigger to backup the dynamo schedule every 15 minutes
+          schedule: rate(15 minutes)
     environment:
       TRADING_MODE: "PAPER"
       USER: "CM3"
@@ -209,9 +214,14 @@ functions:
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: dynamo-backup-15-min
+    name: dynamo-backup-15-min-${self:provider.stage}
   dynamo-backup-daily:
     handler: alt-storage.dynamo_backup.lambda_handler
+    events:
+      - eventBridge:
+          name: dynamo-daily-schedule
+          description: trigger to backup the dynamo schedule daily
+          schedule: rate(24 hours)
     environment:
       TRADING_MODE: "PAPER"
       USER: "CM3"
@@ -219,7 +229,7 @@ functions:
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: dynamo-backup-daily
+    name: dynamo-backup-daily-${self:provider.stage}
   order-controls:
       handler: order_control.run_order_control
       environment:
