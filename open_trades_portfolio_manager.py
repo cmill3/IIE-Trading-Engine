@@ -1,9 +1,8 @@
-import helpers.trade_executor as trade_executor
+import helpers.trade_executor as te
 import helpers.tradier as trade
 import helpers.dynamo_helper as db
-from helpers.helper import date_performance_check
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 import boto3
@@ -13,6 +12,8 @@ import logging
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+table = os.getenv('TABLE')
+close_table = os.getenv("CLOSE_TABLE")
 urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -24,54 +25,58 @@ order_side = "sell_to_close"
 order_type = "market"
 duration = "gtc"
 
+user = os.getenv("USER")
+
 
 def manage_portfolio(event, context):
-    logger.info(f'Initializing new trades PM: {dt}')
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
-    open_trades_df = db.get_all_orders_from_dynamo()
+    try:
+        check_time()
+    except ValueError as e:
+        return "disallowed"
+    
+    logger.info(f'Initializing open trades PM: {dt}')
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
+    open_trades_df = db.get_all_orders_from_dynamo(table)
+    open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
+    open_positions = open_trades_df['pos_id'].unique().tolist()
     orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
+
+    try:
+        # open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
+        # open_positions = open_trades_df['pos_id'].unique().tolist()
+        orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
+    except Exception as e:
+        print(e)
+        print("no trades to close")
+        return {"open_positions": open_positions}
     if len(orders_to_close) == 0:
-        return {"message": "No open trades to close"}
-    trade_response = trade_executor.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode)
-    return trade_response
-
-# def get_open_trades(base_url, account_id, access_token):
-#     keys = s3.list_objects(Bucket=trading_data_bucket,Prefix='currently_open_orders')["Contents"]
-#     key = keys[-1]['Key']
-#     dataset = s3.get_object(Bucket=trading_data_bucket, Key=key)
-#     open_trades = pd.read_csv(dataset.get("Body"))
-#     order_id_list = open_trades['order_id'].tolist()
-#     # order_id_list = []
-#     # open_trades_list = trade.get_account_positions(base_url, account_id, access_token)
-#     # if open_trades_list == "No Positions":
-#     #     return None
-#     # for open_trade in open_trades_list:
-#     #     order_id_list.append(open_trade['id'])
-
-#     open_trades_df = db.get_open_trades_by_orderid(order_id_list)
-#     return open_trades_df, order_id_list
+        return {"open_positions": open_positions}
+    
+    if trading_mode == "DEV":
+        return {"open_positions": open_positions}
+    trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
+    return {"open_positions": open_positions}
 
 def evaluate_open_trades(orders_df, base_url, account_id, access_token):
-    df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')
+    df_unique = orders_df.drop_duplicates(subset='position_id', keep='first')
     positions_to_close = []
     close_reasons = []
     for index, row in df_unique.iterrows():
-        close_order, reason = date_performance_check(row, base_url, access_token)
-        if close_order:
+        sell_code, reason = te.date_performance_check(base_url, access_token, row)
+        if sell_code == 2:
             positions_to_close.append(row['position_id'])
+            logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             ### figure out how to add reason to the order
             close_reasons.append(reason)
-
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
 
+def check_time():
+    current_utc_time = datetime.utcnow().time()
+    
+    if current_utc_time < time(13, 45) or current_utc_time > time(19, 0):
+        raise ValueError("The current time is outside the allowed window!")
+    return "The time is within the allowed window."
     
 if __name__ == "__main__":
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
-    orders_to_close = pd.read_csv('/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test/closed_orders.csv')
-    position_ids = ""
-    db_success = db.process_closed_orders(orders_to_close, base_url, account_id, access_token, position_ids, trading_mode)
-#     # base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
-#     # x = trade.get_account_positions(base_url, account_id, access_token)
-#     # print(x)
-#     # print(y)
+   manage_portfolio(None, None)
