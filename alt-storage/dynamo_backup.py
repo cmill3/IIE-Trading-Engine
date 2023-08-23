@@ -2,13 +2,15 @@ from datetime import datetime, timedelta
 import boto3
 from botocore.exceptions import ClientError
 import os
+import ast
 
 ddbRegion = os.environ['AWS_DEFAULT_REGION']
+table_list = os.environ['TABLE_LIST']
+table_list = ast.literal_eval(table_list)
 current_date_and_time = datetime.now()
 backupName = 'Scheduled_Backup' + "_" + str(datetime.now(current_date_and_time.year) + "_" + str(datetime.now(current_date_and_time.month)) + "_" + str(datetime.now(current_date_and_time.day)) + "_" + str(datetime.now(current_date_and_time.hour)) + "_" + str(datetime.now(current_date_and_time.minute)))
 print('Backup started for: ', backupName)
 ddb = boto3.client('dynamodb', region_name=ddbRegion)
-ddb_table_list = ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']
 
 # for deleting old backup. It will search for old backup and will escape deleting last backup days you mentioned in the backup retention
 # daysToLookBackup=2
@@ -17,7 +19,7 @@ ddb_table_list = ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv'
  
 def lambda_handler(event, context):
     try:
-        for item in ddb_table_list:
+        for item in table_list:
         #create backup
             ddb.create_backup(TableName=item, BackupName = backupName)
             print('Backup has been taken successfully for table:', item)
