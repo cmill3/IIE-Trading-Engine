@@ -2,7 +2,7 @@ import helpers.trade_executor as te
 import helpers.tradier as trade
 import helpers.dynamo_helper as db
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 import boto3
@@ -29,6 +29,11 @@ user = os.getenv("USER")
 
 
 def manage_portfolio(event, context):
+    try:
+        check_time()
+    except ValueError as e:
+        return "disallowed"
+    
     logger.info(f'Initializing open trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
     open_trades_df = db.get_all_orders_from_dynamo(table)
@@ -45,6 +50,9 @@ def manage_portfolio(event, context):
         print("no trades to close")
         return {"open_positions": open_positions}
     if len(orders_to_close) == 0:
+        return {"open_positions": open_positions}
+    
+    if trading_mode == "DEV":
         return {"open_positions": open_positions}
     trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
     return {"open_positions": open_positions}
@@ -63,6 +71,12 @@ def evaluate_open_trades(orders_df, base_url, account_id, access_token):
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
 
+def check_time():
+    current_utc_time = datetime.utcnow().time()
+    
+    if current_utc_time < time(13, 45) or current_utc_time > time(19, 0):
+        raise ValueError("The current time is outside the allowed window!")
+    return "The time is within the allowed window."
     
 if __name__ == "__main__":
    manage_portfolio(None, None)

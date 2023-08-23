@@ -1,8 +1,9 @@
 import helpers.trade_executor as te
 import helpers.tradier as trade
 import helpers.dynamo_helper as db
+import helpers.helper as helpers
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 from yahooquery import Ticker
@@ -18,11 +19,18 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 user = os.getenv("USER")
 table = os.getenv("TABLE")
+now = datetime.now()
+dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+leveraged_etfs = ["TQQQ","SQQQ","SPXS","SPXL","SOXL","SOXS"]
 
 def manage_portfolio(event, context):
     current_positions = event[-1]['open_positions']   
-    dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    try:
+        check_time()
+    except ValueError as e:
+        return "disallowed"
+
 
     logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
@@ -35,9 +43,10 @@ def manage_portfolio(event, context):
 
 def manage_portfolio_inv(event, context):
     current_positions = event['Payload'][-1]['open_positions']
-    print(current_positions)
-    dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    try:
+        check_time()
+    except ValueError as e:
+        return "disallowed"
 
     logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
@@ -50,39 +59,41 @@ def manage_portfolio_inv(event, context):
 
 
 def pull_new_trades():
-    keys = s3.list_objects(Bucket=trading_data_bucket,Prefix='yqalerts_potential_trades/')["Contents"]
-    key = keys[-1]['Key']
-    dataset = s3.get_object(Bucket=trading_data_bucket, Key=key)
+    # date_str = helpers.build_date()
+    dt = datetime.now().strftime("%d/%H")
+    dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"yqalerts_potential_trades/2023/8/{dt}.csv")
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
     return df
 
 def pull_new_trades_inv():
-    trading_strategies = ["day_losers", "maP","vdiff_gainP","day_gainers", "most_actives","vdiff_gainC"]
-    year = datetime.now().year
-    keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f'day_gainers/invalerts_potential_trades/{year}')["Contents"]
-    key = keys[-1]['Key']
-    query_key = key.split("day_gainers/invalerts_potential_trades/")[1]
+    trading_strategies = ["day_losers","maP","vdiff_gainP","day_gainers","most_actives","vdiff_gainC"]
+    # keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f'day_gainers/invalerts_potential_trades/{year}')["Contents"]
+    # key = keys[-1]['Key']
+    # query_key = key.split("day_gainers/invalerts_potential_trades/")[1]
+    dt = datetime.now().strftime("%d/%H")
 
     trade_dfs = []
     for stratgey in trading_strategies:
         try:
-            dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"{stratgey}/invalerts_potential_trades/{query_key}")
+            dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/{stratgey}/2023/8/{dt}.csv")
             df = pd.read_csv(dataset.get("Body"))
             df.dropna(inplace = True)
             df.reset_index(inplace= True, drop = True)
             trade_dfs.append(df)
         except:
-            print(f"{stratgey}/invalerts_potential_trades/{query_key}")
+            print(f"invalerts_potential_trades/{stratgey}/2023/8/{dt}.csv")
     full_df = pd.concat(trade_dfs)
     return full_df
 
 
 def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    # full_trades = approved_trades_df.loc[approved_trades_df['symbol'] not in leveraged_etfs]
-    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons)
+    full_trades = approved_trades_df.loc[~approved_trades_df['symbol'].isin(leveraged_etfs)]
+    if trading_mode == "DEV":
+        return "test execution"
+    execution_result = te.run_executor(full_trades, trading_mode, base_url, account_id, access_token, table, current_positons)
     return execution_result
 
 
@@ -110,6 +121,14 @@ def evaluate_open_trades(orders_df,base_url, access_token):
 
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
+
+
+def check_time():
+    current_utc_time = datetime.utcnow().time()
+    
+    if current_utc_time < time(14, 0) or current_utc_time > time(19, 0):
+        raise ValueError("The current time is outside the allowed window!")
+    return "The time is within the allowed window."
     
 
 if __name__ == "__main__":

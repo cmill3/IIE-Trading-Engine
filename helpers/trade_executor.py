@@ -54,7 +54,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
                                     
-        if pos_id in current_positions or row['symbol'] in leveraged_etfs:
+        if pos_id in current_positions:
             logger.info(pos_id)
             logger.info(current_positions)
             is_valid = False
@@ -66,17 +66,17 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
             logger.info(is_valid)
 
         if is_valid:
-            if len(row['trade_details']) == 0:
+            if row['vol_check2wk'] == False:
                 logger.info(f'no contracts to trade: {position_id}')
                 continue
-            row['trade_details'] = ast.literal_eval(row['trade_details'])
+            row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
             for detail in row['trade_details']:
                 print(row)
                 try: 
                     # is_valid = trade.verify_contract(detail["contractSymbol"],base_url,access_token)
                     # print(is_valid)
                     open_order_id, status_code, json_response = trade.place_order(base_url, account_id, access_token, row['symbol'], 
-                                                                            detail["contractSymbol"], detail['quantity'], 
+                                                                            detail["contract_ticker"], detail['quantity'], 
                                                                             order_type, duration, position_id)
                     
                     if status_code == 200:
@@ -91,7 +91,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                         trade_data = row.to_dict()
                         trade_data['response'] = status_code
                         failed_transactions.append(trade_data)
-                        logger.info(f'Place order did not return 200: {detail["contractSymbol"]} json:{json_response}')
+                        logger.info(f'Place order did not return 200: {detail["contract_ticker"]} json:{json_response}')
                         continue
                 except Exception as e:
                     logger.info(f'Place order failed: {e}')
@@ -154,6 +154,8 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
 
     for index, row in orders_df.iterrows():
         id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
+        print(status_code)
+        print(error_json)
         if error_json == None:
             row_data = row.to_dict()
             row_data['closing_order_id'] = id

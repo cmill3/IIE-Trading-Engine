@@ -1,6 +1,6 @@
 {
   "devDependencies": {
     "serverless-ignore": "^0.2.1",
-    "serverless-step-functions": "^3.13.0"
+    "serverless-step-functions": "^3.13.1"
   }
 }

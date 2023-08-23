@@ -36,22 +36,26 @@ def polygon_call(contract, from_stamp, to_stamp, multiplier, timespan):
     url = f"https://api.polygon.io/v2/aggs/ticker/O:{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
 
     response = requests.request("GET", url, headers=headers, data=payload)
+    print(response.text)
     res_df = pd.DataFrame(json.loads(response.text)['results'])
     res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
     res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
     return res_df
 
 def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
-    payload={}
-    headers = {}
-    url = f"https://api.polygon.io/v2/aggs/ticker/{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
+    try:
+        payload={}
+        headers = {}
+        url = f"https://api.polygon.io/v2/aggs/ticker/{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
 
-    response = requests.request("GET", url, headers=headers, data=payload)
-    res_df = pd.DataFrame(json.loads(response.text)['results'])
-    res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
-    res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
-    res_df['hour'] = res_df['date'].apply(lambda x: x.hour)
-    return res_df
+        response = requests.request("GET", url, headers=headers, data=payload)
+        res_df = pd.DataFrame(json.loads(response.text)['results'])
+        res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
+        res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
+        res_df['hour'] = res_df['date'].apply(lambda x: x.hour)
+        return res_df
+    except:  
+        return pd.DataFrame()
 
 def get_business_days(transaction_date):
     """
@@ -94,14 +98,13 @@ def calculate_floor_pct(row):
    trimmed_df = prices.loc[prices['t'] > time_stamp]
    trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
    trimmed_df = trimmed_df.iloc[1:]
-   print(trimmed_df)
    high_price = trimmed_df['h'].max()
    low_price = trimmed_df['l'].min()
    if len(trimmed_df) == 0:
        return float(row['underlying_purchase_price'])
-   if row['trading_strategy'] in ['maP', 'day_losers']:
+   if row['trading_strategy'] in ['maP', 'day_losers','vdiff_gainP']:
        return low_price
-   elif row['trading_strategy'] in ['most_actives', 'day_gainers']:
+   elif row['trading_strategy'] in ['most_actives', 'day_gainers','vdiff_gainC']:
        return high_price
    else:
         return 0
@@ -150,6 +153,29 @@ def format_pending_df(df):
     
     formatted_df = pd.DataFrame(unpacked_data,indexes,columns)
     return formatted_df
+
+def build_date():
+    date = datetime.now()
+    
+    if date.day < 10:
+        day = "0" + str(date.day)
+    else:
+        day = str(date.day)
+        
+    if date.month < 10:
+        month = "0" + str(date.month)
+    else:
+        month = str(date.month)
+
+    temp_year = date.year
+    
+    # date_dict ={
+    #     'month': month,
+    #     'day': day,
+    #     'year': str(temp_year)
+    #     }
+    
+    return f"{temp_year}/{month}/{day}/{date.hour}"
 
 # if __name__ == "__main__":
 #     x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})

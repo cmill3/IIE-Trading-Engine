@@ -26,7 +26,6 @@ def get_tradier_credentials(trading_mode: str, user):
     if trading_mode == "PAPER":
         base_url = PAPER_BASE_URL
         if user == "inv":
-            print(user)
             access_token = PAPER_ACCESSTOKEN_INV
             account_id = PAPER_ACCOUNTID_INV
         else:
@@ -58,6 +57,8 @@ def verify_contract(symbol: str, base_url:str, access_token: str) -> dict:
 
 
 def place_order(base_url: str, account_id: str, access_token:str, symbol: str, option_symbol: str, quantity: str, order_type: str, duration: str, position_id:str):
+    if "O:" in option_symbol:
+        option_symbol = option_symbol.split("O:")[1]
     response = requests.post(f'{base_url}accounts/{account_id}/orders', 
             data={"class": 'option', "symbol": symbol, "option_symbol": option_symbol, "side": "buy_to_open", "quantity": quantity, "type": order_type, "duration": duration, "tag": position_id}, 
             headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
@@ -138,6 +139,7 @@ def get_last_price(base_url: str, access_token: str, symbol:str) -> dict:
         return print(e)
     
 def position_exit(base_url: str, account_id: str, access_token: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str, position_id: str) -> dict:
+    print(base_url, account_id, access_token, symbol, option_symbol)
     response = requests.post(f'{base_url}accounts/{account_id}/orders', 
                                  params={"account_id": account_id, "class": "Option", "symbol": symbol, "option_symbol": option_symbol, "side": "sell_to_close", "quantity": quantity, "type": order_type, "duration": duration, "tag": position_id}, 
                                  json=None, verify=False, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
