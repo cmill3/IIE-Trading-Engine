@@ -33,6 +33,8 @@ custom:
     closedOrdersTableYQ: icarus-closed-orders-table-dev
     closedOrdersTableINV: icarus-closed-orders-table-inv-dev
     tradingMode: DEV
+    tableList15min: ['icarus-closed-orders-table-dev', 'icarus-closed-orders-table-inv-dev', 'icarus-orders-table-dev', 'icarus-orders-table-inv-dev']
+    tableListdaily: ['yqalerts-model-results-dev']
   prod-val:
     tradingDataBucket: icarus-trading-data
     tradingDataBucketINV: inv-alerts-trading-data
@@ -42,6 +44,8 @@ custom:
     closedOrdersTableYQ: icarus-closed-orders-table
     closedOrdersTableINV: icarus-closed-orders-table-inv
     tradingMode: PAPER
+    tableList15min: ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']
+    tableListdaily: ['yqalerts-model-results']
   # prod:
   #   tableName: prodTable
 
@@ -201,7 +205,7 @@ functions:
     environment:
       TRADING_MODE: "PAPER"
       USER: "CM3"
-      TABLE_LIST: ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']
+      TABLE_LIST: ${self:custom.${self:provider.stage}.tableList15Min}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
@@ -211,7 +215,7 @@ functions:
     environment:
       TRADING_MODE: "PAPER"
       USER: "CM3"
-      TABLE_LIST: ['icarus-models-results-table']
+      TABLE_LIST: ${self:custom.${self:provider.stage}.tableListDaily}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
