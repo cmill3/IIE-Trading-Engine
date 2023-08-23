@@ -7,6 +7,7 @@ name = "pypi"
 pandas = "*"
 yahooquery = "*"
 boto3 = "*"
+requests = "*"
 
 [dev-packages]
 
