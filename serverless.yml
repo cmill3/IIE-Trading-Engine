@@ -34,7 +34,7 @@ custom:
     closedOrdersTableINV: icarus-closed-orders-table-inv-dev
     tradingMode: DEV
     tableList15min: ['icarus-closed-orders-table-dev', 'icarus-closed-orders-table-inv-dev', 'icarus-orders-table-dev', 'icarus-orders-table-inv-dev']
-    tableListdaily: ['yqalerts-model-results-dev']
+    tableListdaily: ['icarus-model-results-table-dev']
   prod-val:
     tradingDataBucket: icarus-trading-data
     tradingDataBucketINV: inv-alerts-trading-data
@@ -45,7 +45,7 @@ custom:
     closedOrdersTableINV: icarus-closed-orders-table-inv
     tradingMode: PAPER
     tableList15min: ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']
-    tableListdaily: ['yqalerts-model-results']
+    tableListdaily: ['icarus-model-results-table']
   # prod:
   #   tableName: prodTable
 
