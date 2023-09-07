@@ -48,9 +48,10 @@ def manage_portfolio_inv(event, context):
     except ValueError as e:
         return "disallowed"
 
+    year, month, day, hour = format_dates(now)
     logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
-    new_trades_df = pull_new_trades_inv()
+    new_trades_df = pull_new_trades_inv(year, month, day, hour)
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
@@ -67,23 +68,18 @@ def pull_new_trades():
     df.reset_index(inplace= True, drop = True)
     return df
 
-def pull_new_trades_inv():
-    trading_strategies = ["day_losers","maP","vdiff_gainP","day_gainers","most_actives","vdiff_gainC"]
-    # keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f'day_gainers/invalerts_potential_trades/{year}')["Contents"]
-    # key = keys[-1]['Key']
-    # query_key = key.split("day_gainers/invalerts_potential_trades/")[1]
-    dt = datetime.now().strftime("%d/%H")
-
+def pull_new_trades_inv(year, month, day, hour):
+    trading_strategies = ["bfC","bfP"]
     trade_dfs = []
     for stratgey in trading_strategies:
         try:
-            dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/{stratgey}/2023/8/{dt}.csv")
+            dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             df = pd.read_csv(dataset.get("Body"))
             df.dropna(inplace = True)
             df.reset_index(inplace= True, drop = True)
             trade_dfs.append(df)
         except:
-            print(f"invalerts_potential_trades/{stratgey}/2023/8/{dt}.csv")
+            print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
     full_df = pd.concat(trade_dfs)
     return full_df
 
@@ -126,9 +122,15 @@ def evaluate_open_trades(orders_df,base_url, access_token):
 def check_time():
     current_utc_time = datetime.utcnow().time()
     
-    if current_utc_time < time(14, 0) or current_utc_time > time(19, 0):
+    if current_utc_time < time(14, 0) or current_utc_time > time(19, 55):
         raise ValueError("The current time is outside the allowed window!")
     return "The time is within the allowed window."
+
+def format_dates(now):
+    now_str = now.strftime("%Y-%m-%d-%H")
+    year, month, day, hour = now_str.split("-")
+    hour = int(hour) - 4
+    return year, month, day, hour
     
 
 if __name__ == "__main__":
