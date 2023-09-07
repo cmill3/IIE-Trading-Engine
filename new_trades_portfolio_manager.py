@@ -133,19 +133,19 @@ def format_dates(now):
     return year, month, day, hour
     
 
-if __name__ == "__main__":
-    trading_strategies = ["day_losers", "maP","vdiff_gainP","day_gainers", "most_actives","vdiff_gainC"]
-    year = datetime.now().year
-    keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f'invalerts_potential_trades/day_gainers/{year}')["Contents"]
-    key = keys[-1]['Key']
+# if __name__ == "__main__":
+#     trading_strategies = ["day_losers", "maP","vdiff_gainP","day_gainers", "most_actives","vdiff_gainC"]
+#     year = datetime.now().year
+#     keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f'invalerts_potential_trades/day_gainers/{year}')["Contents"]
+#     key = keys[-1]['Key']
 
-    trade_dfs = []
-    for strategy in trading_strategies:
-        print(strategy)
-        dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"{strategy}/invalerts_potential_trades/{key}")
-        df = pd.read_csv(dataset.get("Body"))
-        df.dropna(inplace = True)
-        df.reset_index(inplace= True, drop = True)
-        trade_dfs.append(df)
-    full_df = pd.concat(trade_dfs)
-    print(full_df)
+#     trade_dfs = []
+#     for strategy in trading_strategies:
+#         print(strategy)
+#         dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"{strategy}/invalerts_potential_trades/{key}")
+#         df = pd.read_csv(dataset.get("Body"))
+#         df.dropna(inplace = True)
+#         df.reset_index(inplace= True, drop = True)
+#         trade_dfs.append(df)
+#     full_df = pd.concat(trade_dfs)
+#     print(full_df)
