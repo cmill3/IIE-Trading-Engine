@@ -8,14 +8,9 @@ ddbRegion = os.environ['AWS_DEFAULT_REGION']
 table_list = os.environ['TABLE_LIST']
 table_list = ast.literal_eval(table_list)
 current_date_and_time = datetime.now()
-backupName = 'Scheduled_Backup' + "_" + str(datetime.now(current_date_and_time.year) + "_" + str(datetime.now(current_date_and_time.month)) + "_" + str(datetime.now(current_date_and_time.day)) + "_" + str(datetime.now(current_date_and_time.hour)) + "_" + str(datetime.now(current_date_and_time.minute)))
+backupName = 'scheduled_backup_' + str(current_date_and_time.year) + "_" + str(current_date_and_time.month) + "_" + str(current_date_and_time.day) + "_" + str(current_date_and_time.hour) + "_" + str(current_date_and_time.minute)
 print('Backup started for: ', backupName)
 ddb = boto3.client('dynamodb', region_name=ddbRegion)
-
-# for deleting old backup. It will search for old backup and will escape deleting last backup days you mentioned in the backup retention
-# daysToLookBackup=2
-# daysToLookBackup= int(os.environ['BackupRetention'])
-# daysToLookBackupL = daysToLookBackup - 4
  
 def lambda_handler(event, context):
     try:
@@ -34,7 +29,6 @@ def lambda_handler(event, context):
 
             delete_upper_date = datetime.now() - timedelta(days=4)
             delete_lower_date = datetime.now() - timedelta(days=3)
-            # print(delete_upper_date)
 
             # TimeRangeLowerBound is the release of Amazon DynamoDB Backup and Restore - Nov 29, 2017
             response = ddb.list_backups(TableName=item, TimeRangeLowerBound=datetime(delete_lower_date.year, delete_lower_date.month, delete_lower_date.day)) #, TimeRangeUpperBound=datetime(delete_upper_date.year, delete_upper_date.month, delete_upper_date.day))
