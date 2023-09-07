@@ -74,7 +74,7 @@ def evaluate_open_trades(orders_df, base_url, account_id, access_token):
 def check_time():
     current_utc_time = datetime.utcnow().time()
     
-    if current_utc_time < time(13, 45) or current_utc_time > time(19, 0):
+    if current_utc_time < time(13, 45) or current_utc_time > time(19, 55):
         raise ValueError("The current time is outside the allowed window!")
     return "The time is within the allowed window."
     

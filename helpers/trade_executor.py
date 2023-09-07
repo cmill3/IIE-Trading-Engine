@@ -229,6 +229,10 @@ def evaluate_performance_inv(current_price, row):
         sell_code, reason = time_decay_alpha_vdiffP_v0_inv(row, current_price)
     elif strategy == 'most_actives':
        sell_code, reason = time_decay_alpha_ma_v0_inv(row, current_price)
+    elif strategy == 'bfC':
+        sell_code, reason = time_decay_alpha_bfC_v0(row, current_price)
+    elif strategy == 'bfP':
+       sell_code, reason = time_decay_alpha_bfP_v0(row, current_price)
     return sell_code, reason
 
 

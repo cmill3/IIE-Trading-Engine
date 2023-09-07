@@ -26,7 +26,9 @@ prefixes = {
     "day_gainers":"invalerts-xgb-gainers-classifier",
     "day_losers":"invalerts-xgb-losers-classifier",
     "vdiff_gainC":"invalerts-xgb-vdiff-gainC-classifier",
-    "vdiff_gainP":"invalerts-xgb-vdiff-gainP-classifier"
+    "vdiff_gainP":"invalerts-xgb-vdiff-gainP-classifier",
+    "bfC": "invalerts-xgb-bfc-classifier",
+    "bfP": "invalerts-xgb-bfp-classifier",
 }
 
 now = datetime.now()
@@ -48,14 +50,12 @@ def build_trade(event, context):
 
 def build_trade_inv(event, context):
     logger.info('build_trade function started.')
-    df, key = pull_data_inv()
-    logger.info(f'pulled key: {key}')
+    year, month, day, hour = format_dates(now)
+    df  = pull_data_inv(year, month, day, hour)
     df['strategy'] = trading_strategy
     results_df = process_data(df)
     csv = results_df.to_csv()
-    key = key.replace("inv-alerts-full-results", "invalerts_potential_trades")
-    fix_key = key.split(".csv.csv")[0]
-    response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/{now.year}/{now.month}/{now.day}/{now.hour}.csv")
+    response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     print(response)
     return {
         'statusCode': 200
@@ -87,15 +87,13 @@ def pull_data():
     full_df = pd.concat(dfs)
     return full_df, key
 
-def pull_data_inv():
+def pull_data_inv(year, month, day, hour):
     prefix_root = prefixes[trading_strategy]
-    keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f"classifier_predictions/{prefix_root}/{title}")["Contents"]
-    key = keys[-1]['Key']
-    dataset = s3.get_object(Bucket=trading_data_bucket, Key=key)
+    dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{prefix_root}/bf_alerts/{year}/{month}/{day}/{hour}.csv")
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
-    return df, key
+    return df
 
 
 def process_data(df):
@@ -113,8 +111,8 @@ def process_data(df):
     return df
 
 def infer_CP(strategy):
-    call_strategies = ["day_gainers", "most_actives","vdiff_gainC"]
-    put_strategies = ["day_losers", "maP","vdiff_gainP"]
+    call_strategies = ["day_gainers", "most_actives","vdiff_gainC","bfC"]
+    put_strategies = ["day_losers", "maP","vdiff_gainP","bfP"]
     if strategy in call_strategies:
         return "call"
     elif strategy in put_strategies:
@@ -223,6 +221,12 @@ def get_option_chain(symbol, expiry, call_put):
 
     df = pd.DataFrame(details)
     return df
+
+def format_dates(now):
+    now_str = now.strftime("%Y-%m-%d-%H")
+    year, month, day, hour = now_str.split("-")
+    hour = int(hour) - 4
+    return year, month, day, hour
 
 if __name__ == "__main__":
     build_trade(None, None)

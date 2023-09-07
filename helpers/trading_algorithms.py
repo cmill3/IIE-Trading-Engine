@@ -300,6 +300,82 @@ def time_decay_alpha_ma_v0_inv(row, current_price):
         
     return sell_code, reason
 
+def time_decay_alpha_bfC_v0(row, current_price):
+    max_value = calculate_floor_pct(row)
+    Target_pct = .025
+    pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
+    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .015)
+
+    if type(Floor_pct) == float:
+        Floor_pct = -0.015
+
+    if pct_change > (2*Target_pct):
+        Floor_pct += 0.0125
+    elif pct_change > Target_pct:
+        Floor_pct += 0.008
+
+    print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")    
+    day_diff = get_business_days(row['order_transaction_date'])
+    sell_code = 0
+    reason = ""
+    if day_diff < 2:
+        if pct_change <= Floor_pct:
+            sell_code = 2
+            reason = "Hit exit target, sell."
+    elif day_diff >= 2:
+        if pct_change < Floor_pct:
+            sell_code = 2
+            reason = "Hit point of no confidence, sell."
+        elif pct_change >= Target_pct:
+            sell_code = 2
+            reason = "Hit exit target, sell."
+        elif pct_change < (.5*(Target_pct)):
+            sell_code = 2
+            reason = "Failed momentum gate, sell."
+        else:
+            sell_code = 0
+            reason = "Hold."
+
+        
+    return sell_code, reason
+
+def time_decay_alpha_bfP_v0(row, current_price):
+    max_value = calculate_floor_pct(row)
+    Target_pct = -.025
+    pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
+    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .015)
+
+    if type(Floor_pct) == float:
+        Floor_pct = 0.015
+    if pct_change < (2*Target_pct):
+        Floor_pct -= 0.0125
+    elif pct_change < Target_pct:
+        Floor_pct -= 0.008
+
+    print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")    
+    day_diff = get_business_days(row['order_transaction_date'])
+    sell_code = 0
+    reason = ""
+    if day_diff < 2:
+        if pct_change >= Floor_pct:
+            sell_code = 2
+            reason = "Hit exit target, sell."
+    elif day_diff >= 2:
+        if pct_change > Floor_pct:
+            sell_code = 2
+            reason = "Hit point of no confidence, sell."
+        elif pct_change <= Target_pct:
+            sell_code = 2
+            reason = "Hit exit target, sell."
+        elif pct_change > (.5*(Target_pct)):
+            sell_code = 2
+            reason = "Failed momentum gate, sell."
+        else:
+            sell_code = 0
+            reason = "Hold."
+
+        
+    return sell_code, reason
 def time_decay_alpha_maP_v0_inv(row, current_price):
     max_value = calculate_floor_pct(row)
     Target_pct = -.0295
