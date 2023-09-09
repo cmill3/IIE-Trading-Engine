@@ -21,7 +21,7 @@ def lambda_handler(event, context):
             backups_to_delete = ddb.list_backups(TableName=item, TimeRangeLowerBound=datetime(lower_date.year, lower_date.month, lower_date.day))#, TimeRangeUpperBound=datetime(upper_date.year, upper_date.month, upper_date.day))
             deletion_backup_count=len(backups_to_delete['BackupSummaries'])
 
-            delete_upper_date = datetime.utcnow() - timedelta(minutes=15)
+            delete_upper_date = datetime.utcnow() - timedelta(minutes=30)
             delete_lower_date = datetime.utcnow() - timedelta(days=4)
 
             response = ddb.list_backups(TableName=item, TimeRangeUpperBound=delete_upper_date)
