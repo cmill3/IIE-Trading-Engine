@@ -104,11 +104,11 @@ def process_data(df):
     result_df2 = df.apply(lambda row: build_trade_structure_2wk(row), axis=1,result_type='expand')
     df[['trade_details1wk', 'vol_check1wk']] = pd.DataFrame(result_df1, index=df.index)
     df[['trade_details2wk', 'vol_check2wk']] = pd.DataFrame(result_df2, index=df.index)
+    df['sector'] = df['Sym'].apply(lambda Sym: strategy_helper.match_sector(Sym))
     df['sellby_date'] = calculate_sellby_date(d, 3)
     logger.info(f"Data processed successfully: {d}")
     print(df)
     return df
-
 
 def infer_CP(strategy):
     call_strategies = ["day_gainers", "most_actives","vdiff_gainC","bfC"]

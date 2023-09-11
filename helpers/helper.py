@@ -22,6 +22,18 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
         trading_days_to_add -= 1
     return current_date
 
+def pull_symbol(symbol):
+    sym = " ".join(re.findall("[a-zA-Z]+", symbol))
+    underlying_symbol = sym[:-1]
+    return underlying_symbol
+    
+def date_and_time():
+    year = date.today().year
+    month = date.today().month
+    day = date.today().day
+    hour = datetime.datetime.now().hour
+    return year, month, day, hour
+    
 def calculate_dt_features(transaction_date, sell_by):
     transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
     sell_by_dt = datetime(int(sell_by[0:4]), int(sell_by[5:7]), int(sell_by[8:10]),20)
@@ -102,9 +114,9 @@ def calculate_floor_pct(row):
    low_price = trimmed_df['l'].min()
    if len(trimmed_df) == 0:
        return float(row['underlying_purchase_price'])
-   if row['trading_strategy'] in ['maP', 'day_losers','vdiff_gainP','bfP']:
+   if row['trading_strategy'] in ['maP', 'day_losers','vdiff_gainP','bfP','indexP']:
        return low_price
-   elif row['trading_strategy'] in ['most_actives', 'day_gainers','vdiff_gainC','bfC']:
+   elif row['trading_strategy'] in ['most_actives', 'day_gainers','vdiff_gainC','bfC','indexC']:
        return high_price
    else:
         return 0

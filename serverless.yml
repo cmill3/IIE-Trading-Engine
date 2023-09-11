@@ -33,6 +33,8 @@ custom:
     closedOrdersTableYQ: icarus-closed-orders-table-dev
     closedOrdersTableINV: icarus-closed-orders-table-inv-dev
     tradingMode: DEV
+    tableList15min: "['icarus-closed-orders-table-dev', 'icarus-closed-orders-table-inv-dev', 'icarus-orders-table-dev', 'icarus-orders-table-inv-dev']"
+    tableListdaily: "['icarus-model-results-table-dev']"
   prod-val:
     tradingDataBucket: icarus-trading-data
     tradingDataBucketINV: inv-alerts-trading-data
@@ -42,6 +44,8 @@ custom:
     closedOrdersTableYQ: icarus-closed-orders-table
     closedOrdersTableINV: icarus-closed-orders-table-inv
     tradingMode: PAPER
+    tableList15min: ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']
+    tableListdaily: ['icarus-model-results-table']
   # prod:
   #   tableName: prodTable
 
@@ -195,6 +199,37 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-reconciliation-${self:provider.stage}
+    #####
+  dynamo-backup-15-min:
+    handler: alt-storage.dynamo_backup.lambda_handler
+    events:
+      - eventBridge:
+          name: dynamo-15min-schedule
+          description: trigger to backup the dynamo schedule every 15 minutes
+          schedule: rate(15 minutes)
+    environment:
+      TRADING_MODE: "PAPER"
+      USER: "CM3"
+      TABLE_LIST: ${self:custom.${self:provider.stage}.tableList15min}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: dynamo-backup-15-min-${self:provider.stage}
+  dynamo-backup-daily:
+    handler: alt-storage.dynamo_backup.lambda_handler
+    events:
+      - eventBridge:
+          name: dynamo-daily-schedule
+          description: trigger to backup the dynamo schedule daily
+          schedule: rate(24 hours)
+    environment:
+      TRADING_MODE: "PAPER"
+      USER: "CM3"
+      TABLE_LIST: ${self:custom.${self:provider.stage}.tableListdaily}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: dynamo-backup-daily-${self:provider.stage}
   order-controls:
       handler: order_control.run_order_control
       environment:

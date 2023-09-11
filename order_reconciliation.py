@@ -1,14 +1,16 @@
 import helpers.dynamo_helper as db
 import helpers.tradier as trade
+import helpers.helper as helper
 import boto3
 import pandas as pd
+import numpy as np
 import os
 from datetime import datetime
+import re
 
 s3 = boto3.client('s3')
 
 date = datetime.now().strftime("%Y/%m/%d/%H_%M")
-
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 trading_mode = os.getenv('TRADING_MODE')
@@ -25,8 +27,8 @@ def run_reconciliation(event, context):
         pending_csv = pending_df.to_csv()
         response = s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders_enriched/{date}.csv", Body=pending_csv)
         return response
+    exposure_totalling()
     return "No pending orders"
-
 
 
 def pull_pending_trades():
@@ -57,6 +59,26 @@ def format_pending_df(df):
     
     formatted_df = pd.DataFrame(unpacked_data,indexes,columns)
     return formatted_df
+
+def exposure_totalling():
+    # base_url = "https://sandbox.tradier.com/v1/"
+    # account_id = "VA72174659"
+    # access_token = "ld0Mx4KbsOBYwmJApdowZdFcIxO7"
+    #pull all open contract symbols & contract values
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
+    position_list = trade.get_account_positions(base_url, account_id, access_token)
+    # total open trades & values in df
+    df = pd.DataFrame.from_dict(position_list)
+    df['underlying_symbol'] = df['symbol'].apply(lambda symbol: helper.pull_symbol(symbol))
+    agg_functions = {'cost_basis': ['sum', np.mean], 'quantity': 'sum'}
+    df_new = df.groupby(df['underlying_symbol']).aggregate(agg_functions)
+    # export df as csv --> AWS S3
+    year, month, day, hour = helper.date_and_time()
+    bucket = trading_data_bucket
+    df_csv = df_new.to_csv()
+    s3_resource = boto3.resource('s3')
+    s3_resource.Object(bucket, f'positions_exposure/{year}/{month}/{day}/{hour}.csv').put(Body=df_csv.getvalue())
+    return "Exposure Analysis Complete"
 
 if __name__ == "__main__":
     run_reconciliation(None, None)
