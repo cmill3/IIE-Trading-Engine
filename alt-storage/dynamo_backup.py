@@ -16,7 +16,8 @@ ddb = boto3.client('dynamodb', region_name=ddb_region)
 def lambda_handler(event, context):
     try:
         for item in table_list:
-            #Create backup
+            
+            #Creates the backup
             ddb.create_backup(TableName=item, BackupName = backup_name)
             print('Backup has been taken successfully for table:', item)
 
