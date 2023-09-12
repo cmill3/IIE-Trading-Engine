@@ -6,6 +6,7 @@ import ast
 
 ddbRegion = os.environ['AWS_DEFAULT_REGION']
 table_list = os.environ['TABLE_LIST']
+frequency = os.environ['FREQUENCY']
 table_list = ast.literal_eval(table_list)
 current_date_and_time = datetime.now()
 backup_name = 'scheduled_backup_' + str(current_date_and_time.year) + "_" + str(current_date_and_time.month) + "_" + str(current_date_and_time.day) + "_" + str(current_date_and_time.hour) + "_" + str(current_date_and_time.minute)
@@ -15,14 +16,21 @@ ddb = boto3.client('dynamodb', region_name=ddbRegion)
 def lambda_handler(event, context):
     try:
         for item in table_list:
-            # upper_date = datetime.utcnow() - timedelta(minutes=15)
-            lower_date = datetime.utcnow() - timedelta(days=4)
+            if frequency == "15MIN":
+                upper_date = datetime.utcnow() - timedelta(minutes=15)
+                lower_date = datetime.utcnow() - timedelta(days=4)
+                delete_upper_date = datetime.utcnow() - timedelta(minutes=30)
+                delete_lower_date = datetime.utcnow() - timedelta(days=4)
+            elif frequency == "DAILY":
+                upper_date = datetime.utcnow() - timedelta(hours=24)
+                lower_date = datetime.utcnow() - timedelta(days=4)
+                delete_upper_date = datetime.utcnow() - timedelta(hours=24)
+                delete_lower_date = datetime.utcnow() - timedelta(days=4)
+            else:
+                print("frequency env variable failure")
 
             backups_to_delete = ddb.list_backups(TableName=item, TimeRangeLowerBound=datetime(lower_date.year, lower_date.month, lower_date.day))#, TimeRangeUpperBound=datetime(upper_date.year, upper_date.month, upper_date.day))
             deletion_backup_count=len(backups_to_delete['BackupSummaries'])
-
-            delete_upper_date = datetime.utcnow() - timedelta(minutes=30)
-            delete_lower_date = datetime.utcnow() - timedelta(days=4)
 
             response = ddb.list_backups(TableName=item, TimeRangeUpperBound=delete_upper_date)
 
@@ -37,7 +45,7 @@ def lambda_handler(event, context):
             else:
                 print('Backups that meet deletion criteria have been deleted')
 
-    except  ClientError as e:
+    except ClientError as e:
         print(e)
     
     except ValueError as ve:
