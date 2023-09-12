@@ -21,36 +21,19 @@ title = os.getenv("TITLE")
 trading_strategy = os.getenv("TRADING_STRATEGY")
 
 prefixes = {
-    "most_actives": "invalerts-xgb-MA-classifier",
-    "maP":"invalerts-xgb-MAP-classifier",
-    "day_gainers":"invalerts-xgb-gainers-classifier",
-    "day_losers":"invalerts-xgb-losers-classifier",
-    "vdiff_gainC":"invalerts-xgb-vdiff-gainC-classifier",
-    "vdiff_gainP":"invalerts-xgb-vdiff-gainP-classifier",
     "bfC": "invalerts-xgb-bfc-classifier",
     "bfP": "invalerts-xgb-bfp-classifier",
+    "indexC": "invalerts-xgb-indexc-classifier",
+    "indexP": "invalerts-xgb-indexp-classifier",
 }
 
 now = datetime.now()
 d = now.date() # Monday
 
-
-def build_trade(event, context):
-    logger.info('build_trade function started.')
-    df, key = pull_data()
-    logger.info(f'pulled key: {key}')
-    results_df = process_data(df)
-    # csv_buffer = results_df.to_csv("/Users/charlesmiller/Code/PycharmProjects/FFACAP/Icarus/icarus_production/icarus-trading-engine/test.csv")
-    csv = results_df.to_csv()
-    key = key.replace("yqalerts_full_results", "yqalerts_potential_trades")
-    s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"yqalerts_potential_trades/{now.year}/{now.month}/{now.day}/{now.hour}.csv")
-    return {
-        'statusCode': 200
-    }
-
 def build_trade_inv(event, context):
     logger.info('build_trade function started.')
     year, month, day, hour = format_dates(now)
+    logger.info(f'Initializing trade builder: {year}-{month}-{day}-{hour}')
     df  = pull_data_inv(year, month, day, hour)
     df['strategy'] = trading_strategy
     results_df = process_data(df)
@@ -64,28 +47,6 @@ def build_trade_inv(event, context):
 #Non-Explanatory Variables Explained Below:
 #CP = Call/Put (used to represent the Call/Put Trend Value)
 #Sym = Symbol (used to repesent the symbol of the value that we are analyzing)
-
-def pull_data():
-    strategies = ['gainers','losers','ma','maP']
-    dfs = []
-    for strategy in strategies:
-        keys = s3.list_objects(Bucket=model_results_bucket,Prefix=f"{strategy}/full_model_results/3d/classifier/yqalert_{strategy}")["Contents"]
-        key = keys[-1]['Key']
-        dataset = s3.get_object(Bucket=model_results_bucket, Key=key)
-        df = pd.read_csv(dataset.get("Body"))
-        df.dropna(inplace = True)
-        df.reset_index(inplace= True, drop = True)
-        if strategy == "gainers":
-            df['strategy'] = 'day_gainers'
-        elif strategy == "losers":
-            df['strategy'] = 'day_losers'
-        elif strategy == "ma":
-            df['strategy'] = 'most_actives'
-        elif strategy == "maP":
-            df['strategy'] = 'maP'
-        dfs.append(df)
-    full_df = pd.concat(dfs)
-    return full_df, key
 
 def pull_data_inv(year, month, day, hour):
     prefix_root = prefixes[trading_strategy]
@@ -111,8 +72,8 @@ def process_data(df):
     return df
 
 def infer_CP(strategy):
-    call_strategies = ["day_gainers", "most_actives","vdiff_gainC","bfC"]
-    put_strategies = ["day_losers", "maP","vdiff_gainP","bfP"]
+    call_strategies = ["day_gainers", "most_actives","vdiff_gainC","bfC","indexC"]
+    put_strategies = ["day_losers", "maP","vdiff_gainP","bfP","indexP"]
     if strategy in call_strategies:
         return "call"
     elif strategy in put_strategies:
@@ -228,5 +189,5 @@ def format_dates(now):
     hour = int(hour) - 4
     return year, month, day, hour
 
-if __name__ == "__main__":
-    build_trade(None, None)
+# if __name__ == "__main__":
+#     build_trade(None, None)

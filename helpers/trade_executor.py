@@ -27,8 +27,6 @@ order_type = "market"
 duration = "GTC"
 acct_balance_min = 20000
 
-leveraged_etfs = ["TQQQ","SQQQ","SPXS","SPXL","SOXL","SOXS"]
-
 
 def run_executor(data, trading_mode, base_url, account_id, access_token, table, current_positions):
     order_ids = execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, current_positions)
@@ -49,8 +47,6 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
     orders_list = []
     accepted_orders = []
     for i, row in data.iterrows():
-        # account_balance = trade.get_account_balance(base_url, account_id, access_token)
-        # is_valid = account_value_checkpoint(account_balance)
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
                                     
@@ -73,8 +69,6 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
             for detail in row['trade_details']:
                 print(row)
                 try: 
-                    # is_valid = trade.verify_contract(detail["contractSymbol"],base_url,access_token)
-                    # print(is_valid)
                     open_order_id, status_code, json_response = trade.place_order(base_url, account_id, access_token, row['symbol'], 
                                                                             detail["contract_ticker"], detail['quantity'], 
                                                                             order_type, duration, position_id)
@@ -105,10 +99,6 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
             row_data['purchase_price'] = trade.get_last_price(base_url, access_token, row['symbol'])
             full_transactions_data[position_id] = row_data
         
-    # for trade_obj in transaction_data:
-    #     full_order_list = []
-    #     response, order_items = db.create_dynamo_record(trade_obj, trading_mode)
-    #     full_order_list.append(order_items)
 
     df = pd.DataFrame.from_dict(full_transactions_data)
     final_csv = df.to_csv()
@@ -132,13 +122,6 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
     pending_csv = pending_df.to_csv()
     s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders_enriched/{user}/{date}.csv", Body=pending_csv)
     return accepted_df
-
-# def pull_open_orders_df():
-#     keys = s3.list_objects(Bucket=trading_data_bucket, Prefix="open_orders_data/")["Contents"]
-#     query_key = keys[-1]['Key']
-#     data = s3.get_object(Bucket=trading_data_bucket, Key=query_key)
-#     df = pd.read_csv(data.get("Body"))
-#     return df
 
 def process_dynamo_orders(formatted_df, base_url, account_id, access_token, trading_mode, table):
     # for index, row in formatted_df.iterrows():
@@ -187,9 +170,7 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
 
 def date_performance_check(base_url, access_token,row):
     current_price = trade.get_last_price(base_url, access_token,row['underlying_symbol'])
-    if user == "yq":
-        sell_code, reason = evaluate_performance(current_price, row)
-    elif user == "inv":
+    if user == "inv":
         sell_code, reason = evaluate_performance_inv(current_price, row)
     logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
     if sell_code == 2 or current_date > row['sellby_date']:
@@ -202,33 +183,13 @@ def date_performance_check(base_url, access_token,row):
         return 2, reason
     else:
         return 0, reason
-    
-def evaluate_performance(current_price, row):
-    strategy = row['trading_strategy']
-    if strategy == 'maP':
-        sell_code, reason = time_decay_alpha_maP_v0(row, current_price)
-    elif strategy == 'day_losers':
-        sell_code, reason = time_decay_alpha_losers_v0(row, current_price)
-    elif strategy == 'day_gainers':
-        sell_code, reason = time_decay_alpha_gainers_v0(row, current_price)
-    elif strategy == 'most_actives':
-       sell_code, reason = time_decay_alpha_ma_v0(row, current_price)
-    return sell_code, reason
 
 def evaluate_performance_inv(current_price, row):
     strategy = row['trading_strategy']
-    if strategy == 'maP':
-        sell_code, reason = time_decay_alpha_maP_v0_inv(row, current_price)
-    elif strategy == 'day_losers':
-        sell_code, reason = time_decay_alpha_losers_v0_inv(row, current_price)
-    elif strategy == 'day_gainers':
-        sell_code, reason = time_decay_alpha_gainers_v0_inv(row, current_price)
-    elif strategy == 'vdiff_gainC':
-        sell_code, reason = time_decay_alpha_vdiffC_v0_inv(row, current_price)
-    elif strategy == 'vdiff_gainP':
-        sell_code, reason = time_decay_alpha_vdiffP_v0_inv(row, current_price)
-    elif strategy == 'most_actives':
-       sell_code, reason = time_decay_alpha_ma_v0_inv(row, current_price)
+    if strategy == 'indexC':
+        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price)
+    elif strategy == 'indexP':
+        sell_code, reason = time_decay_alpha_indexP_v0(row, current_price)
     elif strategy == 'bfC':
         sell_code, reason = time_decay_alpha_bfC_v0(row, current_price)
     elif strategy == 'bfP':

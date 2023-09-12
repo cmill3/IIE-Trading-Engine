@@ -44,8 +44,8 @@ custom:
     closedOrdersTableYQ: icarus-closed-orders-table
     closedOrdersTableINV: icarus-closed-orders-table-inv
     tradingMode: PAPER
-    tableList15min: ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']
-    tableListdaily: ['icarus-model-results-table']
+    tableList15min: "['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']"
+    tableListdaily: "['icarus-model-results-table']"
   # prod:
   #   tableName: prodTable
 
@@ -114,32 +114,32 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-invBFP-${self:provider.stage}
-  # icarus-trade-builder-invMA:
-  #   handler: icarus_trade_builder.build_trade_inv
-  #   environment:
-  #     MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     USER: "inv"
-  #     TRADING_STRATEGY: "most_actives"
-  #     TITLE: "most_actives"
-  #     TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
-  #   layers:
-  #     - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
-  #   role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-  #   name: icarus-trade-builder-invMA-${self:provider.stage}
-  # icarus-trade-builder-invMAP:
-  #   handler: icarus_trade_builder.build_trade_inv
-  #   environment:
-  #     MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     USER: "inv"
-  #     TRADING_STRATEGY: "maP"
-  #     TITLE: "most_actives"
-  #     TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
-  #   layers:
-  #     - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
-  #   role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-  #   name: icarus-trade-builder-invMAP-${self:provider.stage}
+  icarus-trade-builder-indexC:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      USER: "inv"
+      TRADING_STRATEGY: "indexC"
+      TITLE: "indexC"
+      TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-indexC-${self:provider.stage}
+  icarus-trade-builder-indexP:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      USER: "inv"
+      TRADING_STRATEGY: "indexP"
+      TITLE: "indexP"
+      TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-indexP-${self:provider.stage}
   # icarus-trade-builder-invVDGC:
   #   handler: icarus_trade_builder.build_trade_inv
   #   environment:
@@ -350,6 +350,36 @@ stepFunctions:
                     Type: Task
                     Resource: 
                       Fn::GetAtt: [icarus-trade-builder-invBFP, Arn]
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: BuildTradeIndexC
+                States:
+                  BuildTradeIndexC:
+                    Type: Task
+                    Resource:
+                      Fn::GetAtt: [icarus-trade-builder-indexC, Arn]
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: BuildTradeIndexP
+                States:
+                  BuildTradeIndexP:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [icarus-trade-builder-indexP, Arn]
                     Retry:
                     - ErrorEquals:
                       - Lambda.ServiceException

@@ -22,24 +22,6 @@ table = os.getenv("TABLE")
 now = datetime.now()
 dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-leveraged_etfs = ["TQQQ","SQQQ","SPXS","SPXL","SOXL","SOXS"]
-
-def manage_portfolio(event, context):
-    current_positions = event[-1]['open_positions']   
-    try:
-        check_time()
-    except ValueError as e:
-        return "disallowed"
-
-
-    logger.info(f'Initializing new trades PM: {dt}')
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
-    new_trades_df = pull_new_trades()
-    ## Future feature to deal with descrepancies between our records and tradier
-    # if len(open_trades_df) > len(open_trades_list):
-    # TO-DO create an alarm mechanism to report this 
-    trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positions)
-    return "success"
 
 def manage_portfolio_inv(event, context):
     current_positions = event['Payload'][-1]['open_positions']
@@ -59,15 +41,6 @@ def manage_portfolio_inv(event, context):
     return "success"
 
 
-def pull_new_trades():
-    # date_str = helpers.build_date()
-    dt = datetime.now().strftime("%d/%H")
-    dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"yqalerts_potential_trades/2023/8/{dt}.csv")
-    df = pd.read_csv(dataset.get("Body"))
-    df.dropna(inplace = True)
-    df.reset_index(inplace= True, drop = True)
-    return df
-
 def pull_new_trades_inv(year, month, day, hour):
     trading_strategies = ["bfC","bfP"]
     trade_dfs = []
@@ -86,10 +59,9 @@ def pull_new_trades_inv(year, month, day, hour):
 
 def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    full_trades = approved_trades_df.loc[~approved_trades_df['symbol'].isin(leveraged_etfs)]
     if trading_mode == "DEV":
         return "test execution"
-    execution_result = te.run_executor(full_trades, trading_mode, base_url, account_id, access_token, table, current_positons)
+    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons)
     return execution_result
 
 
