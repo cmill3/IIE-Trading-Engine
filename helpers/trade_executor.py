@@ -217,22 +217,14 @@ def evaluate_performance(current_price, row):
 
 def evaluate_performance_inv(current_price, row):
     strategy = row['trading_strategy']
-    if strategy == 'maP':
-        sell_code, reason = time_decay_alpha_maP_v0_inv(row, current_price)
-    elif strategy == 'day_losers':
-        sell_code, reason = time_decay_alpha_losers_v0_inv(row, current_price)
-    elif strategy == 'day_gainers':
-        sell_code, reason = time_decay_alpha_gainers_v0_inv(row, current_price)
-    elif strategy == 'vdiff_gainC':
-        sell_code, reason = time_decay_alpha_vdiffC_v0_inv(row, current_price)
-    elif strategy == 'vdiff_gainP':
-        sell_code, reason = time_decay_alpha_vdiffP_v0_inv(row, current_price)
-    elif strategy == 'most_actives':
-       sell_code, reason = time_decay_alpha_ma_v0_inv(row, current_price)
-    elif strategy == 'bfC':
+    if strategy == 'bfC':
         sell_code, reason = time_decay_alpha_bfC_v0(row, current_price)
     elif strategy == 'bfP':
        sell_code, reason = time_decay_alpha_bfP_v0(row, current_price)
+    elif strategy == 'indexC':
+        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price)
+    elif strategy == 'indexP':
+        sell_code, reason = time_decay_alpha_indexP_v0(row, current_price)
     return sell_code, reason
 
 

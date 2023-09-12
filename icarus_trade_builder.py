@@ -21,14 +21,10 @@ title = os.getenv("TITLE")
 trading_strategy = os.getenv("TRADING_STRATEGY")
 
 prefixes = {
-    "most_actives": "invalerts-xgb-MA-classifier",
-    "maP":"invalerts-xgb-MAP-classifier",
-    "day_gainers":"invalerts-xgb-gainers-classifier",
-    "day_losers":"invalerts-xgb-losers-classifier",
-    "vdiff_gainC":"invalerts-xgb-vdiff-gainC-classifier",
-    "vdiff_gainP":"invalerts-xgb-vdiff-gainP-classifier",
     "bfC": "invalerts-xgb-bfc-classifier",
     "bfP": "invalerts-xgb-bfp-classifier",
+    "indexC": "invalerts-xgb-indexc-classifier",
+    "indexP": "invalerts-xgb-indexp-classifier",
 }
 
 now = datetime.now()
@@ -111,8 +107,8 @@ def process_data(df):
     return df
 
 def infer_CP(strategy):
-    call_strategies = ["day_gainers", "most_actives","vdiff_gainC","bfC"]
-    put_strategies = ["day_losers", "maP","vdiff_gainP","bfP"]
+    call_strategies = ["bfC","indexC","bfC_1d","indexC_1d"]
+    put_strategies = ["bfP","indexP","bfP_1d","indexP_1d"]
     if strategy in call_strategies:
         return "call"
     elif strategy in put_strategies:

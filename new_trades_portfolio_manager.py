@@ -22,8 +22,6 @@ table = os.getenv("TABLE")
 now = datetime.now()
 dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-leveraged_etfs = ["TQQQ","SQQQ","SPXS","SPXL","SOXL","SOXS"]
-
 def manage_portfolio(event, context):
     current_positions = event[-1]['open_positions']   
     try:
@@ -69,7 +67,7 @@ def pull_new_trades():
     return df
 
 def pull_new_trades_inv(year, month, day, hour):
-    trading_strategies = ["bfC","bfP"]
+    trading_strategies = ["bfC","bfP","indexC","indexP",]
     trade_dfs = []
     for stratgey in trading_strategies:
         try:
@@ -86,10 +84,9 @@ def pull_new_trades_inv(year, month, day, hour):
 
 def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    full_trades = approved_trades_df.loc[~approved_trades_df['symbol'].isin(leveraged_etfs)]
     if trading_mode == "DEV":
         return "test execution"
-    execution_result = te.run_executor(full_trades, trading_mode, base_url, account_id, access_token, table, current_positons)
+    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons)
     return execution_result
 
 
