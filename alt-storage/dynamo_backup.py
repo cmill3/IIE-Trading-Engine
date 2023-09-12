@@ -22,15 +22,9 @@ def lambda_handler(event, context):
 
             #Change variables depending on frequency from YAML env variable
             if frequency == "15MIN":
-                upper_date = datetime.utcnow() - timedelta(minutes=15)
-                lower_date = datetime.utcnow() - timedelta(days=4)
                 delete_upper_date = datetime.utcnow() - timedelta(minutes=30)
-                delete_lower_date = datetime.utcnow() - timedelta(days=4)
             elif frequency == "DAILY":
-                upper_date = datetime.utcnow() - timedelta(hours=24)
-                lower_date = datetime.utcnow() - timedelta(days=4)
-                delete_upper_date = datetime.utcnow() - timedelta(hours=24)
-                delete_lower_date = datetime.utcnow() - timedelta(days=4)
+                delete_upper_date = datetime.utcnow() - timedelta(hours=48)
             else:
                 print("frequency env variable failure")
 
