@@ -17,38 +17,41 @@ trading_mode = os.getenv('TRADING_MODE')
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
-title = os.getenv("TITLE")
-trading_strategy = os.getenv("TRADING_STRATEGY")
 
 prefixes = {
     "bfC": "invalerts-xgb-bfc-classifier",
     "bfP": "invalerts-xgb-bfp-classifier",
     "indexC": "invalerts-xgb-indexc-classifier",
     "indexP": "invalerts-xgb-indexp-classifier",
+    "bfC_1d":  "invalerts-xgb-bfc-1d-classifier",
+    "bfP_1d": "invalerts-xgb-bfp-1d-classifier",
 }
 
 now = datetime.now()
 d = now.date() # Monday
 
 def build_trade_inv(event, context):
+    strategy_names = os.getenv("TRADING_STRATEGY")
     logger.info('build_trade function started.')
     year, month, day, hour = format_dates(now)
-    logger.info(f'Initializing trade builder: {year}-{month}-{day}-{hour}')
-    df  = pull_data_inv(year, month, day, hour)
-    df['strategy'] = trading_strategy
-    results_df = process_data(df)
-    csv = results_df.to_csv()
-    response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
-    print(response)
+    strategy_names = strategy_names.split(",")
+    logger.info(strategy_names)
+    for trading_strategy in strategy_names:
+        logger.info(f'Initializing trade builder: {year}-{month}-{day}-{hour}')
+        df  = pull_data_inv(trading_strategy,year, month, day, hour)
+        df['strategy'] = trading_strategy
+        results_df = process_data(df)
+        csv = results_df.to_csv()
+        logger.info(f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
+        response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     return {
         'statusCode': 200
     }
 
 #Non-Explanatory Variables Explained Below:
 #CP = Call/Put (used to represent the Call/Put Trend Value)
-#Sym = Symbol (used to repesent the symbol of the value that we are analyzing)
 
-def pull_data_inv(year, month, day, hour):
+def pull_data_inv(trading_strategy,year, month, day, hour):
     prefix_root = prefixes[trading_strategy]
     dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{prefix_root}/bf_alerts/{year}/{month}/{day}/{hour}.csv")
     df = pd.read_csv(dataset.get("Body"))
@@ -65,16 +68,15 @@ def process_data(df):
     result_df2 = df.apply(lambda row: build_trade_structure_2wk(row), axis=1,result_type='expand')
     df[['trade_details1wk', 'vol_check1wk']] = pd.DataFrame(result_df1, index=df.index)
     df[['trade_details2wk', 'vol_check2wk']] = pd.DataFrame(result_df2, index=df.index)
-    df['sector'] = df['Sym'].apply(lambda Sym: strategy_helper.match_sector(Sym))
+    df['sector'] = df['symbol'].apply(lambda Sym: strategy_helper.match_sector(Sym))
     df['sellby_date'] = calculate_sellby_date(d, 3)
     logger.info(f"Data processed successfully: {d}")
-    print(df)
     return df
 
 def infer_CP(strategy):
-    call_strategies = ["day_gainers", "most_actives","vdiff_gainC","bfC","indexC"]
-    put_strategies = ["day_losers", "maP","vdiff_gainP","bfP","indexP"]
-    if strategy in call_strategies:
+    call_strategies = ["bfC","indexC","bfC_1d","indexC_1d"]
+    put_strategies = ["bfP","indexP","bfP_1d","indexP_1d"]
+    if strategy in call_strategies:   
         return "call"
     elif strategy in put_strategies:
         return "put"
@@ -189,5 +191,5 @@ def format_dates(now):
     hour = int(hour) - 4
     return year, month, day, hour
 
-# if __name__ == "__main__":
-#     build_trade(None, None)
+if __name__ == "__main__":
+    build_trade_inv(None, None)

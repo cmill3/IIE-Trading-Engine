@@ -46,28 +46,30 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
     failed_transactions = []
     orders_list = []
     accepted_orders = []
+    logger.info(current_positions)
     for i, row in data.iterrows():
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
                                     
         if pos_id in current_positions:
             logger.info(pos_id)
-            logger.info(current_positions)
             is_valid = False
             logger.info(is_valid)
         else:
             logger.info(pos_id)
-            logger.info(current_positions)
             is_valid = True
             logger.info(is_valid)
 
         if is_valid:
-            if row['vol_check2wk'] == False:
-                logger.info(f'no contracts to trade: {position_id}')
-                continue
-            row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
+            if row['strategy'] in ['indexC','indexP','bfC','bfP']:
+                row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
+            elif row['strategy'] in ['bfC_1d','bfP_1d','indexC_1d','indexP_1d']:
+                if now.date().weekday() <= 2:
+                    row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
+                else:
+                    row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
+            
             for detail in row['trade_details']:
-                print(row)
                 try: 
                     open_order_id, status_code, json_response = trade.place_order(base_url, account_id, access_token, row['symbol'], 
                                                                             detail["contract_ticker"], detail['quantity'], 
@@ -194,6 +196,10 @@ def evaluate_performance_inv(current_price, row):
         sell_code, reason = time_decay_alpha_bfC_v0(row, current_price)
     elif strategy == 'bfP':
        sell_code, reason = time_decay_alpha_bfP_v0(row, current_price)
+    elif strategy == 'bfP_1d':
+        sell_code, reason = time_decay_alpha_bfP_1d_v0(row, current_price)
+    elif strategy == 'bfC_1d':
+        sell_code, reason = time_decay_alpha_bfC_1d_v0(row, current_price)
     return sell_code, reason
 
 

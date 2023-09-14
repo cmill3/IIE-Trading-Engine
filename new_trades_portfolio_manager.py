@@ -25,6 +25,7 @@ dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
 def manage_portfolio_inv(event, context):
     current_positions = event['Payload'][-1]['open_positions']
+    # current_positions = []
     try:
         check_time()
     except ValueError as e:
@@ -42,16 +43,19 @@ def manage_portfolio_inv(event, context):
 
 
 def pull_new_trades_inv(year, month, day, hour):
-    trading_strategies = ["bfC","bfP"]
+    trading_strategies = ["bfC","bfP",'indexC','indexP','bfC_1d','bfP_1d']
     trade_dfs = []
     for stratgey in trading_strategies:
         try:
+            print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             df = pd.read_csv(dataset.get("Body"))
-            df.dropna(inplace = True)
+            df.dropna(subset=["trade_details2wk"],inplace=True)
+            df.dropna(subset=["trade_details1wk"],inplace=True)
             df.reset_index(inplace= True, drop = True)
             trade_dfs.append(df)
-        except:
+        except Exception as e:
+            print(e)
             print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
     full_df = pd.concat(trade_dfs)
     return full_df
@@ -106,18 +110,9 @@ def format_dates(now):
     
 
 # if __name__ == "__main__":
-#     trading_strategies = ["day_losers", "maP","vdiff_gainP","day_gainers", "most_actives","vdiff_gainC"]
-#     year = datetime.now().year
-#     keys = s3.list_objects(Bucket=trading_data_bucket,Prefix=f'invalerts_potential_trades/day_gainers/{year}')["Contents"]
-#     key = keys[-1]['Key']
-
-#     trade_dfs = []
-#     for strategy in trading_strategies:
-#         print(strategy)
-#         dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"{strategy}/invalerts_potential_trades/{key}")
-#         df = pd.read_csv(dataset.get("Body"))
-#         df.dropna(inplace = True)
-#         df.reset_index(inplace= True, drop = True)
-#         trade_dfs.append(df)
-#     full_df = pd.concat(trade_dfs)
-#     print(full_df)
+#     accepted_df = pd.read_csv("17_19.csv")
+#     user="inv"
+#     trading_mode = "PAPER"
+#     table = "icarus-orders-table-inv"
+#     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
+#     pending_orders = te.process_dynamo_orders(accepted_df, base_url, account_id, access_token, trading_mode, table)

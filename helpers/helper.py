@@ -114,9 +114,9 @@ def calculate_floor_pct(row):
    low_price = trimmed_df['l'].min()
    if len(trimmed_df) == 0:
        return float(row['underlying_purchase_price'])
-   if row['trading_strategy'] in ['maP', 'day_losers','vdiff_gainP','bfP','indexP']:
+   if row['trading_strategy'] in ['bfP','indexP',"bfP_1d","indexP_1d"]:
        return low_price
-   elif row['trading_strategy'] in ['most_actives', 'day_gainers','vdiff_gainC','bfC','indexC']:
+   elif row['trading_strategy'] in ['bfC','indexC',"bfC_1d","indexC_1d"]:
        return high_price
    else:
         return 0
