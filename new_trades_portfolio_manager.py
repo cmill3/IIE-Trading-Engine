@@ -39,7 +39,7 @@ def manage_portfolio_inv(event, context):
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
     trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positions)
-    return "success"
+    return trades_placed
 
 
 def pull_new_trades_inv(year, month, day, hour):

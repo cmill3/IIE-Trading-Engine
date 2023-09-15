@@ -425,12 +425,14 @@ def bet_sizer(contracts, date, spread_length, call_put):
     else:
         vol_check = "True"
     spread_cost = calculate_spread_cost(contracts)
-    sized_contracts = finalize_trade(contracts, spread_cost, target_cost)
-    if sized_contracts != None:
-        sized_spread_cost = calculate_spread_cost(sized_contracts)
-    else:
-        print(contracts)
-    return sized_contracts, vol_check
+    quantities = finalize_trade(contracts, spread_cost, target_cost)
+    for contract, index in enumerate(contracts):
+        contract['quantity'] = quantities[index]
+    # if sized_contracts != None:
+    #     sized_spread_cost = calculate_spread_cost(sized_contracts)
+    # else:
+    #     print(contracts)
+    return contracts, vol_check
 
 def pull_trading_balance():
     ### This is hardcoded for now, but will be replaced with a call to the tradier API
@@ -464,31 +466,36 @@ def finalize_trade(contracts_details, spread_cost, target_cost):
         spread_cost, spread_multiplier, contracts_details = add_spread_cost(spread_cost, target_cost, contracts_details)
         return contracts_details
 
-# def finalize_trade(contracts_details, spread_cost, target_cost):
-#     if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
-#         return contracts_details
-#     elif spread_cost > (1.1*target_cost):
-#         spread2_cost = calculate_spread_cost(contracts_details[0:2])
-#         if spread2_cost < (1.1*target_cost):
-#             return contracts_details[0:2]
-#         else:
-#             contract = contracts_details[0]
-#             single_contract_cost = 100 * contract['last_price']
-#             if single_contract_cost > (1.1*target_cost):
-#                 contract = contracts_details[1]
-#                 single_contract_cost = 100 * contract['last_price']
-#                 if single_contract_cost > (1.1*target_cost):
-#                     contract = contracts_details[2]
-#                     single_contract_cost = 100 * contract['last_price']
-#                 else:
-#                     return []
-#             else:
-#                 return contract 
-#     elif spread_cost < (.9*target_cost):
-#         spread_cost, spread_multiplier, contracts_details = add_spread_cost(spread_cost, target_cost, contracts_details)
-#         return contracts_details
-#     else:
-#         return []
+def finalize_trade_v2(contracts_details, spread_cost, target_cost):
+    if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
+        return [1,1,1]
+    elif spread_cost > (1.1*target_cost):
+        spread2_cost = calculate_spread_cost(contracts_details[1:])
+        if spread2_cost < (1.1*target_cost):
+            return [0,1,1]
+        else:
+            contract = contracts_details[0]
+            single_contract_cost = 100 * contract['last_price']
+            if single_contract_cost > (1.1*target_cost):
+                contract = contracts_details[1]
+                single_contract_cost = 100 * contract['last_price']
+                if single_contract_cost > (1.1*target_cost):
+                    contract = contracts_details[2]
+                    single_contract_cost = 100 * contract['last_price']
+                    if single_contract_cost > (1.1*target_cost):
+                        return [0,0,0]
+                    else:
+                        return [0,0,1]
+                else:
+                    return [0,1,0]
+            else:
+                return [1,0,0] 
+    elif spread_cost < (.9*target_cost):
+        spread_cost, spread_multiplier, contracts_details = add_spread_cost(spread_cost, target_cost, contracts_details)
+        return [spread_multiplier,spread_multiplier,spread_multiplier]
+    else:
+        print("ERROR")
+        return [0,0,0]
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):
     spread_multiplier = 1
