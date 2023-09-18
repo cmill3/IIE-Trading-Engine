@@ -70,6 +70,8 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                     row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
             
             for detail in row['trade_details']:
+                if detail['quantity'] == 0:
+                    continue
                 try: 
                     open_order_id, status_code, json_response = trade.place_order(base_url, account_id, access_token, row['symbol'], 
                                                                             detail["contract_ticker"], detail['quantity'], 

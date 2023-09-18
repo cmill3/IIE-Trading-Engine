@@ -425,9 +425,15 @@ def bet_sizer(contracts, date, spread_length, call_put):
     else:
         vol_check = "True"
     spread_cost = calculate_spread_cost(contracts)
-    quantities = finalize_trade(contracts, spread_cost, target_cost)
-    for contract, index in enumerate(contracts):
-        contract['quantity'] = quantities[index]
+    quantities = finalize_trade_v2(contracts, spread_cost, target_cost)
+    for index, contract in enumerate(contracts):
+        try:
+            contract['quantity'] = quantities[index]
+            print(contract['quantity'])
+        except:
+            print("ERROR")
+            print(contracts)
+            print(quantities)
     # if sized_contracts != None:
     #     sized_spread_cost = calculate_spread_cost(sized_contracts)
     # else:
@@ -449,22 +455,22 @@ def build_volume_features(df):
     avg_transactions = df['n'].mean()
     return avg_volume, avg_transactions
 
-def finalize_trade(contracts_details, spread_cost, target_cost):
-    if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
-        return contracts_details
-    elif spread_cost > (1.1*target_cost):
-        spread2_cost = calculate_spread_cost(contracts_details[0:2])
-        if spread2_cost < (1.1*target_cost):
-            return contracts_details[0:2]
-        else:
-            single_contract_cost = 100 * contracts_details[0]['last_price']
-            if single_contract_cost > (1.1*target_cost):
-                return []
-            else:
-                return contracts_details[0:1]    
-    elif spread_cost < (.9*target_cost):
-        spread_cost, spread_multiplier, contracts_details = add_spread_cost(spread_cost, target_cost, contracts_details)
-        return contracts_details
+# def finalize_trade(contracts_details, spread_cost, target_cost):
+#     if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
+#         return contracts_details
+#     elif spread_cost > (1.1*target_cost):
+#         spread2_cost = calculate_spread_cost(contracts_details[0:2])
+#         if spread2_cost < (1.1*target_cost):
+#             return contracts_details[0:2]
+#         else:
+#             single_contract_cost = 100 * contracts_details[0]['last_price']
+#             if single_contract_cost > (1.1*target_cost):
+#                 return []
+#             else:
+#                 return contracts_details[0:1]    
+#     elif spread_cost < (.9*target_cost):
+#         spread_cost, spread_multiplier, contracts_details = add_spread_cost(spread_cost, target_cost, contracts_details)
+#         return contracts_details
 
 def finalize_trade_v2(contracts_details, spread_cost, target_cost):
     if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
@@ -491,17 +497,21 @@ def finalize_trade_v2(contracts_details, spread_cost, target_cost):
             else:
                 return [1,0,0] 
     elif spread_cost < (.9*target_cost):
-        spread_cost, spread_multiplier, contracts_details = add_spread_cost(spread_cost, target_cost, contracts_details)
-        return [spread_multiplier,spread_multiplier,spread_multiplier]
+        spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
+        if add_one:  
+            return [(spread_multiplier+1),spread_multiplier,spread_multiplier]
+        else:
+            return [spread_multiplier,spread_multiplier,spread_multiplier]
     else:
         print("ERROR")
         return [0,0,0]
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):
+    add_one = False
     spread_multiplier = 1
     total_cost = spread_cost
     if spread_cost == 0:
-        return 0, 0, []
+        return 0, False
     else:
         while total_cost <= (1.1*target_cost):
             spread_multiplier += 1
@@ -512,11 +522,9 @@ def add_spread_cost(spread_cost, target_cost, contracts_details):
             total_cost -= spread_cost
 
         if total_cost < (.67*target_cost):
-            sized_contracts = contracts_details.append(contracts_details[0])
-        else:
-            sized_contracts = contracts_details * spread_multiplier
+            add_one = True
 
-    return spread_cost, spread_multiplier, sized_contracts
+    return spread_multiplier, add_one
 
 
     

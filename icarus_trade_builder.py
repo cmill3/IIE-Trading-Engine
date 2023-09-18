@@ -48,7 +48,7 @@ def build_trade_inv(event, context):
             results_df = process_data(df)
         csv = results_df.to_csv()
         logger.info(f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
-        response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
+        response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/test/{year}/{month}/{day}/{hour}.csv")
     return {
         'statusCode': 200
     }
@@ -57,8 +57,9 @@ def build_trade_inv(event, context):
 #CP = Call/Put (used to represent the Call/Put Trend Value)
 
 def pull_data_inv(trading_strategy,year, month, day, hour):
-    prefix_root = prefixes[trading_strategy]
-    dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{prefix_root}/bf_alerts/{year}/{month}/{day}/{hour}.csv")
+    # prefix_root = prefixes[trading_strategy]
+    # dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{prefix_root}/bf_alerts/{year}/{month}/{day}/{hour}.csv")
+    dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/invalerts-xgb-bfc-classifier/bf_alerts/2023/09/18/15.csv")
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
@@ -82,8 +83,8 @@ def process_data_index(df):
     df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
     df['expiry_1wk'] = Date_1wk()
     df['expiry_2wk'] = Date_2wk()
-    result_df1 = df.apply(lambda row: build_trade_structure_1wk(row), axis=1,result_type='expand')
-    result_df2 = df.apply(lambda row: build_trade_structure_2wk(row), axis=1,result_type='expand')
+    result_df1 = df.apply(lambda row: build_trade_structure_1d(row), axis=1,result_type='expand')
+    result_df2 = df.apply(lambda row: build_trade_structure_3d(row), axis=1,result_type='expand')
     df[['trade_details1wk', 'vol_check1wk']] = pd.DataFrame(result_df1, index=df.index)
     df[['trade_details2wk', 'vol_check2wk']] = pd.DataFrame(result_df2, index=df.index)
     df['sector'] = df['symbol'].apply(lambda Sym: strategy_helper.match_sector(Sym))
@@ -114,23 +115,13 @@ def build_trade_structure_1d(row):
     underlying_price = tradier.get_last_price(base_url, access_token, row['symbol'])
     try:
         option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
-        # if row['strategy'] == 'day_losers':
-        #     if len(option_chain) < 12:
-        #         contracts = None
-        #         return contracts
-        # else:
-        #     if len(option_chain) < 20:  
-        #         contracts = None
-        #         return contracts
         contracts_1wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
         trade_details_1wk, vol_check = trading_algorithms.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'])
     except Exception as e:
         print("FAIL")
-        trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
         print(f"Could not build spread for {row['symbol']}: {e}")
         return pd.DataFrame(), "FALSE"
-    # trade_details_1wk['underlying_price'] = underlying_price
     return trade_details_1wk, vol_check
 
 def build_trade_structure_3d(row):
@@ -138,71 +129,46 @@ def build_trade_structure_3d(row):
     underlying_price = tradier.get_last_price(base_url, access_token, row['symbol'])
     try:
         option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
-        # option_chain = pd.concat([ochain_1wk, ochain_2wk])
-        # if row['strategy'] == 'day_losers':
-        #     if len(option_chain) < 12:
-        #         contracts = None
-        #         return contracts
-        # else:
-        #     if len(option_chain) < 20:
-        #         contracts = None
-        #         return contracts
         contracts_2wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
         trade_details_2wk, vol_check = trading_algorithms.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'])
     except Exception as e:
-        trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
         print(f"Could not build spread for {row['symbol']}: {e}")
         return pd.DataFrame(), "FALSE"
-    # trade_details_2wk['underlying_price'] = underlying_price
     return trade_details_2wk, vol_check
 
 def build_trade_structure_1wk(row):
     base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
     underlying_price = tradier.get_last_price(base_url, access_token, row['symbol'])
-    try:
-        option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
-        # if row['strategy'] == 'day_losers':
-        #     if len(option_chain) < 12:
-        #         contracts = None
-        #         return contracts
-        # else:
-        #     if len(option_chain) < 20:  
-        #         contracts = None
-        #         return contracts
-        contracts_1wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
-        trade_details_1wk, vol_check = trading_algorithms.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'])
-    except Exception as e:
-        print("FAIL")
-        trade_details = None
-        logger.info(f"Could not build spread for {row['symbol']}: {e}")
-        print(f"Could not build spread for {row['symbol']}: {e}")
-        return pd.DataFrame(), "FALSE"
-    # trade_details_1wk['underlying_price'] = underlying_price
+    option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
+    contracts_1wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
+    trade_details_1wk, vol_check = trading_algorithms.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'])
+    # try:
+    #     option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
+    #     contracts_1wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
+    #     trade_details_1wk, vol_check = trading_algorithms.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'])
+    # except Exception as e:
+    #     print("FAIL")
+    #     logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
+    #     print(f"Could not build spread for {row['symbol']}: {e} 1WK")
+    #     return pd.DataFrame(), "FALSE"
     return trade_details_1wk, vol_check
 
 def build_trade_structure_2wk(row):
     base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
     underlying_price = tradier.get_last_price(base_url, access_token, row['symbol'])
-    try:
-        option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
-        # option_chain = pd.concat([ochain_1wk, ochain_2wk])
-        # if row['strategy'] == 'day_losers':
-        #     if len(option_chain) < 12:
-        #         contracts = None
-        #         return contracts
-        # else:
-        #     if len(option_chain) < 20:
-        #         contracts = None
-        #         return contracts
-        contracts_2wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
-        trade_details_2wk, vol_check = trading_algorithms.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'])
-    except Exception as e:
-        trade_details = None
-        logger.info(f"Could not build spread for {row['symbol']}: {e}")
-        print(f"Could not build spread for {row['symbol']}: {e}")
-        return pd.DataFrame(), "FALSE"
-    # trade_details_2wk['underlying_price'] = underlying_price
+    option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
+    contracts_2wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
+    trade_details_2wk, vol_check = trading_algorithms.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'])
+    # try:
+    #     option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
+    #     contracts_2wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
+    #     trade_details_2wk, vol_check = trading_algorithms.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'])
+    # except Exception as e:
+    #     trade_details = None
+    #     logger.info(f"Could not build spread for {row['symbol']}: {e} 2WK")
+    #     print(f"Could not build spread for {row['symbol']}: {e} 2WK")
+    #     return pd.DataFrame(), "FALSE"
     return trade_details_2wk, vol_check
 
 def volume_check(trade_details):
