@@ -80,7 +80,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                     if status_code == 200:
                         row['order_id'] = open_order_id
                         row['position_id'] = position_id
-                        underlying_purchase_price = trade.get_last_price(base_url, access_token, row['symbol'])
+                        underlying_purchase_price = trade.call_polygon_last_price(row['symbol'])
                         row['underlying_purchase_price'] = underlying_purchase_price
                         orders_list.append(open_order_id)
                         accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price})
@@ -100,7 +100,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
 
             row_data = row.to_dict()
             row_data['orders'] = orders_list
-            row_data['purchase_price'] = trade.get_last_price(base_url, access_token, row['symbol'])
+            row_data['purchase_price'] = trade.call_polygon_last_price(row['symbol'])
             full_transactions_data[position_id] = row_data
         
 
@@ -172,10 +172,10 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
     s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{user}/{date}.csv", Body=csv)
     return s3_response
 
-def date_performance_check(base_url, access_token,row):
-    current_price = trade.get_last_price(base_url, access_token,row['underlying_symbol'])
+def date_performance_check(row):
+    last_price = trade.call_polygon_last_price(row['underlying_symbol'])
     if user == "inv":
-        sell_code, reason = evaluate_performance_inv(current_price, row)
+        sell_code, reason = evaluate_performance_inv(last_price, row)
     logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
     if sell_code == 2 or current_date > row['sellby_date']:
         # order_dict = {

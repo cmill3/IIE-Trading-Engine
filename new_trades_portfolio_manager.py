@@ -25,7 +25,6 @@ dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
 def manage_portfolio_inv(event, context):
     current_positions = event['Payload'][-1]['open_positions']
-    # current_positions = []
     try:
         check_time()
     except ValueError as e:
@@ -39,7 +38,7 @@ def manage_portfolio_inv(event, context):
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
     trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positions)
-    return trades_placed
+    return "trades_placed"
 
 
 def pull_new_trades_inv(year, month, day, hour):
@@ -86,7 +85,7 @@ def evaluate_open_trades(orders_df,base_url, access_token):
     df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')
     positions_to_close = []
     for index, row in df_unique.iterrows():
-        sell_code, reason = te.date_performance_check(row, base_url, access_token)
+        sell_code, reason = te.date_performance_check(row)
         if sell_code == 2:
             logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             positions_to_close.append(row['position_id'])
@@ -110,9 +109,8 @@ def format_dates(now):
     
 
 # if __name__ == "__main__":
-#     accepted_df = pd.read_csv("17_19.csv")
+#     # accepted_df = pd.read_csv("17_19.csv")
 #     user="inv"
 #     trading_mode = "PAPER"
 #     table = "icarus-orders-table-inv"
-#     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
-#     pending_orders = te.process_dynamo_orders(accepted_df, base_url, account_id, access_token, trading_mode, table)
+#     manage_portfolio_inv(None, None)

@@ -442,7 +442,7 @@ def bet_sizer(contracts, date, spread_length, call_put):
 
 def pull_trading_balance():
     ### This is hardcoded for now, but will be replaced with a call to the tradier API
-    return 100000
+    return 60000
 
 def calculate_spread_cost(contracts_details):
     cost = 0
