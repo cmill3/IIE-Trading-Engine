@@ -204,7 +204,7 @@ functions:
     handler: alt-storage.dynamo_backup.lambda_handler
     events:
       - eventBridge:
-          name: dynamo-15min-schedule
+          name: dynamo-15min-schedule-${self:provider.stage}
           description: trigger to backup the dynamo schedule every 15 minutes
           schedule: rate(15 minutes)
     environment:
@@ -220,7 +220,7 @@ functions:
     handler: alt-storage.dynamo_backup.lambda_handler
     events:
       - eventBridge:
-          name: dynamo-daily-schedule
+          name: dynamo-daily-schedule-${self:provider.stage}
           description: trigger to backup the dynamo schedule daily
           schedule: rate(24 hours)
     environment:
