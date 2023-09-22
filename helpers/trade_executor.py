@@ -61,13 +61,17 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
             logger.info(is_valid)
 
         if is_valid:
-            if row['strategy'] in ['indexC','indexP','bfC','bfP']:
+            if row['strategy'] in ['bfC','bfP']:
                 row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
-            elif row['strategy'] in ['bfC_1d','bfP_1d','indexC_1d','indexP_1d']:
+            elif row['strategy'] in ['bfC_1d','bfP_1d']:
                 if now.date().weekday() <= 2:
                     row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
                 else:
                     row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
+            elif row['strategy'] in ['indexC','indexP']:
+                row['trade_details'] = ast.literal_eval(row['trade_details3d'])
+            elif row['strategy'] in ['indexC_1d','indexP_1d']:
+                row['trade_details'] = ast.literal_eval(row['trade_details1d'])
             
             for detail in row['trade_details']:
                 if detail['quantity'] == 0:
