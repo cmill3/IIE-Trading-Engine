@@ -80,8 +80,8 @@ def process_data(df):
 
 def process_data_index(df):
     df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
-    df['expiry_1d'] = date_1d()
-    df['expiry_3d'] = date_3d()
+    df['expiry_1d'] = df['symbol'].apply(lambda x: date_1d(x))
+    df['expiry_3d'] = df['symbol'].apply(lambda x: date_3d(x))
     result_df1 = df.apply(lambda row: build_trade_structure_1d(row), axis=1,result_type='expand')
     result_df2 = df.apply(lambda row: build_trade_structure_3d(row), axis=1,result_type='expand')
     df[['trade_details1d', 'vol_check1d']] = pd.DataFrame(result_df1, index=df.index)
