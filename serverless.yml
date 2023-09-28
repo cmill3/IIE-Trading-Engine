@@ -35,6 +35,7 @@ custom:
     tradingMode: DEV
     tableList15min: "['icarus-closed-orders-table-dev', 'icarus-closed-orders-table-inv-dev', 'icarus-orders-table-dev', 'icarus-orders-table-inv-dev']"
     tableListdaily: "['icarus-model-results-table-dev']"
+    closedTablelist: "['icarus-closed-orders-table-dev', 'icarus-closed-orders-table-inv-dev']"
   prod-val:
     tradingDataBucket: icarus-trading-data
     tradingDataBucketINV: inv-alerts-trading-data
@@ -46,6 +47,7 @@ custom:
     tradingMode: PAPER
     tableList15min: ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']
     tableListdaily: ['icarus-model-results-table']
+    closedTablelist: "['icarus-closed-orders-table-dev', 'icarus-closed-orders-table-inv-dev']"
   # prod:
   #   tableName: prodTable
 
@@ -242,6 +244,21 @@ functions:
         - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
       name: order-controls-${self:provider.stage}
+  closed-order-monthly-log:
+    handler: alt-storage.closed_orders_log.lambda_handler
+    events:
+      - eventBridge:
+          name: closed-orders-monthly-schedule-${self:provider.stage}
+          description: trigger to log all of the closed orders in s3 each month
+          schedule: rate(1 day)
+    environment:
+      TRADING_MODE: "PAPER"
+      USER: "CM3"
+      TABLE_LIST: ${self:custom.${self:provider.stage}.closedTablelist}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: dynamo-backup-daily-${self:provider.stage}
         
   
  
