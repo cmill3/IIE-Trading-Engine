@@ -161,6 +161,8 @@ def time_decay_alpha_bfP_v0(row, current_price):
         else:
             sell_code = 0
             reason = "Hold."
+            
+    return sell_code, reason
 
 def time_decay_alpha_indexC_v0(row, current_price):
     max_value = calculate_floor_pct(row)
