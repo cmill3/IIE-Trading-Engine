@@ -187,7 +187,7 @@ def date_2wk():
 def date_1d(symbol):
     if symbol == "IWM":
         date = advance_weekday(3)
-        if date.weekday() == 1 or date.weekday == 3:
+        if date.weekday() == 1 or date.weekday() == 3:
             date += timedelta(days=1)
     else:
         date = advance_weekday(3)
@@ -196,7 +196,7 @@ def date_1d(symbol):
 def date_3d(symbol):
     if symbol == "IWM":
         date = advance_weekday(5)
-        if date.weekday() == 1 or date.weekday == 3:
+        if date.weekday() == 1 or date.weekday() == 3:
             date += timedelta(days=1)
     else:
         date = advance_weekday(5)
@@ -249,38 +249,6 @@ def format_dates(now):
     hour = int(hour) - 4
     return year, month, day, hour
 
-def build_target_date(symbol, timeframe):
-    if symbol in ["QQQ","SPY"]:
-        if timeframe == "1d":    
-            target_date = advance_weekday(symbol, 3)
-        elif timeframe == "3d":
-            target_date = advance_weekday(symbol, 5)
-    elif symbol == "IWM":
-        if timeframe == "1d":    
-            target_date = advance_weekday(symbol, 3)
-        elif timeframe == "3d":
-            target_date = advance_weekday(symbol, 5)
-
-    return target_date
-
-
-def advance_weekday(weekday: int, days: int, symbol: str) -> int:
-    current_date = now
-    
-    added_days = 0
-    while added_days < days:
-        current_date += timedelta(days=1)
-        # Only increment the added_days counter if the day is a weekday
-        if current_date.weekday() < 5:  # 0-4 represents Monday to Friday
-            added_days += 1
-
-    if symbol == "IWM":
-        if current_date.weekday() == 1:
-            current_date += timedelta(days=1)
-        elif current_date.weekday() == 3:
-            current_date += timedelta(days=1)
-
-    return current_date.strftime("%Y-%m-%d")
 
 if __name__ == "__main__":
     build_trade_inv(None, None)
