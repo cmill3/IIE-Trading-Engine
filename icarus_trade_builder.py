@@ -67,10 +67,10 @@ def pull_data_inv(trading_strategy,year, month, day, hour):
 
 def process_data(df):
     df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
-    df['expiry_1wk'] = Date_1wk()
-    df['expiry_2wk'] = Date_2wk()
-    result_df1 = df.apply(lambda row: build_trade_structure_1d(row), axis=1,result_type='expand')
-    result_df2 = df.apply(lambda row: build_trade_structure_3d(row), axis=1,result_type='expand')
+    df['expiry_1wk'] = date_1wk()
+    df['expiry_2wk'] = date_2wk()
+    result_df1 = df.apply(lambda row: build_trade_structure_1wk(row), axis=1,result_type='expand')
+    result_df2 = df.apply(lambda row: build_trade_structure_2wk(row), axis=1,result_type='expand')
     df[['trade_details1wk', 'vol_check1wk']] = pd.DataFrame(result_df1, index=df.index)
     df[['trade_details2wk', 'vol_check2wk']] = pd.DataFrame(result_df2, index=df.index)
     df['sector'] = df['symbol'].apply(lambda Sym: strategy_helper.match_sector(Sym))
@@ -80,12 +80,12 @@ def process_data(df):
 
 def process_data_index(df):
     df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
-    df['expiry_1wk'] = Date_1wk()
-    df['expiry_2wk'] = Date_2wk()
-    result_df1 = df.apply(lambda row: build_trade_structure_1wk(row), axis=1,result_type='expand')
-    result_df2 = df.apply(lambda row: build_trade_structure_2wk(row), axis=1,result_type='expand')
-    df[['trade_details1wk', 'vol_check1wk']] = pd.DataFrame(result_df1, index=df.index)
-    df[['trade_details2wk', 'vol_check2wk']] = pd.DataFrame(result_df2, index=df.index)
+    df['expiry_1d'] = df['symbol'].apply(lambda x: date_1d(x))
+    df['expiry_3d'] = df['symbol'].apply(lambda x: date_3d(x))
+    result_df1 = df.apply(lambda row: build_trade_structure_1d(row), axis=1,result_type='expand')
+    result_df2 = df.apply(lambda row: build_trade_structure_3d(row), axis=1,result_type='expand')
+    df[['trade_details1d', 'vol_check1d']] = pd.DataFrame(result_df1, index=df.index)
+    df[['trade_details3d', 'vol_check3d']] = pd.DataFrame(result_df2, index=df.index)
     df['sector'] = df['symbol'].apply(lambda Sym: strategy_helper.match_sector(Sym))
     df['sellby_date'] = calculate_sellby_date(d, 3)
     logger.info(f"Data processed successfully: {d}")
@@ -111,64 +111,57 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
 
 def build_trade_structure_1d(row):
     base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
-    underlying_price = tradier.get_last_price(base_url, access_token, row['symbol'])
-    target_expiry = build_target_date(now,row['symbol'],timeframe="1d")
+    underlying_price = tradier.call_polygon_last_price(row['symbol'])
     try:
-        option_chain = get_option_chain(row['symbol'], target_expiry, row['Call/Put'])
-        contracts = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
-        trade_details, vol_check = trading_algorithms.bet_sizer(contracts, now, spread_length=3, call_put=row['Call/Put'])
+        option_chain = get_option_chain(row['symbol'], row['expiry_1d'], row['Call/Put'])
+        contracts_1d = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
+        trade_details_1d, vol_check = trading_algorithms.bet_sizer(contracts_1d, now, spread_length=3, call_put=row['Call/Put'])
     except Exception as e:
         print("FAIL")
-        trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
         print(f"Could not build spread for {row['symbol']}: {e}")
         return pd.DataFrame(), "FALSE"
-    return trade_details, vol_check
+    return trade_details_1d, vol_check
 
 def build_trade_structure_3d(row):
     base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
-    underlying_price = tradier.get_last_price(base_url, access_token, row['symbol'])
-    target_expiry = build_target_date(now,row['symbol'],timeframe="3d")
+    underlying_price = tradier.call_polygon_last_price(row['symbol'])
     try:
-        option_chain = get_option_chain(row['symbol'], target_expiry, row['Call/Put'])
-        contracts = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
-        trade_details, vol_check = trading_algorithms.bet_sizer(contracts, now, spread_length=3, call_put=row['Call/Put'])
+        option_chain = get_option_chain(row['symbol'], row['expiry_3d'], row['Call/Put'])
+        contracts_3d = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
+        trade_details_3d, vol_check = trading_algorithms.bet_sizer(contracts_3d, now, spread_length=3, call_put=row['Call/Put'])
     except Exception as e:
-        trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
         print(f"Could not build spread for {row['symbol']}: {e}")
         return pd.DataFrame(), "FALSE"
-    return trade_details, vol_check
+    return trade_details_3d, vol_check
 
 def build_trade_structure_1wk(row):
     base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
-    underlying_price = tradier.get_last_price(base_url, access_token, row['symbol'])
+    underlying_price = tradier.call_polygon_last_price(row['symbol'])
     try:
         option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
         contracts_1wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
         trade_details_1wk, vol_check = trading_algorithms.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'])
     except Exception as e:
         print("FAIL")
-        trade_details = None
-        logger.info(f"Could not build spread for {row['symbol']}: {e}")
-        print(f"Could not build spread for {row['symbol']}: {e}")
+        logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
+        print(f"Could not build spread for {row['symbol']}: {e} 1WK")
         return pd.DataFrame(), "FALSE"
-    # trade_details_1wk['underlying_price'] = underlying_price
     return trade_details_1wk, vol_check
 
 def build_trade_structure_2wk(row):
     base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
-    underlying_price = tradier.get_last_price(base_url, access_token, row['symbol'])
+    underlying_price = tradier.call_polygon_last_price(row['symbol'])
     try:
         option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
         contracts_2wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
         trade_details_2wk, vol_check = trading_algorithms.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'])
     except Exception as e:
         trade_details = None
-        logger.info(f"Could not build spread for {row['symbol']}: {e}")
-        print(f"Could not build spread for {row['symbol']}: {e}")
+        logger.info(f"Could not build spread for {row['symbol']}: {e} 2WK")
+        print(f"Could not build spread for {row['symbol']}: {e} 2WK")
         return pd.DataFrame(), "FALSE"
-    # trade_details_2wk['underlying_price'] = underlying_price
     return trade_details_2wk, vol_check
 
 def volume_check(trade_details):
@@ -181,15 +174,48 @@ def volume_check(trade_details):
     else:
         return "True"
 
-def Date_1wk():
+def date_1wk():
     t_1wk = timedelta((11 - d.weekday()) % 7)
     Expiry_Date = (d + t_1wk).strftime('%Y-%m-%d')
     return Expiry_Date 
 
-def Date_2wk():
+def date_2wk():
     t_2wk = timedelta((11 - d.weekday()) % 14)
     Expiry_Date = (d + t_2wk).strftime('%Y-%m-%d')
     return Expiry_Date 
+
+def date_1d(symbol):
+    if symbol == "IWM":
+        date = advance_weekday(3)
+        if date.weekday() == 1 or date.weekday == 3:
+            date += timedelta(days=1)
+    else:
+        date = advance_weekday(3)
+    return date.strftime('%Y-%m-%d')
+
+def date_3d(symbol):
+    if symbol == "IWM":
+        date = advance_weekday(5)
+        if date.weekday() == 1 or date.weekday == 3:
+            date += timedelta(days=1)
+    else:
+        date = advance_weekday(5)
+    return date.strftime('%Y-%m-%d')
+
+
+def advance_weekday(days):
+    current_date = datetime.now()
+    added_days = 0
+
+    while added_days < days:
+        current_date += timedelta(days=1)
+        # Only increment the added_days counter if the day is a weekday
+        if current_date.weekday() < 5:  # 0-4 represents Monday to Friday
+            added_days += 1
+
+    return current_date
+
+
 
 def get_option_chain(symbol, expiry, call_put):
     url = f"https://api.polygon.io/v3/snapshot/options/{symbol}?expiration_date={expiry}&contract_type={call_put}&limit=250&apiKey=A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp"
