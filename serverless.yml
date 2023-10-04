@@ -45,8 +45,8 @@ custom:
     closedOrdersTableYQ: icarus-closed-orders-table
     closedOrdersTableINV: icarus-closed-orders-table-inv
     tradingMode: PAPER
-    tableList15min: ['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']
-    tableListdaily: ['icarus-model-results-table']
+    tableList15min: "['icarus-closed-orders-table', 'icarus-closed-orders-table-inv', 'icarus-orders-table', 'icarus-orders-table-inv']"
+    tableListdaily: "['icarus-model-results-table']"
     closedTablelist: "['icarus-closed-orders-table', 'icarus-closed-orders-table-inv']"
   # prod:
   #   tableName: prodTable
