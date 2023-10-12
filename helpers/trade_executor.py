@@ -201,7 +201,11 @@ def evaluate_performance_inv(current_price, row):
     if strategy == 'indexC':
         sell_code, reason = time_decay_alpha_indexC_v0(row, current_price)
     elif strategy == 'indexP':
-        sell_code, reason = time_decay_alpha_indexP_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_indexP_1d_v0(row, current_price)
+    elif strategy == 'indexC_1d':
+        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price)
+    elif strategy == 'indexP_1d':
+        sell_code, reason = time_decay_alpha_indexP_1d_v0(row, current_price)
     elif strategy == 'bfC':
         sell_code, reason = time_decay_alpha_bfC_v0(row, current_price)
     elif strategy == 'bfP':

@@ -1,13 +1,12 @@
-import helpers.trade_executor as te
-import helpers.tradier as trade
-import helpers.dynamo_helper as db
-import pandas as pd
-from datetime import datetime, timedelta, time
+from datetime import datetime, time
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 import boto3
 import os
 import logging
+import helpers.trade_executor as te
+import helpers.tradier as trade
+import helpers.dynamo_helper as db
 
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
@@ -61,7 +60,7 @@ def evaluate_open_trades(orders_df, base_url, account_id, access_token):
     df_unique = orders_df.drop_duplicates(subset='position_id', keep='first')
     positions_to_close = []
     close_reasons = []
-    for index, row in df_unique.iterrows():
+    for _, row in df_unique.iterrows():
         sell_code, reason = te.date_performance_check(row)
         if sell_code == 2:
             positions_to_close.append(row['position_id'])

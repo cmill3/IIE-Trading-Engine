@@ -242,18 +242,18 @@ def time_decay_alpha_indexP_v0(row, current_price):
     return sell_code, reason
 
 
-def time_decay_alpha_indexC_v0(row, current_price):
+def time_decay_alpha_indexC__1d_v0(row, current_price):
     max_value = calculate_floor_pct(row)
-    Target_pct = .015
+    Target_pct = .009
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .01)
+    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .009)
 
     if type(Floor_pct) == float:
-        Floor_pct = -0.01
+        Floor_pct = -0.007
     if pct_change > (2*Target_pct):
-        Floor_pct += 0.004
+        Floor_pct += 0.0015
     elif pct_change > Target_pct:
-        Floor_pct += 0.002
+        Floor_pct += 0.001
 
     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
@@ -280,18 +280,18 @@ def time_decay_alpha_indexC_v0(row, current_price):
         
     return sell_code, reason
 
-def time_decay_alpha_indexP_v0(row, current_price):
+def time_decay_alpha_indexP_1d_v0(row, current_price):
     max_value = calculate_floor_pct(row)
-    Target_pct = -.015
+    Target_pct = -.009
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
-    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .01)
+    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .007)
 
     if type(Floor_pct) == float:
-        Floor_pct = 0.01
+        Floor_pct = 0.007
     if pct_change < (2*Target_pct):
-            Floor_pct -= 0.004
+            Floor_pct -= 0.0015
     elif pct_change < Target_pct:
-        Floor_pct -= 0.002
+        Floor_pct -= 0.001
 
     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
