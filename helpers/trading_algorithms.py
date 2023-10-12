@@ -9,90 +9,12 @@ logger.setLevel(logging.INFO)
 ### TRADING ALGORITHMS ###
 
 ### INV ALERTS STRATEGIES ###
-
-def time_decay_alpha_gainers_v0_inv(row, current_price):
-    max_value = calculate_floor_pct(row)
-    Target_pct = .032
-    pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
-    Floor_pct = ((float(max_value) - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']) - .0125)
-
-    if type(Floor_pct) == float:
-        Floor_pct = -0.0125
-
-    if pct_change > (2*Target_pct):
-        Floor_pct += 0.0105
-    elif pct_change > Target_pct:
-        Floor_pct += 0.008
-
-    print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")
-    # logger.info(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['ticker']}")
-    day_diff = get_business_days(row['order_transaction_date'])
-    sell_code = 0
-    reason = ""
-    if day_diff < 2:
-        if pct_change <= Floor_pct:
-            sell_code = 2
-            reason = "Hit exit target, sell."
-    elif day_diff >= 2:
-        if pct_change < Floor_pct:
-            sell_code = 2
-            reason = "Hit point of no confidence, sell."
-        elif pct_change >= Target_pct:
-            sell_code = 2
-            reason = "Hit exit target, sell."
-        elif pct_change < (.5*(Target_pct)):
-            sell_code = 2
-            reason = "Failed momentum gate, sell."
-        else:
-            sell_code = 0
-            reason = "Hold."
-
-    return sell_code, reason
-
-def time_decay_alpha_ma_v0_inv(row, current_price):
-    max_value = calculate_floor_pct(row)
-    Target_pct = .0285
-    pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-    Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .01)
-
-    if type(Floor_pct) == float:
-        Floor_pct = -0.02
-
-    if pct_change > (2*Target_pct):
-        Floor_pct += 0.0085
-    elif pct_change > Target_pct:
-        Floor_pct += 0.006
-
-    print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")    
-    day_diff = get_business_days(row['order_transaction_date'])
-    sell_code = 0
-    reason = ""
-    if day_diff < 2:
-        if pct_change <= Floor_pct:
-            sell_code = 2
-            reason = "Hit exit target, sell."
-    elif day_diff >= 2:
-        if pct_change < Floor_pct:
-            sell_code = 2
-            reason = "Hit point of no confidence, sell."
-        elif pct_change >= Target_pct:
-            sell_code = 2
-            reason = "Hit exit target, sell."
-        elif pct_change < (.5*(Target_pct)):
-            sell_code = 2
-            reason = "Failed momentum gate, sell."
-        else:
-            sell_code = 0
-            reason = "Hold."
-
-        
-    return sell_code, reason
-
-def time_decay_alpha_bfC_v0(row, current_price):
+def time_decay_alpha_bfC_v0(row, current_price, derivative_price):
     max_value = calculate_floor_pct(row)
     Target_pct = .025
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .015)
+    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = -0.015
@@ -106,7 +28,11 @@ def time_decay_alpha_bfC_v0(row, current_price):
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
-    if day_diff < 2:
+
+    if derivative_gain > 1.5:
+        sell_code = 1
+        reason = "Derivative value capture, sell."
+    elif day_diff < 2:
         if pct_change <= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
@@ -127,13 +53,18 @@ def time_decay_alpha_bfC_v0(row, current_price):
         
     return sell_code, reason
 
-def time_decay_alpha_bfP_v0(row, current_price):
+def time_decay_alpha_bfP_v0(row, current_price, derivative_price):
     max_value = calculate_floor_pct(row)
     Target_pct = -.025
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .015)
+    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
 
-    if type(Floor_pct) == float:
+    
+    if derivative_gain > 1.5:
+        sell_code = 1
+        reason = "Derivative value capture, sell."
+    elif type(Floor_pct) == float:
         Floor_pct = 0.015
     if pct_change < (2*Target_pct):
         Floor_pct -= 0.0125
@@ -164,11 +95,12 @@ def time_decay_alpha_bfP_v0(row, current_price):
             
     return sell_code, reason
 
-def time_decay_alpha_indexC_v0(row, current_price):
+def time_decay_alpha_indexC_v0(row, current_price, derivative_price):
     max_value = calculate_floor_pct(row)
     Target_pct = .015
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .01)
+    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = -0.01
@@ -182,7 +114,10 @@ def time_decay_alpha_indexC_v0(row, current_price):
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
-    if day_diff < 2:
+    if derivative_gain > 1.5:
+        sell_code = 1
+        reason = "Derivative value capture, sell."
+    elif day_diff < 2:
         if pct_change <= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
@@ -203,11 +138,12 @@ def time_decay_alpha_indexC_v0(row, current_price):
         
     return sell_code, reason
 
-def time_decay_alpha_indexP_v0(row, current_price):
+def time_decay_alpha_indexP_v0(row, current_price, derivative_price):
     max_value = calculate_floor_pct(row)
     Target_pct = -.015
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .01)
+    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = 0.01
@@ -220,7 +156,11 @@ def time_decay_alpha_indexP_v0(row, current_price):
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
-    if day_diff < 2:
+
+    if derivative_gain > 1.5:
+        sell_code = 1
+        reason = "Derivative value capture, sell."
+    elif day_diff < 2:
         if pct_change >= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
@@ -242,11 +182,12 @@ def time_decay_alpha_indexP_v0(row, current_price):
     return sell_code, reason
 
 
-def time_decay_alpha_indexC__1d_v0(row, current_price):
+def time_decay_alpha_indexC_1d_v0(row, current_price, derivative_price):
     max_value = calculate_floor_pct(row)
     Target_pct = .009
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .009)
+    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = -0.007
@@ -259,7 +200,11 @@ def time_decay_alpha_indexC__1d_v0(row, current_price):
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
-    if day_diff < 2:
+
+    if derivative_gain > 1.5:
+        sell_code = 1
+        reason = "Derivative value capture, sell."
+    elif day_diff < 2:
         if pct_change <= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
@@ -280,11 +225,12 @@ def time_decay_alpha_indexC__1d_v0(row, current_price):
         
     return sell_code, reason
 
-def time_decay_alpha_indexP_1d_v0(row, current_price):
+def time_decay_alpha_indexP_1d_v0(row, current_price, derivative_price):
     max_value = calculate_floor_pct(row)
     Target_pct = -.009
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .007)
+    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = 0.007
@@ -297,7 +243,11 @@ def time_decay_alpha_indexP_1d_v0(row, current_price):
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
-    if day_diff < 2:
+
+    if derivative_gain > 1.5:
+        sell_code = 1
+        reason = "Derivative value capture, sell."
+    elif day_diff < 2:
         if pct_change >= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
@@ -318,89 +268,12 @@ def time_decay_alpha_indexP_1d_v0(row, current_price):
         
     return sell_code, reason
 
-# def time_decay_alpha_bfC_1d_v0(row, current_price):
-#     max_value = calculate_floor_pct(row)
-#     Target_pct = .025
-#     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
-#     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .015)
-
-#     if type(Floor_pct) == float:
-#         Floor_pct = -0.015
-
-#     if pct_change > (2*Target_pct):
-#         Floor_pct += 0.0125
-#     elif pct_change > Target_pct:
-#         Floor_pct += 0.008
-
-#     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")    
-#     day_diff = get_business_days(row['order_transaction_date'])
-#     sell_code = 0
-#     reason = ""
-#     if day_diff < 2:
-#         if pct_change <= Floor_pct:
-#             sell_code = 2
-#             reason = "Hit exit target, sell."
-#     elif day_diff >= 2:
-#         if pct_change < Floor_pct:
-#             sell_code = 2
-#             reason = "Hit point of no confidence, sell."
-#         elif pct_change >= Target_pct:
-#             sell_code = 2
-#             reason = "Hit exit target, sell."
-#         elif pct_change < (.5*(Target_pct)):
-#             sell_code = 2
-#             reason = "Failed momentum gate, sell."
-#         else:
-#             sell_code = 0
-#             reason = "Hold."
-
-        
-#     return sell_code, reason
-
-# def time_decay_alpha_bfP_1d_v0(row, current_price):
-#     max_value = calculate_floor_pct(row)
-#     Target_pct = -.025
-#     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
-#     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .015)
-
-#     if type(Floor_pct) == float:
-#         Floor_pct = 0.015
-#     if pct_change < (2*Target_pct):
-#         Floor_pct -= 0.0125
-#     elif pct_change < Target_pct:
-#         Floor_pct -= 0.008
-
-#     print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {row['underlying_purchase_price']} for {row['underlying_symbol']}")    
-#     day_diff = get_business_days(row['order_transaction_date'])
-#     sell_code = 0
-#     reason = ""
-#     if day_diff < 2:
-#         if pct_change >= Floor_pct:
-#             sell_code = 2
-#             reason = "Hit exit target, sell."
-#     elif day_diff >= 2:
-#         if pct_change > Floor_pct:
-#             sell_code = 2
-#             reason = "Hit point of no confidence, sell."
-#         elif pct_change <= Target_pct:
-#             sell_code = 2
-#             reason = "Hit exit target, sell."
-#         elif pct_change > (.5*(Target_pct)):
-#             sell_code = 2
-#             reason = "Failed momentum gate, sell."
-#         else:
-#             sell_code = 0
-#             reason = "Hold."
-
-        
-#     return sell_code, reason
-
-
-def time_decay_alpha_bfC_1d_v0(row, current_price):
+def time_decay_alpha_bfC_1d_v0(row, current_price, derivative_price):
     max_value = calculate_floor_pct(row)
     Target_pct = .015
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .01)
+    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = -0.01
@@ -413,7 +286,11 @@ def time_decay_alpha_bfC_1d_v0(row, current_price):
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
-    if day_diff < 1:
+
+    if derivative_gain > 1.5:
+        sell_code = 1
+        reason = "Derivative value capture, sell."
+    elif day_diff < 1:
         if pct_change <= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."
@@ -434,11 +311,12 @@ def time_decay_alpha_bfC_1d_v0(row, current_price):
         
     return sell_code, reason
 
-def time_decay_alpha_bfP_1d_v0(row, current_price):
+def time_decay_alpha_bfP_1d_v0(row, current_price, derivative_price):
     max_value = calculate_floor_pct(row)
     Target_pct = -.015
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .01)
+    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = 0.01
@@ -451,7 +329,11 @@ def time_decay_alpha_bfP_1d_v0(row, current_price):
     day_diff = get_business_days(row['order_transaction_date'])
     sell_code = 0
     reason = ""
-    if day_diff < 1:
+
+    if derivative_gain > 1.5:
+        sell_code = 1
+        reason = "Derivative value capture, sell."
+    elif day_diff < 1:
         if pct_change >= Floor_pct:
             sell_code = 2
             reason = "Hit exit target, sell."

@@ -42,7 +42,7 @@ def manage_portfolio_inv(event, context):
 
 
 def pull_new_trades_inv(year, month, day, hour):
-    trading_strategies = ["bfC","bfP",'indexC','indexP','bfC_1d','bfP_1d']
+    trading_strategies = ["bfC","bfP",'indexC','indexP','bfC_1d','bfP_1d','indexC_1d','indexP_1d']
     trade_dfs = []
     for stratgey in trading_strategies:
         try:

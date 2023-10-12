@@ -28,45 +28,45 @@ user = os.getenv("USER")
 
 
 def manage_portfolio(event, context):
+    logger.info(f'Initializing open trades PM: {dt}')
     try:
         check_time()
     except ValueError as e:
         return "disallowed"
     
-    logger.info(f'Initializing open trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
     open_trades_df = db.get_all_orders_from_dynamo(table)
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
-    orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
 
     try:
-        # open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
-        # open_positions = open_trades_df['pos_id'].unique().tolist()
-        orders_to_close = evaluate_open_trades(open_trades_df, base_url, account_id, access_token)
+        orders_to_close = evaluate_open_trades(open_trades_df)
     except Exception as e:
         print(e)
         print("no trades to close")
         return {"open_positions": open_positions}
+    
     if len(orders_to_close) == 0:
         return {"open_positions": open_positions}
     
     if trading_mode == "DEV":
         return {"open_positions": open_positions}
+    
     trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
+    logger.info(f'Closing orders: {trade_response}')
     return {"open_positions": open_positions}
 
-def evaluate_open_trades(orders_df, base_url, account_id, access_token):
-    df_unique = orders_df.drop_duplicates(subset='position_id', keep='first')
+def evaluate_open_trades(orders_df):
     positions_to_close = []
     close_reasons = []
-    for _, row in df_unique.iterrows():
+    for _, row in orders_df.iterrows():
         sell_code, reason = te.date_performance_check(row)
-        if sell_code == 2:
+        if sell_code != 0:
             positions_to_close.append(row['position_id'])
             logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             ### figure out how to add reason to the order
             close_reasons.append(reason)
+    positions_to_close = list(set(positions_to_close))
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
 
