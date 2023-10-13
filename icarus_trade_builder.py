@@ -30,15 +30,14 @@ prefixes = {
     "indexP_1d": "invalerts-xgb-indexp-1d-classifier",
 }
 
-now = datetime.now()
+est = pytz.timezone('US/Eastern')
+now = datetime.now(est)
 d = now.date() # Monday
 
 def build_trade_inv(event, context):
+    year, month, day, hour = format_dates(now)
     strategy_names = os.getenv("TRADING_STRATEGY")
     logger.info('build_trade function started.')
-    est = pytz.timezone('US/Eastern')
-    date = datetime.now(est)
-    year, month, day, hour = format_dates(date)
     strategy_names = strategy_names.split(",")
     logger.info(strategy_names)
     for trading_strategy in strategy_names:
