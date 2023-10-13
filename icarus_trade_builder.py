@@ -8,6 +8,7 @@ import os
 import logging
 import requests
 import json
+import pytz
 
 s3 = boto3.client('s3')
 logger = logging.getLogger()
@@ -35,7 +36,9 @@ d = now.date() # Monday
 def build_trade_inv(event, context):
     strategy_names = os.getenv("TRADING_STRATEGY")
     logger.info('build_trade function started.')
-    year, month, day, hour = format_dates(now)
+    est = pytz.timezone('US/Eastern')
+    date = datetime.now(est)
+    year, month, day, hour = format_dates(date)
     strategy_names = strategy_names.split(",")
     logger.info(strategy_names)
     for trading_strategy in strategy_names:
