@@ -65,6 +65,7 @@ functions:
       TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-${self:provider.stage}
   new-trades-portfolio-manager-paper:
@@ -75,6 +76,7 @@ functions:
       USER: "yq"
       TABLE: ${self:custom.${self:provider.stage}.ordersTableYQ}
     layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: new-trades-portfolio-manager-${self:provider.stage}
@@ -88,6 +90,7 @@ functions:
       USER: "yq"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-portfolio-manager-${self:provider.stage}
   icarus-trade-builder-invBFC:
@@ -100,6 +103,7 @@ functions:
       TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-invBFC-${self:provider.stage}
   icarus-trade-builder-invBFP:
@@ -112,6 +116,7 @@ functions:
       TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-invBFP-${self:provider.stage}
   icarus-trade-builder-indexC:
@@ -124,6 +129,7 @@ functions:
       TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-indexC-${self:provider.stage}
   icarus-trade-builder-indexP:
@@ -136,6 +142,7 @@ functions:
       TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-indexP-${self:provider.stage}
   # icarus-trade-builder-invVDGC:
@@ -173,6 +180,7 @@ functions:
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: new-trades-portfolio-manager-inv-${self:provider.stage}
   open-trades-portfolio-manage-paper-inv:
@@ -185,6 +193,7 @@ functions:
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-portfolio-manager-inv-${self:provider.stage}
   open-trades-reconciliation:
@@ -195,6 +204,7 @@ functions:
       USER: "CM3"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-reconciliation-${self:provider.stage}
     #####
@@ -212,6 +222,7 @@ functions:
       FREQUENCY: "15MIN"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: dynamo-backup-15-min-${self:provider.stage}
   dynamo-backup-daily:
@@ -228,6 +239,7 @@ functions:
       FREQUENCY: "DAILY"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: dynamo-backup-daily-${self:provider.stage}
   order-controls:
@@ -253,6 +265,7 @@ functions:
       TABLE_LIST: ${self:custom.${self:provider.stage}.closedTablelist}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: closed-orders-log-${self:provider.stage}
         
