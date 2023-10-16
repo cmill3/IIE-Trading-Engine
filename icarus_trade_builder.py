@@ -8,6 +8,7 @@ import os
 import logging
 import requests
 import json
+import pytz
 
 s3 = boto3.client('s3')
 logger = logging.getLogger()
@@ -29,13 +30,14 @@ prefixes = {
     "indexP_1d": "invalerts-xgb-indexp-1d-classifier",
 }
 
-now = datetime.now()
+est = pytz.timezone('US/Eastern')
+now = datetime.now(est)
 d = now.date() # Monday
 
 def build_trade_inv(event, context):
+    year, month, day, hour = format_dates(now)
     strategy_names = os.getenv("TRADING_STRATEGY")
     logger.info('build_trade function started.')
-    year, month, day, hour = format_dates(now)
     strategy_names = strategy_names.split(",")
     logger.info(strategy_names)
     for trading_strategy in strategy_names:
