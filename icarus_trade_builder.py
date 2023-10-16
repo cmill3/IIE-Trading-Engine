@@ -248,7 +248,7 @@ def get_option_chain(symbol, expiry, call_put):
 def format_dates(now):
     now_str = now.strftime("%Y-%m-%d-%H")
     year, month, day, hour = now_str.split("-")
-    hour = int(hour) - 4
+    hour = int(hour)
     return year, month, day, hour
 
 
