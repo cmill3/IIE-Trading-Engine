@@ -182,7 +182,7 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
 
 def date_performance_check(row):
     last_price = trade.call_polygon_last_price(row['underlying_symbol'])
-    derivative_price = trade.call_polygon_last_price(f"O:row['option_symbol']")
+    derivative_price = trade.call_polygon_last_price(f"O:{row['option_symbol']}")
     if user == "inv":
         sell_code, reason = evaluate_performance_inv(last_price, derivative_price, row)
     logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')

@@ -14,7 +14,7 @@ def time_decay_alpha_bfC_v0(row, current_price, derivative_price):
     Target_pct = .025
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .015)
-    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
+    derivative_gain = (derivative_price - float(row['last_fill_price_open']))/float(row['last_fill_price_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = -0.015
@@ -58,7 +58,7 @@ def time_decay_alpha_bfP_v0(row, current_price, derivative_price):
     Target_pct = -.025
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .015)
-    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
+    derivative_gain = (derivative_price - float(row['last_fill_price_open']))/float(row['last_fill_price_open'])
 
     
     if derivative_gain > 1.5:
@@ -100,7 +100,7 @@ def time_decay_alpha_indexC_v0(row, current_price, derivative_price):
     Target_pct = .015
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .01)
-    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
+    derivative_gain = (derivative_price - float(row['last_fill_price_open']))/float(row['last_fill_price_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = -0.01
@@ -143,7 +143,7 @@ def time_decay_alpha_indexP_v0(row, current_price, derivative_price):
     Target_pct = -.015
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .01)
-    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
+    derivative_gain = (derivative_price - float(row['last_fill_price_open']))/float(row['last_fill_price_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = 0.01
@@ -187,7 +187,7 @@ def time_decay_alpha_indexC_1d_v0(row, current_price, derivative_price):
     Target_pct = .009
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .009)
-    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
+    derivative_gain = (derivative_price - float(row['last_fill_price_open']))/float(row['last_fill_price_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = -0.007
@@ -230,7 +230,7 @@ def time_decay_alpha_indexP_1d_v0(row, current_price, derivative_price):
     Target_pct = -.009
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .007)
-    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
+    derivative_gain = (derivative_price - float(row['last_fill_price_open']))/float(row['last_fill_price_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = 0.007
@@ -273,7 +273,7 @@ def time_decay_alpha_bfC_1d_v0(row, current_price, derivative_price):
     Target_pct = .015
     pct_change = (current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) - .01)
-    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
+    derivative_gain = (derivative_price - float(row['last_fill_price_open']))/float(row['last_fill_price_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = -0.01
@@ -316,7 +316,7 @@ def time_decay_alpha_bfP_1d_v0(row, current_price, derivative_price):
     Target_pct = -.015
     pct_change = ((current_price - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price']))
     Floor_pct = (((max_value - float(row['underlying_purchase_price']))/float(row['underlying_purchase_price'])) + .01)
-    derivative_gain = (derivative_price - float(row['last_fill_open']))/float(row['last_fill_open'])
+    derivative_gain = (derivative_price - float(row['last_fill_price_open']))/float(row['last_fill_price_open'])
 
     if type(Floor_pct) == float:
         Floor_pct = 0.01

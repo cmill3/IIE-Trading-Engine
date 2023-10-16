@@ -39,12 +39,12 @@ def manage_portfolio(event, context):
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
 
-    try:
-        orders_to_close = evaluate_open_trades(open_trades_df)
-    except Exception as e:
-        print(e)
-        print("no trades to close")
-        return {"open_positions": open_positions}
+    # try:
+    orders_to_close = evaluate_open_trades(open_trades_df)
+    # except Exception as e:
+    #     print(e)
+    #     print("no trades to close")
+    #     return {"open_positions": open_positions}
     
     if len(orders_to_close) == 0:
         return {"open_positions": open_positions}
