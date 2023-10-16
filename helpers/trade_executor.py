@@ -182,34 +182,33 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
 
 def date_performance_check(row):
     last_price = trade.call_polygon_last_price(row['underlying_symbol'])
+    derivative_price = trade.call_polygon_last_price(f"O:row['option_symbol']")
     if user == "inv":
-        sell_code, reason = evaluate_performance_inv(last_price, row)
+        sell_code, reason = evaluate_performance_inv(last_price, derivative_price, row)
     logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
-    if sell_code == 2 or current_date > row['sellby_date']:
-        # order_dict = {
-        #     "contract": row['option_symbol'],
-        #     "underlying_symbol": row['underlying_symbol'],
-        #     "quantity": row['quantity'], 
-        #     "reason": reason,
-        # }
-        return 2, reason
+    if sell_code != 0 or current_date > row['sellby_date']:
+        return sell_code, reason
     else:
-        return 0, reason
+        return sell_code, reason
 
-def evaluate_performance_inv(current_price, row):
+def evaluate_performance_inv(current_price, derivative_price, row):
     strategy = row['trading_strategy']
     if strategy == 'indexC':
-        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price, derivative_price)
     elif strategy == 'indexP':
-        sell_code, reason = time_decay_alpha_indexP_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_indexP_1d_v0(row, current_price, derivative_price)
+    elif strategy == 'indexC_1d':
+        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price, derivative_price)
+    elif strategy == 'indexP_1d':
+        sell_code, reason = time_decay_alpha_indexP_1d_v0(row, current_price, derivative_price)
     elif strategy == 'bfC':
-        sell_code, reason = time_decay_alpha_bfC_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_bfC_v0(row, current_price, derivative_price)
     elif strategy == 'bfP':
-       sell_code, reason = time_decay_alpha_bfP_v0(row, current_price)
+       sell_code, reason = time_decay_alpha_bfP_v0(row, current_price, derivative_price)
     elif strategy == 'bfP_1d':
-        sell_code, reason = time_decay_alpha_bfP_1d_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_bfP_1d_v0(row, current_price, derivative_price)
     elif strategy == 'bfC_1d':
-        sell_code, reason = time_decay_alpha_bfC_1d_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_bfC_1d_v0(row, current_price, derivative_price)
     return sell_code, reason
 
 
