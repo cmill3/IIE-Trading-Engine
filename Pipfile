@@ -8,8 +8,10 @@ pandas = "*"
 yahooquery = "*"
 boto3 = "*"
 requests = "*"
+urllib3 = "*"
 
 [dev-packages]
+ipykernel = "*"
 
 [requires]
 python_version = "3.9"
