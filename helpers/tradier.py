@@ -2,11 +2,13 @@ import requests
 import json
 import os
 import pandas as pd
+from datetime import datetime
 from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PAPER_ACCESSTOKEN_INV, PAPER_ACCOUNTID_INV
 
 base_url = os.getenv("BASE_URL")
 account_id = os.getenv("ACCOUNT_ID")
 access_token = os.getenv("ACCESS_TOKEN")
+now = datetime.now()
 
 def get_account_balance(base_url: str, account_id: str, access_token:str) -> dict:
     try:
@@ -125,18 +127,35 @@ def get_account_positions(base_url: str, account_id: str, access_token: str) -> 
     except Exception as e:
         return e
     
-def get_last_price(base_url: str, access_token: str, symbol:str) -> dict:
+# def get_last_price(base_url: str, access_token: str, symbol:str) -> dict:
+#     try:
+#         response = requests.get(f'{base_url}markets/quotes', params={'symbols': symbol, 'greeks': 'false'}, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+#         if response.status_code == 200:
+#             response_json = response.json()
+#             last_price = response_json['quotes']['quote']['last']    
+#             return last_price
+#         else:
+#             print("Buying power pull for live trader failed")
+#             return response
+#     except Exception as e:
+#         return print(e)
+
+def call_polygon_last_price(symbol):
+    today = datetime.today().strftime('%Y-%m-%d')
+    key = "A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp"
+    url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/minute/{today}/{today}?adjusted=true&sort=asc&limit=50000&apiKey={key}"
+    response = requests.request("GET", url, headers={}, data={})
+
+    response_data = json.loads(response.text)
     try:
-        response = requests.get(f'{base_url}markets/quotes', params={'symbols': symbol, 'greeks': 'false'}, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
-        if response.status_code == 200:
-            response_json = response.json()
-            last_price = response_json['quotes']['quote']['last']    
-            return last_price
-        else:
-            print("Buying power pull for live trader failed")
-            return response
-    except Exception as e:
-        return print(e)
+        results = response_data['results']
+    except:
+        return None
+
+    results_df = pd.DataFrame.from_dict(results)
+    last_price = results_df['c'].iloc[-1]
+
+    return last_price
     
 def position_exit(base_url: str, account_id: str, access_token: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str, position_id: str) -> dict:
     print(base_url, account_id, access_token, symbol, option_symbol)

@@ -61,15 +61,25 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
             logger.info(is_valid)
 
         if is_valid:
-            if row['strategy'] in ['indexC','indexP','bfC','bfP']:
-                row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
-            elif row['strategy'] in ['bfC_1d','bfP_1d','indexC_1d','indexP_1d']:
-                if now.date().weekday() <= 2:
-                    row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
-                else:
+            try:
+                if row['strategy'] in ['bfC','bfP']:
                     row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
+                elif row['strategy'] in ['bfC_1d','bfP_1d']:
+                    if now.date().weekday() <= 2:
+                        row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
+                    else:
+                        row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
+                elif row['strategy'] in ['indexC','indexP']:
+                    row['trade_details'] = ast.literal_eval(row['trade_details3d'])
+                elif row['strategy'] in ['indexC_1d','indexP_1d']:
+                    row['trade_details'] = ast.literal_eval(row['trade_details1d'])
+            except Exception as e:
+                logger.info(f'Failed to parse trade_details: {e}')
+                continue
             
             for detail in row['trade_details']:
+                if detail['quantity'] == 0:
+                    continue
                 try: 
                     open_order_id, status_code, json_response = trade.place_order(base_url, account_id, access_token, row['symbol'], 
                                                                             detail["contract_ticker"], detail['quantity'], 
@@ -78,7 +88,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                     if status_code == 200:
                         row['order_id'] = open_order_id
                         row['position_id'] = position_id
-                        underlying_purchase_price = trade.get_last_price(base_url, access_token, row['symbol'])
+                        underlying_purchase_price = trade.call_polygon_last_price(row['symbol'])
                         row['underlying_purchase_price'] = underlying_purchase_price
                         orders_list.append(open_order_id)
                         accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price})
@@ -98,7 +108,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
 
             row_data = row.to_dict()
             row_data['orders'] = orders_list
-            row_data['purchase_price'] = trade.get_last_price(base_url, access_token, row['symbol'])
+            row_data['purchase_price'] = trade.call_polygon_last_price(row['symbol'])
             full_transactions_data[position_id] = row_data
         
 
@@ -170,36 +180,37 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
     s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{user}/{date}.csv", Body=csv)
     return s3_response
 
-def date_performance_check(base_url, access_token,row):
-    current_price = trade.get_last_price(base_url, access_token,row['underlying_symbol'])
+def date_performance_check(row):
+    last_price = trade.call_polygon_last_price(row['underlying_symbol'])
+    derivative_price = trade.call_polygon_last_price(f"O:row['option_symbol']")
+    if derivative_price is None:
+        derivative_price = 0
     if user == "inv":
-        sell_code, reason = evaluate_performance_inv(current_price, row)
+        sell_code, reason = evaluate_performance_inv(last_price, derivative_price, row)
     logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
-    if sell_code == 2 or current_date > row['sellby_date']:
-        # order_dict = {
-        #     "contract": row['option_symbol'],
-        #     "underlying_symbol": row['underlying_symbol'],
-        #     "quantity": row['quantity'], 
-        #     "reason": reason,
-        # }
-        return 2, reason
+    if sell_code != 0 or current_date > row['sellby_date']:
+        return sell_code, reason
     else:
-        return 0, reason
+        return sell_code, reason
 
-def evaluate_performance_inv(current_price, row):
+def evaluate_performance_inv(current_price, derivative_price, row):
     strategy = row['trading_strategy']
     if strategy == 'indexC':
-        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price, derivative_price)
     elif strategy == 'indexP':
-        sell_code, reason = time_decay_alpha_indexP_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_indexP_1d_v0(row, current_price, derivative_price)
+    elif strategy == 'indexC_1d':
+        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price, derivative_price)
+    elif strategy == 'indexP_1d':
+        sell_code, reason = time_decay_alpha_indexP_1d_v0(row, current_price, derivative_price)
     elif strategy == 'bfC':
-        sell_code, reason = time_decay_alpha_bfC_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_bfC_v0(row, current_price, derivative_price)
     elif strategy == 'bfP':
-       sell_code, reason = time_decay_alpha_bfP_v0(row, current_price)
+       sell_code, reason = time_decay_alpha_bfP_v0(row, current_price, derivative_price)
     elif strategy == 'bfP_1d':
-        sell_code, reason = time_decay_alpha_bfP_1d_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_bfP_1d_v0(row, current_price, derivative_price)
     elif strategy == 'bfC_1d':
-        sell_code, reason = time_decay_alpha_bfC_1d_v0(row, current_price)
+        sell_code, reason = time_decay_alpha_bfC_1d_v0(row, current_price, derivative_price)
     return sell_code, reason
 
 
