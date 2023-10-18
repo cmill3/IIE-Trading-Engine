@@ -246,11 +246,12 @@ def get_option_chain(symbol, expiry, call_put):
     return df
 
 def smart_spreads_filter(contracts,underlying_price):
+    new_contracts = []
     for contract in contracts:
         contract['pct_to_money'] = abs(underlying_price - contract['strike'])/underlying_price
-        if contract['pct_to_money'] > .1:
-            contracts.remove(contract)
-    return contracts
+        if contract['pct_to_money'] < .1:
+            new_contracts.append(contract)
+    return new_contracts
 
 def format_dates(now):
     now_str = now.strftime("%Y-%m-%d-%H")
