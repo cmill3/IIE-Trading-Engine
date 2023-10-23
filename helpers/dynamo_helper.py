@@ -114,18 +114,18 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         )   
     return response, order_item
 
-def create_new_dynamo_record_order_reconciliation(order_info_obj, trading_mode):    
-    # details = ast.literal_eval(position['trade_details'])[0]
+def create_new_dynamo_record_order_reconciliation(order_info_obj, row,position_id,order_id,underlying_purchase_price,,trading_mode,table):    
+    table = ddb.Table(table)    
     order_item ={
-        'order_id': str(order_info_obj['id']),
+        'order_id': str(order_id),
         'trading_mode': trading_mode,
         'execution_strategy': execution_strategy,
-        # 'underlying_purchase_price': underlying_purchase_price,
+        'underlying_purchase_price': underlying_purchase_price,
         # 'transaction_ids': transactions,
-        # 'underlying_symbol': position['symbol'],
-        # 'position_id': position_id,
+        'underlying_symbol': row['underlying_symbol_x'],
+        'position_id': position_id,
         # 'trading_strategy': position['strategy'],
-        'option_symbol': order_info_obj['option_symbol'],
+        'option_symbol': row['symbol_x'],
         # 'option_side': position['Call/Put'],
         # 'two_week_contract_expiry': position['expiry_2wk'],
         'avg_fill_price_open': str(order_info_obj['average_fill_price']),
