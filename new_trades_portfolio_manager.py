@@ -42,7 +42,8 @@ def manage_portfolio_inv(event, context):
 
 
 def pull_new_trades_inv(year, month, day, hour):
-    trading_strategies = ["bfC","bfP",'indexC','indexP','bfC_1d','bfP_1d','indexC_1d','indexP_1d']
+    # trading_strategies = ["bfC","bfP",'indexC','indexP','bfC_1d','bfP_1d','indexC_1d','indexP_1d']
+    trading_strategies = ["bfC","bfP",'bfC_1d','bfP_1d','indexC_1d','indexP_1d']
     trade_dfs = []
     for stratgey in trading_strategies:
         try:
@@ -57,6 +58,7 @@ def pull_new_trades_inv(year, month, day, hour):
             print(e)
             print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
     full_df = pd.concat(trade_dfs)
+    print(full_df)
     return full_df
 
 
