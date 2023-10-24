@@ -114,7 +114,7 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         )   
     return response, order_item
 
-def create_new_dynamo_record_order_reconciliation(order_info_obj, row,position_id,order_id,underlying_purchase_price,,trading_mode,table):    
+def create_new_dynamo_record_order_reconciliation(order_info_obj, row,position_id,order_id,underlying_purchase_price,trading_mode,table):    
     table = ddb.Table(table)    
     order_item ={
         'order_id': str(order_id),
@@ -138,7 +138,7 @@ def create_new_dynamo_record_order_reconciliation(order_info_obj, row,position_i
         'reconciliation': 'True'
     }
 
-    response = orders_table.put_item(
+    response = table.put_item(
             Item=order_item 
         )   
     return response, order_item
