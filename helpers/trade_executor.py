@@ -77,7 +77,8 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                 logger.info(f'Failed to parse trade_details: {e}')
                 continue
             
-            for detail in row['trade_details']:
+            trades = row['trade_details'][:3]
+            for detail in trades:
                 if detail['quantity'] == 0:
                     continue
                 try: 

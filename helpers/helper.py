@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import requests
 import pandas as pd
 import json
+import pytz
 import boto3
 
 
@@ -63,8 +64,9 @@ def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
         response = requests.request("GET", url, headers=headers, data=payload)
         res_df = pd.DataFrame(json.loads(response.text)['results'])
         res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
-        res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
+        res_df['date'] = res_df['t'].apply(lambda x:convert_timestamp_est(x))
         res_df['hour'] = res_df['date'].apply(lambda x: x.hour)
+        res_df['minute'] = res_df['date'].apply(lambda x: x.minute)
         return res_df
     except:  
         return pd.DataFrame()
@@ -105,10 +107,11 @@ def get_business_days(transaction_date):
 def calculate_floor_pct(row):
    trading_hours = [9,10,11,12,13,14,15]
    from_stamp = row['order_transaction_date'].split('T')[0]
-   time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() - timedelta(hours=3).total_seconds()
+   time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
    prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "10", "minute")
    trimmed_df = prices.loc[prices['t'] > time_stamp]
    trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
+   trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
    trimmed_df = trimmed_df.iloc[1:]
    high_price = trimmed_df['h'].max()
    low_price = trimmed_df['l'].min()
@@ -188,6 +191,16 @@ def build_date():
     #     }
     
     return f"{temp_year}/{month}/{day}/{date.hour}"
+
+def convert_timestamp_est(timestamp):
+    # Create a naive datetime object from the UNIX timestamp
+    dt_naive = datetime.utcfromtimestamp(timestamp)
+    # Convert the naive datetime object to a timezone-aware one (UTC)
+    dt_utc = pytz.utc.localize(dt_naive)
+    # Convert the UTC datetime to EST
+    dt_est = dt_utc.astimezone(pytz.timezone('US/Eastern'))
+    
+    return dt_est
 
 # if __name__ == "__main__":
 #     x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})

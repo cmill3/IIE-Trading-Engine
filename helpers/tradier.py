@@ -156,6 +156,27 @@ def call_polygon_last_price(symbol):
     last_price = results_df['c'].iloc[-1]
 
     return last_price
+
+def call_polygon_price_reconciliation(symbol,dt):
+    timestamp_seconds = dt.timestamp()
+    timestamp_milliseconds = int(timestamp_seconds * 1000)
+
+    today = datetime.today().strftime('%Y-%m-%d')
+    key = "A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp"
+    url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/30/minute/{today}/{today}?adjusted=true&sort=asc&limit=50000&apiKey={key}"
+    response = requests.request("GET", url, headers={}, data={})
+
+    response_data = json.loads(response.text)
+    try:
+        results = response_data['results']
+    except:
+        return None
+
+    results_df = pd.DataFrame.from_dict(results)
+    results_df = results_df[results_df['t'] <= timestamp_milliseconds]
+    last_price = results_df['c'].iloc[-1]
+
+    return last_price
     
 def position_exit(base_url: str, account_id: str, access_token: str, symbol: str, option_symbol: str, side: str, quantity: str, order_type: str, duration: str, position_id: str) -> dict:
     print(base_url, account_id, access_token, symbol, option_symbol)
@@ -175,7 +196,7 @@ def position_exit(base_url: str, account_id: str, access_token: str, symbol: str
 
 def get_account_orders(base_url: str, account_id: str, access_token: str) -> dict:
     try:
-        response = requests.get(f'{base_url}accounts/{account_id}/orders', params=account_id, headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+        response = requests.get(f'{base_url}accounts/{account_id}/orders', params={'includeTags': 'true'},headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
         response_json = response.json()
         if response.status_code == 200:
             if response_json['orders'] == "null":

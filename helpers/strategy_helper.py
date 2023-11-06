@@ -9,14 +9,12 @@ def build_spread(chain_df, spread_length, cp, current_price):
     if cp == "call":
         chain_df = chain_df.loc[chain_df['strike_price'] > current_price]
         chain_df.sort_values('strike_price',ascending=True,inplace=True)
-        # chain_df = chain_df.head(3)
-        chain_df = chain_df.iloc[1:(1+ spread_length)]
+        chain_df = chain_df.iloc[:spread_length]
     if cp == "put":
         chain_df = chain_df.loc[chain_df['strike_price'] < current_price]
         chain_df.sort_values('strike_price',ascending=False,inplace=True)
-        # chain_df = chain_df.head(3)
-        chain_df = chain_df.iloc[1:(1+ spread_length)]
-    for index, row in chain_df.iterrows():
+        chain_df = chain_df.iloc[:spread_length]
+    for _, row in chain_df.iterrows():
         temp_object = {
             "contract_ticker": row['ticker'],
             "strike": row['strike_price'],

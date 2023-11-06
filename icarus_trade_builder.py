@@ -112,11 +112,11 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
     return current_date
 
 def build_trade_structure_1d(row):
-    base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
     underlying_price = tradier.call_polygon_last_price(row['symbol'])
     try:
         option_chain = get_option_chain(row['symbol'], row['expiry_1d'], row['Call/Put'])
-        contracts_1d = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
+        contracts_1d = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
+        contracts_1d = smart_spreads_filter(contracts_1d,underlying_price)
         trade_details_1d, vol_check = trading_algorithms.bet_sizer(contracts_1d, now, spread_length=3, call_put=row['Call/Put'])
     except Exception as e:
         print("FAIL")
@@ -126,11 +126,11 @@ def build_trade_structure_1d(row):
     return trade_details_1d, vol_check
 
 def build_trade_structure_3d(row):
-    base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
     underlying_price = tradier.call_polygon_last_price(row['symbol'])
     try:
         option_chain = get_option_chain(row['symbol'], row['expiry_3d'], row['Call/Put'])
-        contracts_3d = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
+        contracts_3d = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
+        contracts_3d = smart_spreads_filter(contracts_3d,underlying_price)
         trade_details_3d, vol_check = trading_algorithms.bet_sizer(contracts_3d, now, spread_length=3, call_put=row['Call/Put'])
     except Exception as e:
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
@@ -139,31 +139,31 @@ def build_trade_structure_3d(row):
     return trade_details_3d, vol_check
 
 def build_trade_structure_1wk(row):
-    base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
     underlying_price = tradier.call_polygon_last_price(row['symbol'])
-    try:
-        option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
-        contracts_1wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
-        trade_details_1wk, vol_check = trading_algorithms.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'])
-    except Exception as e:
-        print("FAIL")
-        logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
-        print(f"Could not build spread for {row['symbol']}: {e} 1WK")
-        return pd.DataFrame(), "FALSE"
+    # try:
+    option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
+    contracts_1wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
+    contracts_1wk = smart_spreads_filter(contracts_1wk,underlying_price)
+    trade_details_1wk, vol_check = trading_algorithms.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'])
+    # except Exception as e:
+        # print("FAIL")
+        # logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
+        # print(f"Could not build spread for {row['symbol']}: {e} 1WK")
+        # return pd.DataFrame(), "FALSE"
     return trade_details_1wk, vol_check
 
 def build_trade_structure_2wk(row):
-    base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode, user)
     underlying_price = tradier.call_polygon_last_price(row['symbol'])
-    try:
-        option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
-        contracts_2wk = strategy_helper.build_spread(option_chain, 3, row['Call/Put'], underlying_price)
-        trade_details_2wk, vol_check = trading_algorithms.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'])
-    except Exception as e:
-        trade_details = None
-        logger.info(f"Could not build spread for {row['symbol']}: {e} 2WK")
-        print(f"Could not build spread for {row['symbol']}: {e} 2WK")
-        return pd.DataFrame(), "FALSE"
+    # try:
+    option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
+    contracts_2wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
+    contracts_2wk = smart_spreads_filter(contracts_2wk,underlying_price)
+    trade_details_2wk, vol_check = trading_algorithms.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'])
+    # except Exception as e:
+    #     trade_details = None
+    #     logger.info(f"Could not build spread for {row['symbol']}: {e} 2WK")
+    #     print(f"Could not build spread for {row['symbol']}: {e} 2WK")
+    #     return pd.DataFrame(), "FALSE"
     return trade_details_2wk, vol_check
 
 def volume_check(trade_details):
@@ -244,6 +244,14 @@ def get_option_chain(symbol, expiry, call_put):
 
     df = pd.DataFrame(details)
     return df
+
+def smart_spreads_filter(contracts,underlying_price):
+    new_contracts = []
+    for contract in contracts:
+        contract['pct_to_money'] = abs(underlying_price - contract['strike'])/underlying_price
+        if contract['pct_to_money'] < .1:
+            new_contracts.append(contract)
+    return new_contracts
 
 def format_dates(now):
     now_str = now.strftime("%Y-%m-%d-%H")

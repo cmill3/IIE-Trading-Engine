@@ -7,10 +7,11 @@ import numpy as np
 import os
 from datetime import datetime
 import re
+import logging
 
 s3 = boto3.client('s3')
-
-date = datetime.now().strftime("%Y/%m/%d/%H_%M")
+date = datetime.now().strftime("%Y-%m-%d")
+logger = logging.getLogger()
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 trading_mode = os.getenv('TRADING_MODE')
@@ -18,47 +19,43 @@ user = os.getenv("USER")
 
 def run_reconciliation(event, context):
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
-    trades_df = pull_pending_trades()
-    # formatted_df = format_pending_df(trades_df)
-    if len(trades_df) > 0:
-        still_pending  = process_dynamo_orders(trades_df, base_url, account_id, access_token)
-        pending_df = pd.DataFrame.from_dict(still_pending)
-    if len(pending_df) > 0:
-        pending_csv = pending_df.to_csv()
-        response = s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders_enriched/{date}.csv", Body=pending_csv)
-        return response
-    exposure_totalling()
+    tradier_trades = trade.get_account_orders(base_url, account_id, access_token)
+    tradier_df = pd.DataFrame.from_dict(tradier_trades)
+    dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
+    still_pending  = compare_order_dfs(tradier_df, dynamo_trades,base_url, account_id, access_token)
+    # exposure_totalling()
     return "No pending orders"
 
 
-def pull_pending_trades():
-    keys = s3.list_objects(Bucket=trading_data_bucket,Prefix='pending_orders_enriched/2023')["Contents"]
-    pending_keys = keys[-2:-1]['Key']
-    dfs = []
-    for key in pending_keys:
-        dataset = s3.get_object(Bucket=trading_data_bucket, Key=key)
-        df = pd.read_csv(dataset.get("Body"))
-        dfs.append(df)
-    pending_df = pd.concat(dfs)
-    return pending_df
+def compare_order_dfs(tradier_trades, dynamo_trades,base_url, account_id, access_token):
+    tradier_trades = tradier_trades[tradier_trades['status'] == 'filled']
+    tradier_trades['underlying_symbol'] = tradier_trades['symbol'].apply(lambda symbol: symbol[:-15])
+    opened_trades = tradier_trades[tradier_trades['side'] == 'buy_to_open']
+    closed_trades = tradier_trades[tradier_trades['side'] == 'sell_to_close']
+    merged = opened_trades.merge(closed_trades, on='tag', how='outer', indicator=True)
+    still_open = merged[merged['_merge'] == 'left_only']
+    dynamo_trades['date_str'] = dynamo_trades['order_creation_date'].apply(lambda date: date.split('T')[0])
+    todays_dynamo = dynamo_trades[dynamo_trades['date_str'] == date]
 
-def process_dynamo_orders(trades_df, base_url, account_id, access_token, trading_mode):
-    # for index, row in trades_df.iterrows():
-    #     unfilled_order = db.process_opened_orders(row, row['position_id'],base_url, account_id, access_token, trading_mode)
-    unfulfilled_orders = db.process_opened_ordersv2(trades_df, base_url, account_id, access_token, trading_mode)
-    return unfulfilled_orders
-
-def format_pending_df(df):
-    columns = df['Unnamed: 0'].values
-    indexes = df.columns.values[1:]
-
-    unpacked_data = []
-    for index in indexes:
-        data = df[index].values
-        unpacked_data.append(data)
+    tradier_set = set(still_open['id_x'].values.astype(int))
+    dynamo_set = set(todays_dynamo['order_id'].values.astype(int))
+    not_in_tradier = dynamo_set - tradier_set
+    not_in_dynamo = tradier_set - dynamo_set
+    logger.info(f"Trades in Dynamo but not in Tradier: {not_in_tradier}")
+    logger.info(f"Trades in Tradier but not in Dynamo: {not_in_dynamo}")
     
-    formatted_df = pd.DataFrame(unpacked_data,indexes,columns)
-    return formatted_df
+    
+    for order_id in not_in_dynamo:
+        order_info_obj = trade.get_order_info(base_url, account_id, access_token, order_id)
+        print(order_info_obj)
+        row = dynamo_trades[dynamo_trades['order_id'] == order_id]
+        print(row)
+        if order_info_obj['status'] == "filled":
+            dt = datetime.strptime(row['create_date_x'],"%Y-%m-%dT%H:%M:%S.%fZ")
+            underlying_purchase_price = trade.call_polygon_price_reconciliation(f"{row['underlying_symbol_x']}",dt)
+            db.create_new_dynamo_record_order(order_info_obj, row, row['tag'],order_id, underlying_purchase_price, trading_mode, table="icarus-orders-table-inv")
+        
+
 
 def exposure_totalling():
     # base_url = "https://sandbox.tradier.com/v1/"
@@ -79,9 +76,6 @@ def exposure_totalling():
     s3_resource = boto3.resource('s3')
     s3_resource.Object(bucket, f'positions_exposure/{year}/{month}/{day}/{hour}.csv').put(Body=df_csv.getvalue())
     return "Exposure Analysis Complete"
-
-if __name__ == "__main__":
-    run_reconciliation(None, None)
 
 # def run_reconciliation(event, context):
 #     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
@@ -132,5 +126,5 @@ if __name__ == "__main__":
 #     formatted_df = pd.DataFrame(unpacked_data,indexes,columns)
 #     return formatted_df
 
-# if __name__ == "__main__":
-#     run_reconciliation(None, None)
+if __name__ == "__main__":
+    run_reconciliation(None, None)
