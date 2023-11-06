@@ -20,8 +20,8 @@ logger.setLevel(logging.INFO)
 now = datetime.now()
 dt = now.strftime("%Y-%m-%dT%H-%M-%S")
 dt_posId = now.strftime("%Y-%m-%dT%H-%M")
-dt = now.strftime("%Y-%m-%d_%H:%M:%S")
 current_date = now.strftime("%Y-%m-%d")
+date = datetime.now().strftime("%Y/%m/%d/%H_%M")
 
 order_type = "market"
 duration = "GTC"
@@ -42,7 +42,7 @@ def account_value_checkpoint(current_balance) -> dict:
     
 def execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, current_positions):
     # transaction_data = []
-    full_transactions_data = {}
+    positions_data = []
     failed_transactions = []
     orders_list = []
     accepted_orders = []
@@ -76,7 +76,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
             except Exception as e:
                 logger.info(f'Failed to parse trade_details: {e}')
                 continue
-            
+            all_trades = row['trade_details']
             trades = row['trade_details'][:3]
             for detail in trades:
                 if detail['quantity'] == 0:
@@ -106,34 +106,23 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                     trade_data['response'] = is_valid
                     failed_transactions.append(trade_data)
                     continue
+            
+            positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price})        
 
-            row_data = row.to_dict()
-            row_data['orders'] = orders_list
-            row_data['purchase_price'] = trade.call_polygon_last_price(row['symbol'])
-            full_transactions_data[position_id] = row_data
-        
-
-    df = pd.DataFrame.from_dict(full_transactions_data)
-    final_csv = df.to_csv()
-
+    positions_df = pd.DataFrame.from_dict(positions_data)
     accepted_df = pd.DataFrame.from_dict(accepted_orders)
-    accepted_csv = accepted_df.to_csv()
-
     failed_df = pd.DataFrame(failed_transactions)
-    failed_csv = failed_df.to_csv()
-
-    date = datetime.now().strftime("%Y/%m/%d/%H_%M")
-    s3.put_object(Bucket=trading_data_bucket, Key=f"orders_data/{user}/{date}.csv", Body=final_csv)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_orders_data/{user}/{date}.csv", Body=accepted_csv)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders/{user}/{date}.csv", Body=final_csv)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"failed_orders/{user}/{date}.csv", Body=failed_csv)
 
 
-    time.sleep(15)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"orders_data/{user}/{date}.csv", Body=positions_df.to_csv())
+    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_orders_data/{user}/{date}.csv", Body=accepted_df.to_csv())
+    s3.put_object(Bucket=trading_data_bucket, Key=f"failed_orders/{user}/{date}.csv", Body=failed_df.to_csv())
+
+    time.sleep(2)
+
     pending_orders = process_dynamo_orders(accepted_df, base_url, account_id, access_token, trading_mode, table)
     pending_df = pd.DataFrame.from_dict(pending_orders)
-    pending_csv = pending_df.to_csv()
-    s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders_enriched/{user}/{date}.csv", Body=pending_csv)
+    s3.put_object(Bucket=trading_data_bucket, Key=f"pending_orders_enriched/{user}/{date}.csv", Body=pending_df.to_csv())
     return accepted_df
 
 def process_dynamo_orders(formatted_df, base_url, account_id, access_token, trading_mode, table):

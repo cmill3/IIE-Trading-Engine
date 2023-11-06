@@ -10,6 +10,7 @@ from yahooquery import Ticker
 import boto3
 import os
 import logging
+import pytz
 
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
@@ -19,8 +20,8 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 user = os.getenv("USER")
 table = os.getenv("TABLE")
-now = datetime.now()
-dt = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+now = datetime.now().astimezone(pytz.timezone('US/Eastern'))
+dt = now.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def manage_portfolio_inv(event, context):
