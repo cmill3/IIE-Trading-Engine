@@ -22,3 +22,4 @@ node_modules/
 
 Pipfile.lock
 alt-storage/fix.py
+alt-storage/dynamo_backup_fix.py

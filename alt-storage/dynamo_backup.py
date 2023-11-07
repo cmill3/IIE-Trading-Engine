@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import boto3
 from botocore.exceptions import ClientError
 import os
@@ -23,9 +23,9 @@ def lambda_handler(event, context):
 
             #Change variables depending on frequency from YAML env variable
             if frequency == "15MIN":
-                delete_upper_date = datetime.utcnow() - timedelta(minutes=30)
+                delete_upper_date = datetime.now(timezone.utc) - timedelta(minutes=30)
             elif frequency == "DAILY":
-                delete_upper_date = datetime.utcnow() - timedelta(hours=48)
+                delete_upper_date = datetime.now(timezone.utc) - timedelta(hours=48)
             else:
                 print("frequency env variable failure")
 
