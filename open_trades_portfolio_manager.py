@@ -7,6 +7,7 @@ import logging
 import helpers.trade_executor as te
 import helpers.tradier as trade
 import helpers.dynamo_helper as db
+import pytz
 
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
@@ -71,10 +72,11 @@ def evaluate_open_trades(orders_df):
     orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
     return orders_to_close
 
+
 def check_time():
-    current_utc_time = datetime.utcnow().time()
+    current_time = datetime.now().astimezone(pytz.timezone('US/Eastern'))
     
-    if current_utc_time < time(13, 45) or current_utc_time > time(19, 55):
+    if current_time < time(9, 45,tzinfo=pytz.timezone('US/Eastern')) or current_time > time(3, 55,tzinfo=pytz.timezone('US/Eastern')):
         raise ValueError("The current time is outside the allowed window!")
     return "The time is within the allowed window."
     

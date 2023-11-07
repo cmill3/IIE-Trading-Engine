@@ -98,9 +98,9 @@ def evaluate_open_trades(orders_df,base_url, access_token):
 
 
 def check_time():
-    current_utc_time = datetime.utcnow().time()
+    current_time = datetime.now().astimezone(pytz.timezone('US/Eastern'))
     
-    if current_utc_time < time(14, 0) or current_utc_time > time(19, 55):
+    if current_time < time(9, 45,tzinfo=pytz.timezone('US/Eastern')) or current_time > time(3, 55,tzinfo=pytz.timezone('US/Eastern')):
         raise ValueError("The current time is outside the allowed window!")
     return "The time is within the allowed window."
 
