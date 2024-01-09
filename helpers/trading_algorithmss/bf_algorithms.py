@@ -360,9 +360,9 @@ def time_decay_alpha_bfP_1d_v0(row, current_price, derivative_price):
 
 def bet_sizer(contracts, date, spread_length, call_put):
     if call_put == "call":
-        target_cost = (.01* pull_trading_balance())
+        target_cost = .004* pull_trading_balance()
     elif call_put == "put":
-        target_cost = (.01* pull_trading_balance()) * .9
+        target_cost = .004* pull_trading_balance()
 
     to_stamp = (date - timedelta(days=1)).strftime("%Y-%m-%d")
     from_stamp = (date - timedelta(days=5)).strftime("%Y-%m-%d")
@@ -401,7 +401,7 @@ def bet_sizer(contracts, date, spread_length, call_put):
 
 def pull_trading_balance():
     ### This is hardcoded for now, but will be replaced with a call to the tradier API
-    return 60000
+    return 10000
 
 def calculate_spread_cost(contracts_details):
     cost = 0

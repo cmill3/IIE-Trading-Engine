@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from helpers.constants import CALL_STRATEGIES, PUT_STRATEGIES
 import requests
 import pandas as pd
 import json
@@ -117,12 +118,25 @@ def calculate_floor_pct(row):
    low_price = trimmed_df['l'].min()
    if len(trimmed_df) == 0:
        return float(row['underlying_purchase_price'])
-   if row['trading_strategy'] in ['bfP','indexP',"bfP_1d","indexP_1d"]:
+   if row['trading_strategy'] in PUT_STRATEGIES:
        return low_price
-   elif row['trading_strategy'] in ['bfC','indexC',"bfC_1d","indexC_1d"]:
+   elif row['trading_strategy'] in CALL_STRATEGIES:
        return high_price
    else:
         return 0
+   
+
+def get_derivative_max_value(row):
+    trading_hours = [9,10,11,12,13,14,15]
+    from_stamp = row['order_transaction_date'].split('T')[0]
+    time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+    prices = polygon_call_stocks(f"O:{row['option_symbol']}", from_stamp, current_date, "10", "minute")
+    trimmed_df = prices.loc[prices['t'] > time_stamp]
+    trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
+    trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
+    trimmed_df = trimmed_df.iloc[1:]
+    high_price = trimmed_df['h'].max()
+    return high_price
 
 
 def pull_opened_data_s3(path, bucket,date_prefix):
