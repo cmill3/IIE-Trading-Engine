@@ -9,6 +9,7 @@ import logging
 import requests
 import json
 import pytz
+from helpers.constants import PREFIXES
 
 s3 = boto3.client('s3')
 logger = logging.getLogger()
@@ -19,16 +20,7 @@ trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
 
-prefixes = {
-    "bfC": "invalerts-xgb-bfc-classifier",
-    "bfP": "invalerts-xgb-bfp-classifier",
-    "indexC": "invalerts-xgb-indexc-classifier",
-    "indexP": "invalerts-xgb-indexp-classifier",
-    "bfC_1d":  "invalerts-xgb-bfc-1d-classifier",
-    "bfP_1d": "invalerts-xgb-bfp-1d-classifier",
-    "indexC_1d":  "invalerts-xgb-indexc-1d-classifier",
-    "indexP_1d": "invalerts-xgb-indexp-1d-classifier",
-}
+
 
 est = pytz.timezone('US/Eastern')
 now = datetime.now(est)
@@ -44,7 +36,7 @@ def build_trade_inv(event, context):
         logger.info(f'Initializing trade builder: {year}-{month}-{day}-{hour}')
         df  = pull_data_inv(trading_strategy,year, month, day, hour)
         df['strategy'] = trading_strategy
-        if trading_strategy == "indexC_1d" or trading_strategy == "indexP_1d" or trading_strategy == "indexC" or trading_strategy == "indexP":
+        if trading_strategy == "IDXC_1D" or trading_strategy == "IDXP_1D" or trading_strategy == "IDXC" or trading_strategy == "IDXP":
             results_df = process_data_index(df)
         else:
             results_df = process_data(df)
@@ -59,7 +51,7 @@ def build_trade_inv(event, context):
 #CP = Call/Put (used to represent the Call/Put Trend Value)
 
 def pull_data_inv(trading_strategy,year, month, day, hour):
-    prefix_root = prefixes[trading_strategy]
+    prefix_root = PREFIXES[trading_strategy]
     dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{prefix_root}/bf_alerts/{year}/{month}/{day}/{hour}.csv")
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
@@ -94,8 +86,8 @@ def process_data_index(df):
     return df
 
 def infer_CP(strategy):
-    call_strategies = ["bfC","indexC","bfC_1d","indexC_1d"]
-    put_strategies = ["bfP","indexP","bfP_1d","indexP_1d"]
+    call_strategies = ["bfC","IDXC","bfC_1d","IDXC_1D"]
+    put_strategies = ["bfP","IDXP","bfP_1d","IDXP_1D"]
     if strategy in call_strategies:   
         return "call"
     elif strategy in put_strategies:

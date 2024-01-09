@@ -11,6 +11,7 @@ import boto3
 import os
 import logging
 import pytz
+from helpers.constants import ACTIVE_STRATEGIES
 
 s3 = boto3.client('s3')
 trading_mode = os.getenv('TRADING_MODE')
@@ -43,10 +44,8 @@ def manage_portfolio_inv(event, context):
 
 
 def pull_new_trades_inv(year, month, day, hour):
-    # trading_strategies = ["bfC","bfP",'indexC','indexP','bfC_1d','bfP_1d','indexC_1d','indexP_1d']
-    trading_strategies = ["bfC","bfP",'bfC_1d','bfP_1d','indexC_1d','indexP_1d']
     trade_dfs = []
-    for stratgey in trading_strategies:
+    for stratgey in ACTIVE_STRATEGIES:
         try:
             print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
