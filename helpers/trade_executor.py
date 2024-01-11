@@ -7,7 +7,9 @@ from datetime import datetime
 import time
 import ast
 import logging
-from helpers.trading_algorithms import *
+from helpers.constants import ACTIVE_STRATEGIES, THREED_STRATEGIES, ONED_STRATEGIES, CALL_STRATEGIES, PUT_STRATEGIES
+from helpers.trend_algorithms import *
+
 
 
 s3 = boto3.client('s3')
@@ -51,31 +53,13 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
                                     
-        if pos_id in current_positions:
-            logger.info(pos_id)
-            is_valid = False
-            logger.info(is_valid)
-        else:
-            logger.info(pos_id)
+        if row['strategy'] in THREED_STRATEGIES and now.date().weekday() < 2:
             is_valid = True
-            logger.info(is_valid)
+        elif row['strategy'] in ONED_STRATEGIES and now.date().weekday() < 3:
+            is_valid = True
 
         if is_valid:
-            try:
-                if row['strategy'] in ['bfC','bfP']:
-                    row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
-                elif row['strategy'] in ['bfC_1d','bfP_1d']:
-                    if now.date().weekday() <= 2:
-                        row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
-                    else:
-                        row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
-                elif row['strategy'] in ['indexC','indexP']:
-                    row['trade_details'] = ast.literal_eval(row['trade_details3d'])
-                elif row['strategy'] in ['indexC_1d','indexP_1d']:
-                    row['trade_details'] = ast.literal_eval(row['trade_details1d'])
-            except Exception as e:
-                logger.info(f'Failed to parse trade_details: {e}')
-                continue
+            row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
             all_trades = row['trade_details']
             trades = row['trade_details'][:3]
             for detail in trades:
@@ -184,23 +168,14 @@ def date_performance_check(row):
         return sell_code, reason
 
 def evaluate_performance_inv(current_price, derivative_price, row):
-    strategy = row['trading_strategy']
-    if strategy == 'indexC':
-        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price, derivative_price)
-    elif strategy == 'indexP':
-        sell_code, reason = time_decay_alpha_indexP_1d_v0(row, current_price, derivative_price)
-    elif strategy == 'indexC_1d':
-        sell_code, reason = time_decay_alpha_indexC_v0(row, current_price, derivative_price)
-    elif strategy == 'indexP_1d':
-        sell_code, reason = time_decay_alpha_indexP_1d_v0(row, current_price, derivative_price)
-    elif strategy == 'bfC':
-        sell_code, reason = time_decay_alpha_bfC_v0(row, current_price, derivative_price)
-    elif strategy == 'bfP':
-       sell_code, reason = time_decay_alpha_bfP_v0(row, current_price, derivative_price)
-    elif strategy == 'bfP_1d':
-        sell_code, reason = time_decay_alpha_bfP_1d_v0(row, current_price, derivative_price)
-    elif strategy == 'bfC_1d':
-        sell_code, reason = time_decay_alpha_bfC_1d_v0(row, current_price, derivative_price)
+    if row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
+        sell_code, reason = tda_CALL_3D_stdclsAGG(row, current_price)
+    elif row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
+        sell_code, reason = tda_PUT_3D_stdclsAGG(row, current_price)
+    elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
+        sell_code, reason = tda_CALL_1D_stdclsAGG(row, current_price)
+    elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
+        sell_code, reason = tda_PUT_1D_stdclsAGG(row, current_price)
     return sell_code, reason
 
 
