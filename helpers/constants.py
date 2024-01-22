@@ -24,7 +24,7 @@ PREFIXES = {
 TRADING_STRATEGIES = ["IDXC","IDXP","IDXC_1D","IDXP_1D","MA","MAP","MA_1D","MAP_1D","GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D",
                       "LOSERSC","LOSERSC_1D","VDIFFC","VDIFFC_1D","VDIFFP_1D","VDIFFP"]
 
-ACTIVE_STRATEGIES = ["GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D","LOSERSC","LOSERSC_1D"]
+ACTIVE_STRATEGIES = ["GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D","LOSERSC","LOSERSC_1D","MA","MA_1D","MAP","MAP_1D"]
 
 CALL_STRATEGIES = ["IDXC","IDXC_1D","MA","MA_1D","GAIN_1D","GAIN","LOSERSC","LOSERSC_1D","VDIFFC","VDIFFC_1D"]
 
@@ -55,4 +55,87 @@ ENDPOINT_NAMES = {
 "IDXC_1D": "invalerts-idxc1d-classifier",
 "IDXP": "invalerts-idxp-classifier",
 "IDXP_1D": "invalerts-idxp1d-classifier",
+}
+
+ALGORITHM_CONFIG = {
+    "GAIN_1D": {
+        "target_label": "one_max",
+        "target_value": .0175,
+    },
+    "GAIN": {
+        "target_label": "three_max",
+        "target_value": .0275,
+    },
+    "GAINP_1D": {
+        "target_label": "one_min",
+        "target_value": -.018,
+    },
+    "GAINP": {
+        "target_label": "three_min",
+        "target_value": -.028,
+    },
+     "LOSERSC_1D": {
+        "target_label": "one_max",
+        "target_value": .016,
+    },
+    "LOSERSC": {
+        "target_label": "three_max",
+        "target_value": .025,
+    },
+    "LOSERS_1D": {
+        "target_label": "one_min",
+        "target_value": -.013,
+    },
+    "LOSERS": {
+        "target_label": "three_min",
+        "target_value": -.02,
+    },
+    "vdiffC1d": {
+        "target_label": "one_max",
+        "target_value": .013,
+    },
+    "vdiffC": {
+        "target_label": "three_max",
+        "target_value": .028,
+    },
+    "vdiffP1d": {
+        "target_label": "one_min",
+        "target_value": -.013,
+    },
+    "vdiffP": {
+        "target_label": "three_min",
+        "target_value": -.028,
+    },
+     "MA_1D": {
+        "target_label": "one_max",
+        "target_value": .013,
+    },
+    "MA": {
+        "target_label": "three_max",
+        "target_value": .028,
+    },
+    "MAP_1D": {
+        "target_label": "one_min",
+        "target_value": -.013,
+    },
+    "MAP": {
+        "target_label": "three_min",
+        "target_value": -.028,
+    },
+    "idxC1d": {
+        "target_label": "one_max",
+        "target_value": .013,
+    },
+    "idxC": {
+        "target_label": "three_max",
+        "target_value": .028,
+    },
+    "idxP1d": {
+        "target_label": "one_min",
+        "target_value": -.013,
+    },
+    "idxP": {
+        "target_label": "three_min",
+        "target_value": -.028,
+    },
 }

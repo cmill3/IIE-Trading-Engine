@@ -54,6 +54,7 @@ def polygon_call(contract, from_stamp, to_stamp, multiplier, timespan):
     url = f"https://api.polygon.io/v2/aggs/ticker/O:{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
 
     response = requests.request("GET", url, headers=headers, data=payload)
+    print(response.text)
     res_df = pd.DataFrame(json.loads(response.text)['results'])
     res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
     res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
@@ -72,7 +73,7 @@ def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
         res_df['minute'] = res_df['date'].apply(lambda x: x.minute)
         return res_df
     except Exception as e:  
-        logger.info(e)
+        print(e)
         return pd.DataFrame()
 
 def get_business_days(transaction_date):
@@ -109,32 +110,36 @@ def get_business_days(transaction_date):
     return business_days 
 
 def calculate_floor_pct(row):
-   trading_hours = [9,10,11,12,13,14,15]
-   from_stamp = row['order_transaction_date'].split('T')[0]
-   time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
-   prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "10", "minute")
-   trimmed_df = prices.loc[prices['t'] > time_stamp]
-   trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
-   trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
-   trimmed_df = trimmed_df.iloc[1:]
-   high_price = trimmed_df['h'].max()
-   low_price = trimmed_df['l'].min()
-   if len(trimmed_df) == 0:
-       return float(row['underlying_purchase_price'])
-   if row['trading_strategy'] in PUT_STRATEGIES:
-       return low_price
-   elif row['trading_strategy'] in CALL_STRATEGIES:
-       return high_price
-   else:
+    trading_hours = [9,10,11,12,13,14,15]
+    from_stamp = row["order_transaction_date"].split('T')[0]
+    time_str = row["order_transaction_date"].split('.')[0]
+    original_datetime = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
+    est_stamp = convert_datetime_est(original_datetime)
+    prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "10", "minute")
+    trimmed_df = prices.loc[prices['t'] > est_stamp]
+    trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
+    trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
+    trimmed_df = trimmed_df.iloc[1:]
+    high_price = trimmed_df['h'].max()
+    low_price = trimmed_df['l'].min()
+    if len(trimmed_df) == 0:
+        return float(row['underlying_purchase_price'])
+    if row['trading_strategy'] in PUT_STRATEGIES:
+        return low_price
+    elif row['trading_strategy'] in CALL_STRATEGIES:
+        return high_price
+    else:
         return 0
    
 
 def get_derivative_max_value(row):
     trading_hours = [9,10,11,12,13,14,15]
-    from_stamp = row['order_transaction_date'].split('T')[0]
-    time_stamp = datetime.strptime(row['order_transaction_date'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
-    prices = polygon_call_stocks(f"O:{row['option_symbol']}", from_stamp, current_date, "10", "minute")
-    trimmed_df = prices.loc[prices['t'] > time_stamp]
+    from_stamp = row["order_transaction_date"].split('T')[0]
+    time_str = row["order_transaction_date"].split('.')[0]
+    original_datetime = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
+    est_stamp = convert_datetime_est(original_datetime)
+    prices = polygon_call_stocks(f"O:row['underlying_symbol']", from_stamp, current_date, "10", "minute")
+    trimmed_df = prices.loc[prices['t'] > est_stamp]
     trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
     trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
     trimmed_df = trimmed_df.iloc[1:]
@@ -200,6 +205,13 @@ def build_date():
         month = str(date.month)
 
     temp_year = date.year
+    
+    # date_dict ={
+    #     'month': month,
+    #     'day': day,
+    #     'year': str(temp_year)
+    #     }
+    
     return f"{temp_year}/{month}/{day}/{date.hour}"
 
 def convert_timestamp_est(timestamp):
@@ -209,8 +221,12 @@ def convert_timestamp_est(timestamp):
     dt_utc = pytz.utc.localize(dt_naive)
     # Convert the UTC datetime to EST
     dt_est = dt_utc.astimezone(pytz.timezone('US/Eastern'))
-    
     return dt_est
+
+def convert_datetime_est(dt_naive):
+    dt_utc = pytz.utc.localize(dt_naive)
+    timestamp_est = dt_utc.astimezone(pytz.timezone('US/Eastern')).timestamp()
+    return timestamp_est
 
 def bet_sizer(contracts, date, spread_length, call_put):
     if call_put == "call":
@@ -239,13 +255,14 @@ def bet_sizer(contracts, date, spread_length, call_put):
         vol_check = "True"
     spread_cost = calculate_spread_cost(contracts)
     quantities = finalize_trade(contracts, spread_cost, target_cost)
+    print(quantities)
     for index, contract in enumerate(contracts):
         if index < 3:
             try:
                 contract['quantity'] = quantities[index]
                 print(contract['quantity'])
-            except Exception as e:
-                logger.info(f"ERROR of {e} for {contract['contract_ticker']}")
+            except:
+                print("ERROR")
                 print(contracts)
                 print(quantities)
         else:
@@ -354,7 +371,6 @@ def add_spread_cost(spread_cost, target_cost, contracts_details):
 
     return spread_multiplier, add_one
 
-# if __name__ == "__main__":
-#     x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})
-#     print(x)
-#     print(type(x))
+if __name__ == "__main__":
+    hi = get_derivative_max_value("MRNA240119C00101000","2024-01-18T16:43:45.161Z")
+    print(hi)

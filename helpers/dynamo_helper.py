@@ -70,18 +70,18 @@ def create_new_dynamo_record_position(position_id, position, order_ids, transact
     return response, position_item
 
 
-def close_dynamo_record_position(position_id,transaction_ids):
-    # pm_data = order_info_obj['pm_data']    
-    position_item = {
-        'position_id': position_id,
-        'transaction_ids': transaction_ids,
-        'position_order_status': "closed"
-    }
+# def close_dynamo_record_position(position_id,transaction_ids):
+#     # pm_data = order_info_obj['pm_data']    
+#     position_item = {
+#         'position_id': position_id,
+#         'transaction_ids': transaction_ids,
+#         'position_order_status': "closed"
+#     }
 
-    response = positions_table.put_item(
-            Item=position_item
-        )   
-    return response, position_item
+#     response = positions_table.put_item(
+#             Item=position_item
+#         )   
+#     return response, position_item
 
 
 def create_new_dynamo_record_order(order_info_obj, position, position_id, transactions, underlying_purchase_price, trading_mode, table):
@@ -331,8 +331,8 @@ def process_closed_orders(full_transactions_data, base_url, account_id, access_t
         create_response, full_order_record = create_new_dynamo_record_closed_order(order_info_obj, row, trading_mode, close_table)
         closed_orders.append(full_order_record)
     final_positions_dict = create_positions_list(full_transactions_data)
-    for position_id, transaction_list in final_positions_dict.items():
-        close_dynamo_record_position(position_id, transaction_list)
+    # for position_id, transaction_list in final_positions_dict.items():
+    #     close_dynamo_record_position(position_id, transaction_list)
     return closed_orders
     
 

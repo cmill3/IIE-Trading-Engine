@@ -26,7 +26,7 @@ dt = now.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def manage_portfolio_inv(event, context):
-    current_positions = event['Payload'][-1]['open_positions']
+    # current_positions = event['Payload'][-1]['open_positions']
     try:
         check_time()
     except ValueError as e:
@@ -39,7 +39,7 @@ def manage_portfolio_inv(event, context):
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
-    trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positions)
+    trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table)
     return "trades_placed"
 
 
@@ -62,11 +62,11 @@ def pull_new_trades_inv(year, month, day, hour):
     return full_df
 
 
-def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons):
+def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
     if trading_mode == "DEV":
         return "test execution"
-    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table, current_positons)
+    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table)
     return execution_result
 
 
@@ -98,15 +98,21 @@ def evaluate_open_trades(orders_df,base_url, access_token):
 
 def check_time():
     current_time = datetime.now().astimezone(pytz.timezone('US/Eastern'))
+    hour = current_time.hour
+    minute = current_time.minute
     
-    if current_time < time(9, 45,tzinfo=pytz.timezone('US/Eastern')) or current_time > time(3, 55,tzinfo=pytz.timezone('US/Eastern')):
+    if hour <= 9:
+        if hour == 9 and minute > 45:
+            return "The time is within the allowed window."
+        else:
+            raise ValueError("The current time is outside the allowed window!")
+    elif hour > 16:
         raise ValueError("The current time is outside the allowed window!")
-    return "The time is within the allowed window."
 
 def format_dates(now):
     now_str = now.strftime("%Y-%m-%d-%H")
     year, month, day, hour = now_str.split("-")
-    hour = int(hour) - 4
+    hour = int(hour)
     return year, month, day, hour
     
 

@@ -7,7 +7,7 @@ from datetime import datetime
 import time
 import ast
 import logging
-from helpers.constants import ACTIVE_STRATEGIES, THREED_STRATEGIES, ONED_STRATEGIES, CALL_STRATEGIES, PUT_STRATEGIES
+from helpers.constants import ALGORITHM_CONFIG, THREED_STRATEGIES, ONED_STRATEGIES, CALL_STRATEGIES, PUT_STRATEGIES
 from helpers.trend_algorithms import *
 
 
@@ -30,8 +30,8 @@ duration = "GTC"
 acct_balance_min = 20000
 
 
-def run_executor(data, trading_mode, base_url, account_id, access_token, table, current_positions):
-    order_ids = execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, current_positions)
+def run_executor(data, trading_mode, base_url, account_id, access_token, table):
+    order_ids = execute_new_trades(data, base_url, account_id, access_token, trading_mode, table)
     return order_ids
 
      
@@ -42,13 +42,12 @@ def account_value_checkpoint(current_balance) -> dict:
     else:
         return False
     
-def execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, current_positions):
+def execute_new_trades(data, base_url, account_id, access_token, trading_mode, table):
     # transaction_data = []
     positions_data = []
     failed_transactions = []
     orders_list = []
     accepted_orders = []
-    logger.info(current_positions)
     for i, row in data.iterrows():
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
@@ -78,11 +77,13 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                         orders_list.append(open_order_id)
                         accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price})
                         logger.info(f'Place order executed: {open_order_id}')
+                        positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price})        
                     else:
                         trade_data = row.to_dict()
                         trade_data['response'] = status_code
                         failed_transactions.append(trade_data)
                         logger.info(f'Place order did not return 200: {detail["contract_ticker"]} json:{json_response}')
+                        underlying_purchase_price = 0
                         continue
                 except Exception as e:
                     logger.info(f'Place order failed: {e}')
@@ -91,7 +92,6 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                     failed_transactions.append(trade_data)
                     continue
             
-            positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price})        
 
     positions_df = pd.DataFrame.from_dict(positions_data)
     accepted_df = pd.DataFrame.from_dict(accepted_orders)
@@ -169,13 +169,13 @@ def date_performance_check(row):
 
 def evaluate_performance_inv(current_price, derivative_price, row):
     if row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
-        sell_code, reason = tda_CALL_3D_stdclsAGG(row, current_price)
+        sell_code, reason = tda_CALL_3D_stdclsAGG(row, current_price,abs((.8*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
     elif row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
-        sell_code, reason = tda_PUT_3D_stdclsAGG(row, current_price)
+        sell_code, reason = tda_PUT_3D_stdclsAGG(row, current_price,abs((.8*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
     elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
-        sell_code, reason = tda_CALL_1D_stdclsAGG(row, current_price)
+        sell_code, reason = tda_CALL_1D_stdclsAGG(row, current_price,abs((.8*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
     elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
-        sell_code, reason = tda_PUT_1D_stdclsAGG(row, current_price)
+        sell_code, reason = tda_PUT_1D_stdclsAGG(row, current_price,abs((.8*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
     return sell_code, reason
 
 
