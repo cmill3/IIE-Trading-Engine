@@ -49,12 +49,13 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
     orders_list = []
     accepted_orders = []
     for i, row in data.iterrows():
+        is_valid = False
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
                                     
-        if row['strategy'] in THREED_STRATEGIES and now.date().weekday() < 2:
+        if row['strategy'] in THREED_STRATEGIES and now.date().weekday() <= 2:
             is_valid = True
-        elif row['strategy'] in ONED_STRATEGIES and now.date().weekday() < 3:
+        elif row['strategy'] in ONED_STRATEGIES and now.date().weekday() <= 3:
             is_valid = True
 
         if is_valid:
