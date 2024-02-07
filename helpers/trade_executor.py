@@ -81,7 +81,7 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                         row['underlying_purchase_price'] = underlying_purchase_price
                         orders_list.append(open_order_id)
                         accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D']})
-                        logger.info(f'Trade executed: {open_order_id} for {detail["contract_ticker"]}')
+                        logger.info(f'Trade executed: {open_order_id} for {detail["contract_ticker"]} for {row["position_id"]}')
                         positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D']})        
                     else:
                         trade_data = row.to_dict()
@@ -130,7 +130,7 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
             row_data = row.to_dict()
             row_data['closing_order_id'] = id
             accepted_orders.append(row_data)
-            logger.info(f'Close order succesful {row["option_symbol"]} close order id:{id} open order id:{row["order_id"]}')
+            logger.info(f'Close order succesful {row["option_symbol"]} close order id:{id} open order id:{row["order_id"]} for {row["position_id"]}')
         else:
             row_data = row.to_dict()
             row_data['response'] = error_json
@@ -147,13 +147,13 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
     s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_closed_orders_data/{user}/{date}.csv", Body=accepted_csv)
     s3.put_object(Bucket=trading_data_bucket, Key=f"rejected_closed_orders_data/{user}/{date}.csv", Body=rejected_csv)
 
-    time.sleep(25)
+    time.sleep(5)
     closed_orders = db.process_closed_orders(accepted_df, base_url, account_id, access_token, position_ids, trading_mode, table, close_table)
     closed_df = pd.DataFrame.from_dict(closed_orders)
     csv = closed_df.to_csv()
 
     s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{user}/{date}.csv", Body=csv)
-    return s3_response
+    return "done"
 
 def date_performance_check(row):
     last_price = trade.call_polygon_last_price(row['underlying_symbol'])
