@@ -9,6 +9,7 @@ yahooquery = "*"
 boto3 = "*"
 requests = "*"
 urllib3 = "*"
+req = "*"
 
 [dev-packages]
 ipykernel = "*"

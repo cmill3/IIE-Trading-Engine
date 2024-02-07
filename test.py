@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from helpers.constants import CALL_STRATEGIES, PUT_STRATEGIES
 import requests
 import pandas as pd
@@ -11,11 +11,9 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-est = pytz.timezone('US/Eastern')
-date = datetime.now(est)
-now_str = datetime.now().strftime("%Y/%m/%d/%H:%M")
-current_date = datetime.now().strftime("%Y-%m-%d")
-
+now = datetime.now()
+dt = now.strftime("%Y-%m-%d_%H:%M:%S")
+current_date = now.strftime("%Y-%m-%d")
 
 limit = 50000
 key = "A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp"
@@ -45,7 +43,7 @@ def date_and_time():
 def calculate_dt_features(transaction_date, sell_by):
     transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
     sell_by_dt = datetime(int(sell_by[0:4]), int(sell_by[5:7]), int(sell_by[8:10]),20)
-    day_diff = transaction_dt - date
+    day_diff = transaction_dt - now
     day_diff = abs(day_diff.days)
     return day_diff
     
@@ -56,6 +54,7 @@ def polygon_call(contract, from_stamp, to_stamp, multiplier, timespan):
     url = f"https://api.polygon.io/v2/aggs/ticker/O:{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
 
     response = requests.request("GET", url, headers=headers, data=payload)
+    print(response.text)
     res_df = pd.DataFrame(json.loads(response.text)['results'])
     res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
     res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
@@ -74,31 +73,50 @@ def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
         res_df['minute'] = res_df['date'].apply(lambda x: x.minute)
         return res_df
     except Exception as e:  
-        logger.info(e)
+        print(e)
         return pd.DataFrame()
 
 def get_business_days(transaction_date):
     """
-    This function can be used to find the number of days between purchase time and current time for a strategy that doesn't hold through the weekend.
+    Returns the number of business days (excluding weekends) between two dates. For now we
+    aren't considering market holidays because that is how the training data was generated.
     """
+    
     transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
-    if date.day == transaction_dt.day:
-        return 0
-    else:
-        transaction_day_of_week = transaction_dt.weekday()
-        current_day_of_week = date.weekday()
-        return current_day_of_week - transaction_day_of_week
+    # We aren't inclusive of the transaction date
+    days = (now - transaction_dt).days 
+
+    complete_weeks = days // 7
+    remaining_days = days % 7
+
+    # Calculate the number of weekend days in the complete weeks
+    weekends = complete_weeks * 2
+
+    # Adjust for the remaining days
+    if remaining_days:
+        start_weekday = transaction_dt.weekday()
+        end_weekday = now.weekday()
+
+        if start_weekday <= end_weekday:
+            if start_weekday <= 5 and end_weekday >= 5:
+                weekends += 2  # Include both Saturdays and Sundays
+            elif start_weekday <= 4 and end_weekday >= 4:
+                weekends += 1  # Include only Saturdays
+        else:
+            if start_weekday <= 5:
+                weekends += 1  # Include Saturday of the first week
+
+    business_days = days - weekends
+    return business_days 
 
 def calculate_floor_pct(row):
     trading_hours = [9,10,11,12,13,14,15]
-    from_stamp = row['order_transaction_date'].split('T')[0]
-    time_stamp = convert_datestring_to_timestamp_UTC(row['order_transaction_date'])
+    from_stamp = row["order_transaction_date"].split('T')[0]
+    time_str = row["order_transaction_date"].split('.')[0]
+    original_datetime = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
+    est_stamp = convert_datetime_est(original_datetime)
     prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "10", "minute")
-    trimmed_df = prices.loc[prices['t'] > time_stamp]
-    trimmed_df['t'] = trimmed_df['t'].apply(lambda x: int(x/1000))
-    trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
-    trimmed_df['time'] = trimmed_df['date'].apply(lambda x: x.time())
-    trimmed_df['hour'] = trimmed_df['date'].apply(lambda x: x.hour)
+    trimmed_df = prices.loc[prices['t'] > est_stamp]
     trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
     trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
     trimmed_df = trimmed_df.iloc[1:]
@@ -116,14 +134,12 @@ def calculate_floor_pct(row):
 
 def get_derivative_max_value(row):
     trading_hours = [9,10,11,12,13,14,15]
-    from_stamp = row['order_transaction_date'].split('T')[0]
-    time_stamp = convert_datestring_to_timestamp_UTC(row['order_transaction_date'])
-    prices = polygon_call_stocks(f"O:{row['option_symbol']}", from_stamp, current_date, "10", "minute")
-    trimmed_df = prices.loc[prices['t'] > time_stamp]
-    trimmed_df['t'] = trimmed_df['t'].apply(lambda x: int(x/1000))
-    trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
-    trimmed_df['time'] = trimmed_df['date'].apply(lambda x: x.time())
-    trimmed_df['hour'] = trimmed_df['date'].apply(lambda x: x.hour)
+    from_stamp = row["order_transaction_date"].split('T')[0]
+    time_str = row["order_transaction_date"].split('.')[0]
+    original_datetime = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
+    est_stamp = convert_datetime_est(original_datetime)
+    prices = polygon_call_stocks(f"O:row['underlying_symbol']", from_stamp, current_date, "10", "minute")
+    trimmed_df = prices.loc[prices['t'] > est_stamp]
     trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
     trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
     trimmed_df = trimmed_df.iloc[1:]
@@ -189,6 +205,13 @@ def build_date():
         month = str(date.month)
 
     temp_year = date.year
+    
+    # date_dict ={
+    #     'month': month,
+    #     'day': day,
+    #     'year': str(temp_year)
+    #     }
+    
     return f"{temp_year}/{month}/{day}/{date.hour}"
 
 def convert_timestamp_est(timestamp):
@@ -198,8 +221,12 @@ def convert_timestamp_est(timestamp):
     dt_utc = pytz.utc.localize(dt_naive)
     # Convert the UTC datetime to EST
     dt_est = dt_utc.astimezone(pytz.timezone('US/Eastern'))
-    
     return dt_est
+
+def convert_datetime_est(dt_naive):
+    dt_utc = pytz.utc.localize(dt_naive)
+    timestamp_est = dt_utc.astimezone(pytz.timezone('US/Eastern')).timestamp()
+    return timestamp_est
 
 def bet_sizer(contracts, date, spread_length, call_put):
     if call_put == "call":
@@ -228,13 +255,14 @@ def bet_sizer(contracts, date, spread_length, call_put):
         vol_check = "True"
     spread_cost = calculate_spread_cost(contracts)
     quantities = finalize_trade(contracts, spread_cost, target_cost)
+    print(quantities)
     for index, contract in enumerate(contracts):
         if index < 3:
             try:
                 contract['quantity'] = quantities[index]
                 print(contract['quantity'])
-            except Exception as e:
-                logger.info(f"ERROR of {e} for {contract['contract_ticker']}")
+            except:
+                print("ERROR")
                 print(contracts)
                 print(quantities)
         else:
@@ -343,29 +371,6 @@ def add_spread_cost(spread_cost, target_cost, contracts_details):
 
     return spread_multiplier, add_one
 
-def convert_timestamp_est(timestamp):
-    # Create a naive datetime object from the UNIX timestamp
-    dt_naive = datetime.utcfromtimestamp(timestamp)
-    # Convert the naive datetime object to a timezone-aware one (UTC)
-    dt_utc = pytz.utc.localize(dt_naive)
-    # Convert the UTC datetime to EST
-    dt_est = dt_utc.astimezone(pytz.timezone('US/Eastern'))
-    
-    return dt_est
-
-def convert_datestring_to_timestamp_UTC(date_string):
-    date_obj = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
-    date_obj = date_obj.replace(tzinfo=timezone.utc)
-    timestamp = date_obj.timestamp()
-    return timestamp
-
 if __name__ == "__main__":
-    print('2024-02-05T17:18:25.415Z')
-    # date_obj = datetime.strptime('2024-02-05T17:18:25.415Z', "%Y-%m-%dT%H:%M:%S.%fZ")
-    # date_obj = date_obj.replace(tzinfo=timezone.utc)
-    # timestamp = date_obj.timestamp()
-    # print(timestamp)
-    # print(time_stamp)
-    # x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})
-    # print(x)
-    # print(type(x))
+    hi = get_derivative_max_value("MRNA240119C00101000","2024-01-18T16:43:45.161Z")
+    print(hi)

@@ -37,6 +37,9 @@ def manage_portfolio(event, context):
     
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
     open_trades_df = db.get_all_orders_from_dynamo(table)
+
+    if len(open_trades_df) == 0:
+        return {"open_positions": []}
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
 
@@ -59,26 +62,34 @@ def manage_portfolio(event, context):
     return {"open_positions": open_positions}
 
 def evaluate_open_trades(orders_df):
-    positions_to_close = []
+    orders_to_close = []
     close_reasons = []
     for _, row in orders_df.iterrows():
         sell_code, reason = te.date_performance_check(row)
         if sell_code != 0:
-            positions_to_close.append(row['position_id'])
-            logger.info(f'Closing order {row["option_symbol"]}: {reason}')
+            orders_to_close.append(row['order_id'])
+            print(f'Closing order {row["option_symbol"]}: {reason}')
+            # logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             ### figure out how to add reason to the order
             close_reasons.append(reason)
-    positions_to_close = list(set(positions_to_close))
-    orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
+    # positions_to_close = list(set(positions_to_close))
+    orders_to_close = orders_df.loc[orders_df['order_id'].isin(orders_to_close)]
+    orders_to_close['close_reason'] = close_reasons
     return orders_to_close
 
 
 def check_time():
     current_time = datetime.now().astimezone(pytz.timezone('US/Eastern'))
+    hour = current_time.hour
+    minute = current_time.minute
     
-    if current_time < time(9, 45,tzinfo=pytz.timezone('US/Eastern')) or current_time > time(3, 55,tzinfo=pytz.timezone('US/Eastern')):
+    if hour <= 9:
+        if hour == 9 and minute > 45:
+            return "The time is within the allowed window."
+        else:
+            raise ValueError("The current time is outside the allowed window!")
+    elif hour > 16:
         raise ValueError("The current time is outside the allowed window!")
-    return "The time is within the allowed window."
     
 if __name__ == "__main__":
    manage_portfolio(None, None)
