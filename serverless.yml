@@ -73,7 +73,7 @@ functions:
     environment:
       TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
-      USER: "yq"
+      USER: "inv"
       TABLE: ${self:custom.${self:provider.stage}.ordersTableYQ}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -85,9 +85,9 @@ functions:
     environment:
       TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
-      TABLE: ${self:custom.${self:provider.stage}.ordersTableYQ}
-      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableYQ}
-      USER: "yq"
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
+      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
+      USER: "inv"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -105,7 +105,7 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: icarus-trade-builder-invBFC-${self:provider.stage}
+    name: icarus-trade-builder-GAIN-${self:provider.stage}
   icarus-trade-builder-LOSERS:
     handler: icarus_trade_builder.build_trade_inv
     environment:
@@ -118,7 +118,7 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: icarus-trade-builder-invBFP-${self:provider.stage}
+    name: icarus-trade-builder-LOSERS-${self:provider.stage}
   icarus-trade-builder-MA:
     handler: icarus_trade_builder.build_trade_inv
     environment:
@@ -131,7 +131,33 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: icarus-trade-builder-indexC-${self:provider.stage}
+    name: icarus-trade-builder-MA-${self:provider.stage}
+  icarus-trade-builder-CDVOLBFP:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      USER: "inv"
+      TRADING_STRATEGY: "CDBFP,CDBFP_1D"
+      TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-CDVOLBFP-${self:provider.stage}
+  icarus-trade-builder-CDVOLBFC:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      USER: "inv"
+      TRADING_STRATEGY: "CDBFC,CDBFC_1D"
+      TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-CDVOLBFC-${self:provider.stage}
   # icarus-trade-builder-MAP:
   #   handler: icarus_trade_builder.build_trade_inv
   #   environment:
@@ -398,12 +424,42 @@ stepFunctions:
                       MaxAttempts: 3
                       BackoffRate: 2
                     End: True
-              - StartAt: BuildTradeMA
+              # - StartAt: BuildTradeMA
+              #   States:
+              #     BuildTradeMA:
+              #       Type: Task
+              #       Resource: 
+              #         Fn::GetAtt: [icarus-trade-builder-MA, Arn]
+              #       Retry:
+              #       - ErrorEquals:
+              #         - Lambda.ServiceException
+              #         - Lambda.AWSLambdaException
+              #         - Lambda.SdkClientException
+              #         IntervalSeconds: 5
+              #         MaxAttempts: 3
+              #         BackoffRate: 2
+              #       End: True
+              - StartAt: BuildTradeCDVOLBFP
                 States:
-                  BuildTradeMA:
+                  BuildTradeCDVOLBFP:
                     Type: Task
                     Resource: 
-                      Fn::GetAtt: [icarus-trade-builder-MA, Arn]
+                      Fn::GetAtt: [icarus-trade-builder-CDVOLBFP, Arn]
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: BuildTradeCDVOLBFC
+                States:
+                  BuildTradeCDVOLBFC:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [icarus-trade-builder-CDVOLBFC, Arn]
                     Retry:
                     - ErrorEquals:
                       - Lambda.ServiceException

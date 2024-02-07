@@ -50,8 +50,8 @@ def pull_new_trades_inv(year, month, day, hour):
             print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             df = pd.read_csv(dataset.get("Body"))
-            # df.dropna(subset=["trade_details2wk"],inplace=True)
-            # df.dropna(subset=["trade_details1wk"],inplace=True)
+            df.dropna(subset=["trade_details2wk"],inplace=True)
+            df.dropna(subset=["trade_details1wk"],inplace=True)
             df.reset_index(inplace= True, drop = True)
             trade_dfs.append(df)
         except Exception as e:

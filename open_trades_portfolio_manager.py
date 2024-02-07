@@ -62,17 +62,19 @@ def manage_portfolio(event, context):
     return {"open_positions": open_positions}
 
 def evaluate_open_trades(orders_df):
-    positions_to_close = []
+    orders_to_close = []
     close_reasons = []
     for _, row in orders_df.iterrows():
         sell_code, reason = te.date_performance_check(row)
         if sell_code != 0:
-            positions_to_close.append(row['position_id'])
-            logger.info(f'Closing order {row["option_symbol"]}: {reason}')
+            orders_to_close.append(row['order_id'])
+            print(f'Closing order {row["option_symbol"]}: {reason}')
+            # logger.info(f'Closing order {row["option_symbol"]}: {reason}')
             ### figure out how to add reason to the order
             close_reasons.append(reason)
-    positions_to_close = list(set(positions_to_close))
-    orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
+    # positions_to_close = list(set(positions_to_close))
+    orders_to_close = orders_df.loc[orders_df['order_id'].isin(orders_to_close)]
+    orders_to_close['close_reason'] = close_reasons
     return orders_to_close
 
 

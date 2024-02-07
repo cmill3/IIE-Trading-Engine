@@ -41,19 +41,18 @@ def compare_order_dfs(tradier_trades, dynamo_trades,base_url, account_id, access
     dynamo_set = set(todays_dynamo['order_id'].values.astype(int))
     not_in_tradier = dynamo_set - tradier_set
     not_in_dynamo = tradier_set - dynamo_set
-    logger.info(f"Trades in Dynamo but not in Tradier: {not_in_tradier}")
-    logger.info(f"Trades in Tradier but not in Dynamo: {not_in_dynamo}")
-    
+    print(f"Trades in Dynamo but not in Tradier: {not_in_tradier}")
+    print(f"Trades in Tradier but not in Dynamo: {not_in_dynamo}")
+    print(dynamo_trades['order_id'].values)
     
     for order_id in not_in_dynamo:
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, order_id)
         print(order_info_obj)
-        row = dynamo_trades[dynamo_trades['order_id'] == order_id]
-        print(row)
         if order_info_obj['status'] == "filled":
-            dt = datetime.strptime(row['create_date_x'],"%Y-%m-%dT%H:%M:%S.%fZ")
-            underlying_purchase_price = trade.call_polygon_price_reconciliation(f"{row['underlying_symbol_x']}",dt)
-            db.create_new_dynamo_record_order(order_info_obj, row, row['tag'],order_id, underlying_purchase_price, trading_mode, table="icarus-orders-table-inv")
+            dt = datetime.strptime(order_info_obj['created_date'],"%Y-%m-%dT%H:%M:%S.%fZ")
+            underlying_symbol = order_info_obj['position_id'].split("-")[0]
+            underlying_purchase_price = trade.call_polygon_price_reconciliation(underlying_symbol,dt)
+            db.create_new_dynamo_record_order_reconciliation(order_info_obj, order_info_obj['position_id'], underlying_symbol,order_id, underlying_purchase_price, trading_mode, table="icarus-orders-table-inv")
         
 
 

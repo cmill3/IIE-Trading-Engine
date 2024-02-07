@@ -11,6 +11,10 @@ PREFIXES = {
 "MA_1D": "invalerts-xgb-MA-1d-classifier",
 "MAP": "invalerts-xgb-MAP-classifier",
 "MAP_1D": "invalerts-xgb-MAP-1d-classifier",
+"CDBFC": "invalerts-xgb-CDBFC-classifier",
+"CDBFC_1D": "invalerts-xgb-CDBFC-1d-classifier", 
+"CDBFP": "invalerts-xgb-CDBFP-classifier",
+"CDBFP_1D": "invalerts-xgb-CDBFP-1d-classifier",
 # "VDIFFC": "invalerts-vdiffc-classifier",
 # "VDIFFC_1D": "invalerts-vdiffc1d-classifier",
 # "VDIFFP": "invalerts-vdiffp-classifier",
@@ -22,14 +26,16 @@ PREFIXES = {
 }
 
 TRADING_STRATEGIES = ["IDXC","IDXP","IDXC_1D","IDXP_1D","MA","MAP","MA_1D","MAP_1D","GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D",
-                      "LOSERSC","LOSERSC_1D","VDIFFC","VDIFFC_1D","VDIFFP_1D","VDIFFP"]
+                      "LOSERSC","LOSERSC_1D","CDBFC","CDBFP","CDBFC_1D","CDBFP_1D","VDIFFC","VDIFFC_1D","VDIFFP","VDIFFP_1D"]
 
-ACTIVE_STRATEGIES = ["GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D","LOSERSC","LOSERSC_1D","MA","MA_1D","MAP","MAP_1D"]
+ACTIVE_STRATEGIES = ["GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D","LOSERSC","LOSERSC_1D","CDBFC","CDBFP","CDBFC_1D","CDBFP_1D"]
 
-CALL_STRATEGIES = ["IDXC","IDXC_1D","MA","MA_1D","GAIN_1D","GAIN","LOSERSC","LOSERSC_1D","VDIFFC","VDIFFC_1D"]
-PUT_STRATEGIES = ["IDXP","IDXP_1D","MAP","MAP_1D","GAINP_1D","GAINP","LOSERS","LOSERS_1D","VDIFFP","VDIFFP_1D"]
-ONED_STRATEGIES = ["IDXC_1D","IDXP_1D","MA_1D","MAP_1D","GAIN_1D","GAINP_1D","LOSERS_1D","LOSERSC_1D","VDIFFC_1D","VDIFFP_1D"]
-THREED_STRATEGIES = ["IDXC","IDXP","MA","MAP","GAIN","GAINP","LOSERS","LOSERSC","VDIFFC","VDIFFP"]
+CALL_STRATEGIES = ["IDXC","IDXC_1D","MA","MA_1D","GAIN_1D","GAIN","LOSERSC","LOSERSC_1D","VDIFFC","VDIFFC_1D","CDBFC","CDBFC_1D"]
+PUT_STRATEGIES = ["IDXP","IDXP_1D","MAP","MAP_1D","GAINP_1D","GAINP","LOSERS","LOSERS_1D","VDIFFP","VDIFFP_1D","CDBFP","CDBFP_1D"]
+ONED_STRATEGIES = ["IDXC_1D","IDXP_1D","MA_1D","MAP_1D","GAIN_1D","GAINP_1D","LOSERS_1D","LOSERSC_1D","VDIFFC_1D","VDIFFP_1D","CDBFC_1D","CDBFP_1D"]
+THREED_STRATEGIES = ["IDXC","IDXP","MA","MAP","GAIN","GAINP","LOSERS","LOSERSC","VDIFFC","VDIFFP","CDBFC","CDBFP"]
+CDVOL_STRATEGIES = ["CDBFC","CDBFP","CDBFC_1D","CDBFP_1D"]
+TREND_STRATEGIES = ["GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D","LOSERSC","LOSERSC_1D","MA","MA_1D","MAP","MAP_1D"]
 
 
 ENDPOINT_NAMES = {
@@ -45,6 +51,10 @@ ENDPOINT_NAMES = {
 "MA_1D": "invalerts-xgb-MA-1d-classifier",
 "MAP": "invalerts-xgb-MAP-classifier",
 "MAP_1D": "invalerts-xgb-MAP-1d-classifier",
+"CDBFC": "invalerts-xgb-CDBFC-classifier",
+"CDBFC_1D": "invalerts-xgb-CDBFC-1d-classifier", 
+"CDBFP": "invalerts-xgb-CDBFP-classifier",
+"CDBFP_1D": "invalerts-xgb-CDBFP-1d-classifier",
 # "VDIFFC": "invalerts-vdiffc-classifier",
 # "VDIFFC_1D": "invalerts-vdiffc1d-classifier",
 # "VDIFFP": "invalerts-vdiffp-classifier",
@@ -58,82 +68,66 @@ ENDPOINT_NAMES = {
 ALGORITHM_CONFIG = {
     "GAIN_1D": {
         "target_label": "one_max",
-        "target_value": .014,
+        "target_value": .016,
     },
     "GAIN": {
         "target_label": "three_max",
-        "target_value": .022,
+        "target_value": .026,
     },
     "GAINP_1D": {
         "target_label": "one_min",
-        "target_value": -.013,
+        "target_value": -.017,
     },
     "GAINP": {
         "target_label": "three_min",
-        "target_value": -.02,
+        "target_value": -.026,
     },
      "LOSERSC_1D": {
         "target_label": "one_max",
-        "target_value": .017,
+        "target_value": .02,
     },
     "LOSERSC": {
         "target_label": "three_max",
-        "target_value": .026,
+        "target_value": .032,
     },
     "LOSERS_1D": {
         "target_label": "one_min",
-        "target_value": -.015,
+        "target_value": -.02,
     },
     "LOSERS": {
         "target_label": "three_min",
-        "target_value": -.023,
-    },
-    "vdiffC1d": {
-        "target_label": "one_max",
-        "target_value": .013,
-    },
-    "vdiffC": {
-        "target_label": "three_max",
-        "target_value": .028,
-    },
-    "vdiffP1d": {
-        "target_label": "one_min",
-        "target_value": -.013,
-    },
-    "vdiffP": {
-        "target_label": "three_min",
-        "target_value": -.028,
+        "target_value": -.032,
     },
      "MA_1D": {
         "target_label": "one_max",
-        "target_value": .014,
+        "target_value": .017,
     },
     "MA": {
         "target_label": "three_max",
-        "target_value": .021,
+        "target_value": .026,
     },
     "MAP_1D": {
         "target_label": "one_min",
-        "target_value": -.013,
+        "target_value": -.017,
     },
     "MAP": {
         "target_label": "three_min",
-        "target_value": -.021,
+        "target_value": -.026,
     },
-    "idxC1d": {
-        "target_label": "one_max",
-        "target_value": .013,
+    "CDBFC": {
+        "target_label": "three_max_vol",
+        "target_value": 1.42,
     },
-    "idxC": {
-        "target_label": "three_max",
-        "target_value": .028,
+    "CDBFP": {
+        "target_label": "three_min_vol",
+        "target_value": -.876,
     },
-    "idxP1d": {
-        "target_label": "one_min",
-        "target_value": -.013,
+    "CDBFC_1D": {
+        "target_label": "one_max_vol",
+        "target_value": .959,
     },
-    "idxP": {
-        "target_label": "three_min",
-        "target_value": -.028,
+    "CDBFP_1D": {
+        "target_label": "one_min_vol",
+        "target_value": -1.34,
     },
 }
