@@ -370,30 +370,15 @@ def convert_datestring_to_timestamp_UTC(date_string):
     timestamp = date_obj.timestamp()
     return timestamp
 
-def log_message_close(row, id, status_code, error):
+def log_message_close(row, id, status_code, reason, error):
     if error == None:
         log_entry = json.dumps({
             "order_id": row['order_id'],
             "position_id": row['position_id'],
             "closing_order_id": id,
             "status_code": status_code,
-        })
-        logger.info(log_entry)
-    else:
-        log_entry = json.dumps({
-            "order_id": row['order_id'],
-            "position_id": row['position_id'],
-            "response": error
-        })
-        logger.error(log_entry)
-
-def log_message_open(row, id, status_code, error, contract_ticker):
-    if error == None:
-        log_entry = json.dumps({
-            "order_id": row['order_id'],
-            "position_id": row['position_id'],
-            "status_code": status_code,
-            "contract_ticker": contract_ticker
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "close_reason": reason
         })
         logger.info(log_entry)
     else:
@@ -401,7 +386,33 @@ def log_message_open(row, id, status_code, error, contract_ticker):
             "order_id": row['order_id'],
             "position_id": row['position_id'],
             "response": error,
-            "contract_ticker": contract_ticker
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+        logger.error(log_entry)
+
+def log_message_open(row, id, status_code, error, contract_ticker, option_side):
+    if error == None:
+        log_entry = json.dumps({
+            "order_id": row['order_id'],
+            "position_id": row['position_id'],
+            "status_code": status_code,
+            "contract_ticker": contract_ticker,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "underlying_purchase_price": row['underlying_purchase_price'],
+            "quantity": row['quantity'],
+            "strategy": row['trading_strategy'],
+            "target_value": ALGORITHM_CONFIG[row['trading_strategy']]['target_value'],
+            'underlying_symbol': row['underlying_symbol'],
+            'option_side': option_side
+        })
+        logger.info(log_entry)
+    else:
+        log_entry = json.dumps({
+            "order_id": row['order_id'],
+            "position_id": row['position_id'],
+            "response": error,
+            "contract_ticker": contract_ticker,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
         logger.error(log_entry)
 

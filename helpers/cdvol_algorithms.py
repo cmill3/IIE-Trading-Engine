@@ -49,9 +49,12 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
     sell_code = 0
     reason = ""
     if day_diff < 3:
-        if pct_change > Floor_pct:
+        if current_weekday == 4 and hour > 12: 
             sell_code = 2
-            reason = f"Breached floor pct"
+            reason = f"Friday sell. {pct_change} {Floor_pct}"
+        elif pct_change >= Floor_pct:
+            sell_code = 2
+            reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
     elif day_diff > 3:
         sell_code = 3
         reason = "Held through confidence."
@@ -98,9 +101,12 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     sell_code = 0
     reason = ""
     if day_diff < 3:
-        if pct_change < Floor_pct:
+        if current_weekday == 4 and hour > 12: 
             sell_code = 2
-            reason = f"Breached floor pct"
+            reason = f"Friday sell. {pct_change} {Floor_pct}"
+        elif pct_change <= Floor_pct:
+            sell_code = 2
+            reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
     elif day_diff > 3:
         sell_code = 3
         reason = "Held through confidence."
@@ -146,9 +152,12 @@ def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     sell_code = 0
     reason = ""
     if day_diff < 1:
-        if pct_change > Floor_pct:
+        if current_weekday == 4 and hour > 12: 
             sell_code = 2
-            reason = f"Breached floor pct"
+            reason = f"Friday sell. {pct_change} {Floor_pct}"
+        elif pct_change >= Floor_pct:
+            sell_code = 2
+            reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
     elif day_diff > 1:
         sell_code = 3
         reason = "Held through confidence."
@@ -194,9 +203,12 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     sell_code = 0
     reason = ""
     if day_diff < 1:
-        if pct_change < Floor_pct:
+        if current_weekday == 4 and hour > 12: 
             sell_code = 2
-            reason = f"Breached floor pct"
+            reason = f"Friday sell. {pct_change} {Floor_pct}"
+        elif pct_change <= Floor_pct:
+            sell_code = 2
+            reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
     elif day_diff > 1:
         sell_code = 3
         reason = "Held through confidence."

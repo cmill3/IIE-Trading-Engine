@@ -42,24 +42,24 @@ def manage_portfolio(event, context):
         return {"open_positions": []}
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
-
-    orders_to_close = evaluate_open_trades(open_trades_df)
+    closed_orders = evaluate_open_trades(open_trades_df)
     
-    if len(orders_to_close) == 0:
-        return {"open_positions": open_positions}
+    # if len(orders_to_close) == 0:
+    #     return {"open_positions": open_positions}
     
-    if trading_mode == "DEV":
-        return {"open_positions": open_positions}
+    # if trading_mode == "DEV":
+    #     return {"open_positions": open_positions}
     
-    trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
-    logger.info(f'Closing orders: {trade_response}')
+    # trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
+    # logger.info(f'Closing orders: {trade_response}')
 
-    if datetime.now().minute < 10:
-        open_trades_df = db.get_all_orders_from_dynamo(table)
-        open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
-        open_positions = open_trades_df['pos_id'].unique().tolist()
+    # if datetime.now().minute < 10:
+    #     open_trades_df = db.get_all_orders_from_dynamo(table)
+    #     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
+    #     open_positions = open_trades_df['pos_id'].unique().tolist()
 
-    return {"open_positions": open_positions}
+    logger.info(f'closed_orders: {closed_orders}')
+    return {"closed_orders": closed_orders}
 
 def evaluate_open_trades(orders_df):
     orders_to_close = []
