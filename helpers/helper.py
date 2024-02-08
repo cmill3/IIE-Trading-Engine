@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from helpers.constants import CALL_STRATEGIES, PUT_STRATEGIES
+from helpers.constants import *
 import requests
 import pandas as pd
 import json
@@ -201,11 +201,8 @@ def convert_timestamp_est(timestamp):
     
     return dt_est
 
-def bet_sizer(contracts, date, spread_length, call_put):
-    if call_put == "call":
-        target_cost = .0007* pull_trading_balance()
-    elif call_put == "put":
-        target_cost = .0007* pull_trading_balance()
+def bet_sizer(contracts, date, spread_length, call_put,strategy):
+    target_cost = (.004* pull_trading_balance(strategy))
 
     to_stamp = (date - timedelta(days=1)).strftime("%Y-%m-%d")
     from_stamp = (date - timedelta(days=5)).strftime("%Y-%m-%d")
@@ -240,6 +237,20 @@ def bet_sizer(contracts, date, spread_length, call_put):
         else:
             contract['quantity'] = 0
     return contracts, vol_check
+
+# def pull_trading_balance(strategy):
+#     s3 = boto3.client('s3')
+#     if strategy in CDVOL_STRATEGIES:
+#         data = s3.get_object(Bucket="inv-alerts-trading-data", Key="trading_balance/cd_vol.csv")
+#         data = pd.read_csv(data.get("Body"))
+#         return data['balance'].values[0]
+#     elif strategy in TREND_STRATEGIES:
+#         data = s3.get_object(Bucket="inv-alerts-trading-data", Key="trading_balance/trend.csv")
+#         data = pd.read_csv(data.get("Body"))
+#         return data['balance'].values[0]
+#     else:
+#         logger.error(f"ERROR: STRATEGY NOT FOUND {strategy} in bet_sizer")
+#         return 0
 
 def pull_trading_balance():
     ### This is hardcoded for now, but will be replaced with a call to the tradier API
@@ -358,6 +369,41 @@ def convert_datestring_to_timestamp_UTC(date_string):
     date_obj = date_obj.replace(tzinfo=timezone.utc)
     timestamp = date_obj.timestamp()
     return timestamp
+
+def log_message_close(row, id, status_code, error):
+    if error == None:
+        log_entry = json.dumps({
+            "order_id": row['order_id'],
+            "position_id": row['position_id'],
+            "closing_order_id": id,
+            "status_code": status_code,
+        })
+        logger.info(log_entry)
+    else:
+        log_entry = json.dumps({
+            "order_id": row['order_id'],
+            "position_id": row['position_id'],
+            "response": error
+        })
+        logger.error(log_entry)
+
+def log_message_open(row, id, status_code, error, contract_ticker):
+    if error == None:
+        log_entry = json.dumps({
+            "order_id": row['order_id'],
+            "position_id": row['position_id'],
+            "status_code": status_code,
+            "contract_ticker": contract_ticker
+        })
+        logger.info(log_entry)
+    else:
+        log_entry = json.dumps({
+            "order_id": row['order_id'],
+            "position_id": row['position_id'],
+            "response": error,
+            "contract_ticker": contract_ticker
+        })
+        logger.error(log_entry)
 
 if __name__ == "__main__":
     print('2024-02-05T17:18:25.415Z')

@@ -109,7 +109,7 @@ def build_trade_structure_1d(row):
         option_chain = get_option_chain(row['symbol'], row['expiry_1d'], row['Call/Put'])
         contracts_1d = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_1d = smart_spreads_filter(contracts_1d,underlying_price)
-        trade_details_1d, vol_check = helper.bet_sizer(contracts_1d, now, spread_length=3, call_put=row['Call/Put'])
+        trade_details_1d, vol_check = helper.bet_sizer(contracts_1d, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
     except Exception as e:
         print("FAIL")
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
@@ -123,7 +123,7 @@ def build_trade_structure_3d(row):
         option_chain = get_option_chain(row['symbol'], row['expiry_3d'], row['Call/Put'])
         contracts_3d = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_3d = smart_spreads_filter(contracts_3d,underlying_price)
-        trade_details_3d, vol_check = helper.bet_sizer(contracts_3d, now, spread_length=3, call_put=row['Call/Put'])
+        trade_details_3d, vol_check = helper.bet_sizer(contracts_3d, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
     except Exception as e:
         logger.info(f"Could not build spread for {row['symbol']}: {e}")
         print(f"Could not build spread for {row['symbol']}: {e}")
@@ -139,7 +139,7 @@ def build_trade_structure_1wk(row):
             option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
         contracts_1wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_1wk = smart_spreads_filter(contracts_1wk,underlying_price)
-        trade_details_1wk, vol_check = helper.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'])
+        trade_details_1wk, vol_check = helper.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
     except Exception as e:
         print("FAIL")
         logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
@@ -156,7 +156,7 @@ def build_trade_structure_2wk(row):
             option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
         contracts_2wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_2wk = smart_spreads_filter(contracts_2wk,underlying_price)
-        trade_details_2wk, vol_check = helper.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'])
+        trade_details_2wk, vol_check = helper.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
     except Exception as e:
         trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e} 2WK")
