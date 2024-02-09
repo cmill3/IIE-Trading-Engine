@@ -373,6 +373,7 @@ def convert_datestring_to_timestamp_UTC(date_string):
 def log_message_close(row, id, status_code, reason, error):
     if error == None:
         log_entry = json.dumps({
+            "log_type": "close_success",
             "order_id": row['order_id'],
             "position_id": row['position_id'],
             "closing_order_id": id,
@@ -383,6 +384,7 @@ def log_message_close(row, id, status_code, reason, error):
         logger.info(log_entry)
     else:
         log_entry = json.dumps({
+            "log_type": "close_error",
             "order_id": row['order_id'],
             "position_id": row['position_id'],
             "response": error,
@@ -393,6 +395,7 @@ def log_message_close(row, id, status_code, reason, error):
 def log_message_open(row, id, status_code, error, contract_ticker, option_side):
     if error == None:
         log_entry = json.dumps({
+            "log_type": "open_success",
             "order_id": row['order_id'],
             "position_id": row['position_id'],
             "status_code": status_code,
@@ -408,6 +411,7 @@ def log_message_open(row, id, status_code, error, contract_ticker, option_side):
         logger.info(log_entry)
     else:
         log_entry = json.dumps({
+            "log_type": "open_error",
             "order_id": row['order_id'],
             "position_id": row['position_id'],
             "response": error,
