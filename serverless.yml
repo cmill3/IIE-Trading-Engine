@@ -397,7 +397,7 @@ stepFunctions:
             Resource: 
               Fn::GetAtt: [opened-orders-data-processor, Arn]
             Parameters:
-              Payload.$: $
+              Payload.$: "$.lambda_signifier"
             Retry:
             - ErrorEquals:
               - Lambda.ServiceException
@@ -414,7 +414,7 @@ stepFunctions:
       role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
       alarms:
         topics:
-          alarm: !Ref yqalertsTopic
+          alarm: arn:aws:sns:us-east-1:456201388658:yqalerts-production-modeling
         metrics:
           - executionsTimedOut
           - executionsFailed
@@ -428,7 +428,7 @@ stepFunctions:
           PortfolioManager:
             Type: Task
             Resource: 
-              Fn::GetAtt: [open-trades-portfolio-manager-paper-inv, Arn]
+              Fn::GetAtt: [open-trades-portfolio-manage-paper, Arn]
             Parameters:
               Payload.$: $
             Retry:
@@ -445,7 +445,7 @@ stepFunctions:
             Resource: 
               Fn::GetAtt: [closed-orders-data-processor, Arn]
             Parameters:
-              Payload.$: $
+              lambda_signifier.$: "$.lambda_signifier"
             Retry:
             - ErrorEquals:
               - Lambda.ServiceException

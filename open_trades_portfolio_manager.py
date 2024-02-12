@@ -20,6 +20,7 @@ logger.setLevel(logging.INFO)
 
 dt = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 current_date = datetime.now().strftime("%Y-%m-%d")
+lambda_signifier = datetime.now().strftime("%Y%m%d+%H%M")
 
 order_side = "sell_to_close"
 order_type = "market"
@@ -39,7 +40,7 @@ def manage_portfolio(event, context):
     open_trades_df = db.get_all_orders_from_dynamo(table)
 
     if len(open_trades_df) == 0:
-        return {"open_positions": []}
+        {"lambda_signifier": lambda_signifier}
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
     closed_orders = evaluate_open_trades(open_trades_df)
@@ -58,23 +59,17 @@ def manage_portfolio(event, context):
     #     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     #     open_positions = open_trades_df['pos_id'].unique().tolist()
 
-    logger.info(f'closed_orders: {closed_orders}')
-    return {"closed_orders": closed_orders}
+    logger.info(f'closed_orders: {closed_orders['closing_order_id']}')
+    return {"lambda_signifier": lambda_signifier}
 
-def evaluate_open_trades(orders_df):
+def  evaluate_open_trades(orders_df):
     orders_to_close = []
-    close_reasons = []
     for _, row in orders_df.iterrows():
-        sell_code, reason = te.date_performance_check(row)
-        if sell_code != 0:
-            orders_to_close.append(row['order_id'])
-            print(f'Closing order {row["option_symbol"]}: {reason}')
-            # logger.info(f'Closing order {row["option_symbol"]}: {reason}')
-            ### figure out how to add reason to the order
-            close_reasons.append(reason)
+        order_data = te.date_performance_check(row,trading_mode,lambda_signifier)
+        if order_data is not None:
+            orders_to_close.append({"open_order_id":order_data['order_id'],"closing_order_id":order_data['closing_order_id']})
     # positions_to_close = list(set(positions_to_close))
-    orders_to_close = orders_df.loc[orders_df['order_id'].isin(orders_to_close)]
-    orders_to_close['close_reason'] = close_reasons
+    logger.info(f'orders_to_close: {orders_to_close}')
     return orders_to_close
 
 
