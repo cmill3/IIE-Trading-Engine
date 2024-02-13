@@ -37,7 +37,6 @@ def run_closed_trades_data_process(event,context):
 
 def run_opened_trades_data_process(event,context):
     lambda_signifier = event.get('lambda_signifier', 'default_value')
-    # lambda_signifier = "20240212+1642"
     succesful_logs, unsuccesful_logs = pull_log_data("opened",lambda_signifier)
     create_dynamo_order_open(succesful_logs)
     success_df = pd.DataFrame.from_dict(succesful_logs)
@@ -97,7 +96,6 @@ def pull_log_data(process_type,lambda_signifier):
     for page in paginator.paginate(**pagination_options):
         for event in page['events']:
             message = event['message']
-            print(message)
             try:
                 parts = message.split('\t')
                 json_part = parts[-1]

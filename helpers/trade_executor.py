@@ -167,8 +167,6 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
 def close_order(row,trading_mode, reason,lambda_signifier):
     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
     id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
-    print(status_code)
-    print(error_json)
     if status_code == 200:
         row['closing_order_id'] = id
         log_message_close(row, id, status_code, reason,error_json,lambda_signifier)
