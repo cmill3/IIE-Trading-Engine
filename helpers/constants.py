@@ -30,8 +30,7 @@ TRADING_STRATEGIES = ["IDXC","IDXP","IDXC_1D","IDXP_1D","MA","MAP","MA_1D","MAP_
 
 ACTIVE_STRATEGIES = [
     # "GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D","LOSERSC","LOSERSC_1D",
-    "CDBFC","CDBFP",
-    # "CDBFC_1D","CDBFP_1D"
+    "CDBFC","CDBFP","CDBFC_1D","CDBFP_1D"
     ]
 
 CALL_STRATEGIES = ["IDXC","IDXC_1D","MA","MA_1D","GAIN_1D","GAIN","LOSERSC","LOSERSC_1D","VDIFFC","VDIFFC_1D","CDBFC","CDBFC_1D"]
@@ -120,19 +119,19 @@ ALGORITHM_CONFIG = {
     },
     "CDBFC": {
         "target_label": "three_max_vol",
-        "target_value": 1.42,
+        "target_value": 1.731,
     },
     "CDBFP": {
         "target_label": "three_min_vol",
-        "target_value": -1.34,
+        "target_value": -1.554,
         
     },
     "CDBFC_1D": {
         "target_label": "one_max_vol",
-        "target_value": .959,
+        "target_value": 1.098,
     },
     "CDBFP_1D": {
         "target_label": "one_min_vol",
-        "target_value": -.876,
+        "target_value": -1.012,
     },
 }

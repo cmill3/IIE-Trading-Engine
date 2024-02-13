@@ -226,7 +226,7 @@ def create_new_dynamo_record_closed_order_logmessage(order_info_obj, original_or
         'last_fill_price_open': str(original_order['last_fill_price_open']),
         'qty_executed_open': str(original_order['qty_executed_open']),
         'order_creation_date': str(original_order['order_creation_date']),
-        'order_transaction_date': str(log_message['order_transaction_date']),
+        'order_transaction_date': str(original_order['order_transaction_date']),
         'close_creation_date': str(original_order['created_date']),
         'close_transaction_date': str(order_info_obj['transaction_date']),
         'avg_fill_price_close': str(order_info_obj['average_fill_price']),
