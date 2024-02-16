@@ -11,11 +11,10 @@ import pytz
 import json
 import pandas as pd
 
-trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 table = os.getenv('TABLE')
 close_table = os.getenv("CLOSE_TABLE")
-user = os.getenv("USER")
+env = os.getenv("ENV")
 urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -48,20 +47,20 @@ def run_opened_trades_data_process(event,context):
 
 
 def create_dynamo_order_open(log_messages):
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
+    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     for log in log_messages:
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, log['order_id'])
-        db.create_new_dynamo_record_order_logmessage(order_info_obj,log, trading_mode, table)
+        db.create_new_dynamo_record_order_logmessage(order_info_obj,log, env, table)
         logger.info(f"Created new dynamo record for order_id: {log['order_id']} in {table}")
 
     return "Created new dynamo records for open orders"
 
 def create_dynamo_order_close(log_messages):
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
+    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     for log in log_messages:
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, log['order_id'])
         original_order = db.delete_order_record(log['order_id'], table)
-        create_response = db.create_new_dynamo_record_closed_order_logmessage(order_info_obj, original_order, log, trading_mode, close_table)
+        create_response = db.create_new_dynamo_record_closed_order_logmessage(order_info_obj, original_order, log, env, close_table)
         logger.info(f"Created new dynamo record for order_id: {log['order_id']} {log['closing_order_id']} in {close_table}")
 
     return "Created new dynamo records for close orders"

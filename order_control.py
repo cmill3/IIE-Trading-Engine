@@ -6,8 +6,7 @@ import logging
 from datetime import datetime
 
 bucket = os.getenv("TRADING_BUCKET")
-trading_mode = os.getenv("TRADING_MODE")
-user = os.getenv("USER")
+env = os.getenv("ENV")
 
 ddb = boto3.resource('dynamodb','us-east-1')
 orders_table = ddb.Table('icarus-orders-table')
@@ -19,7 +18,7 @@ logger = logging.getLogger()
 
 def run_order_control(event, context):
     date_prefix = helper.calculate_date_prefix()
-    base_url, account_id, access_token = tradier.get_tradier_credentials(trading_mode=trading_mode, user=user)
+    base_url, account_id, access_token = tradier.get_tradier_credentials(env=env)
     closed_orders_df = helper.pull_data_s3(path='enriched_closed_orders_data',bucket=bucket,date_prefix=date_prefix)
     opened_orders_df = helper.pull_opened_data_s3(path='orders_data',bucket=bucket,date_prefix=date_prefix)
     tradier_orders = tradier.get_account_orders(base_url, account_id, access_token)
@@ -32,7 +31,7 @@ def run_order_control(event, context):
     if len(untracked_closed_orders) > 0:
         for order in untracked_closed_orders:
             order_info_obj = tradier.get_order_info(base_url, account_id, access_token, order)
-            create_response, full_order_record = db.create_new_dynamo_record_closed_order_reconciliation(order_info_obj, trading_mode)
+            create_response, full_order_record = db.create_new_dynamo_record_closed_order_reconciliation(order_info_obj, env)
     # dynamo_open_trades_df = get_all_orders_from_dynamo(orders_table)
     # dynamo_closed_trades_df = get_all_orders_from_dynamo(closed_orders_table)
 
@@ -93,7 +92,7 @@ def open_orders_reconciliation(orders,base_url, account_id, access_token):
     date_str = datetime.now().strftime("%Y/%m/%d")
     for order_id in orders:
         order_info_obj = tradier.get_order_info(base_url, account_id, access_token, order_id)
-        db.create_new_dynamo_record_order_reconciliation(order_info_obj, trading_mode)
+        db.create_new_dynamo_record_order_reconciliation(order_info_obj, env)
         logger.info(f"Error getting order info {order_id}: {e}")
         untracked_info.append(order_info_obj)
     
