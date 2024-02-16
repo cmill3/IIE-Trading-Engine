@@ -167,17 +167,16 @@ def close_orders(orders_df,  base_url, account_id, access_token, env, table, clo
 def close_order(row,env, lambda_signifier):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
-    print(status_code)
-    print(error_json)
     if status_code == 200:
-        row_data['closing_order_id'] = id
-        log_message_close(row, id, status_code, error_json,lambda_signifier)
+        row['closing_order_id'] = id
+        log_message_close(row, id, status_code, reason,error_json,lambda_signifier)
         logger.info(f'Close order succesful {row["option_symbol"]} close order id:{id} open order id:{row["order_id"]} for {row["position_id"]}')
     else:
-        row_data = row.to_dict()
-        row_data['response'] = error_json
+        row = row.to_dict()
+        row['response'] = error_json
         log_message_close(row, id, status_code, error_json,lambda_signifier)
-    return {"closing_order_id": id, "position_id": row['position_id'], "symbol": row['underlying_symbol'], "open_order_id": row['order_id']}
+        return None
+    return id
 
 def date_performance_check(row, env, lambda_signifier):
     last_price = trade.call_polygon_last_price(row['underlying_symbol'])

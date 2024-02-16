@@ -58,7 +58,7 @@ def manage_portfolio(event, context):
     #     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     #     open_positions = open_trades_df['pos_id'].unique().tolist()
 
-    logger.info(f'closed_orders: {closed_orders['closing_order_id']}')
+    logger.info(f"closed_orders: {closed_orders}")
     return {"lambda_signifier": lambda_signifier}
 
 def  evaluate_open_trades(orders_df):
@@ -68,7 +68,7 @@ def  evaluate_open_trades(orders_df):
         if order_data is not None:
             orders_to_close.append({"open_order_id":order_data['order_id'],"closing_order_id":order_data['closing_order_id']})
     # positions_to_close = list(set(positions_to_close))
-    logger.info(f'orders_to_close: {orders_to_close}')
+    logger.info(f'closing order ids: {orders_to_close}')
     return orders_to_close
 
 
