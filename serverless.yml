@@ -158,45 +158,32 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-CDVOLBFC-${self:provider.stage}
-  # icarus-trade-builder-MAP:
-  #   handler: icarus_trade_builder.build_trade_inv
-  #   environment:
-  #     MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     USER: "inv"
-  #     TRADING_STRATEGY: "indexP,indexP_1d"
-  #     TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
-  #   layers:
-  #     - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
-  #     - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
-  #   role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-  #   name: icarus-trade-builder-indexP-${self:provider.stage}
-  # icarus-trade-builder-invVDGC:
-  #   handler: icarus_trade_builder.build_trade_inv
-  #   environment:
-  #     MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     USER: "inv"
-  #     TRADING_STRATEGY: "vdiff_gainC"
-  #     TITLE: "vdiff_gain"
-  #     TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
-  #   layers:
-  #     - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
-  #   role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-  #   name: icarus-trade-builder-invVDGC-${self:provider.stage}
-  # icarus-trade-builder-invVDGP:
-  #   handler: icarus_trade_builder.build_trade_inv
-  #   environment:
-  #     MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-  #     USER: "inv"
-  #     TRADING_STRATEGY: "vdiff_gainP"
-  #     TITLE: "vdiff_gain"
-  #     TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
-  #   layers:
-  #     - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
-  #   role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-  #   name: icarus-trade-builder-invVDGP-${self:provider.stage}
+  closed-orders-data-processor:
+    handler: order_data_processor.run_closed_trades_data_process
+    environment:
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
+      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
+      USER: "inv"
+      TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: closed-orders-data-processor-${self:provider.stage}
+  opened-orders-data-processor:
+    handler: order_data_processor.run_opened_trades_data_process
+    environment:
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
+      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
+      USER: "inv"
+      TRADING_MODE: ${self:custom.${self:provider.stage}.tradingMode}
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: opened-orders-data-processor-${self:provider.stage}
   new-trades-portfolio-manager-paper-inv:
     handler: new_trades_portfolio_manager.manage_portfolio_inv
     environment:
@@ -310,71 +297,6 @@ functions:
  
 stepFunctions:
   stateMachines:
-    icarus-new-trades:
-      name: icarus-new-trades-${self:provider.stage}
-      role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
-      alarms:
-        topics:
-          alarm: arn:aws:sns:us-east-1:456201388658:yqalerts-production-modeling
-        metrics:
-          - executionsTimedOut
-          - executionsFailed
-          - executionsAborted
-          - executionThrottled
-        treatMissingData: missing
-      definition:
-        Comment: "This state machine constructs and executes trades based on results of the modeling engine"
-        StartAt: ParallelProcessor
-        States:
-          ParallelProcessor:
-            Type: Parallel
-            Branches:
-              - StartAt: BuildTrade
-                States:
-                  BuildTrade:
-                    Type: Task
-                    Resource: 
-                      Fn::GetAtt: [icarus-trade-builder, Arn]
-                    Retry:
-                    - ErrorEquals:
-                      - Lambda.ServiceException
-                      - Lambda.AWSLambdaException
-                      - Lambda.SdkClientException
-                      IntervalSeconds: 5
-                      MaxAttempts: 3
-                      BackoffRate: 2
-                    End: True
-              - StartAt: open-trades-portfolio-manage-paper
-                States:
-                  open-trades-portfolio-manage-paper:
-                    Type: Task
-                    Resource:
-                      Fn::GetAtt: [open-trades-portfolio-manage-paper, Arn]
-                    Retry:
-                    - ErrorEquals:
-                      - Lambda.ServiceException
-                      - Lambda.AWSLambdaException
-                      - Lambda.SdkClientException
-                      IntervalSeconds: 5
-                      MaxAttempts: 3
-                      BackoffRate: 2
-                    End: True
-            Next: PortfolioManager
-          PortfolioManager:
-            Type: Task
-            Resource: 
-              Fn::GetAtt: [new-trades-portfolio-manager-paper, Arn]
-            Retry:
-            - ErrorEquals:
-              - Lambda.ServiceException
-              - Lambda.AWSLambdaException
-              - Lambda.SdkClientException
-              IntervalSeconds: 5
-              MaxAttempts: 3
-              BackoffRate: 2
-            Next: End
-          End:
-            Type: Succeed
     icarus-new-trades-inv:
       name: icarus-new-trades-inv-${self:provider.stage}
       role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
@@ -424,21 +346,6 @@ stepFunctions:
                       MaxAttempts: 3
                       BackoffRate: 2
                     End: True
-              # - StartAt: BuildTradeMA
-              #   States:
-              #     BuildTradeMA:
-              #       Type: Task
-              #       Resource: 
-              #         Fn::GetAtt: [icarus-trade-builder-MA, Arn]
-              #       Retry:
-              #       - ErrorEquals:
-              #         - Lambda.ServiceException
-              #         - Lambda.AWSLambdaException
-              #         - Lambda.SdkClientException
-              #         IntervalSeconds: 5
-              #         MaxAttempts: 3
-              #         BackoffRate: 2
-              #       End: True
               - StartAt: BuildTradeCDVOLBFP
                 States:
                   BuildTradeCDVOLBFP:
@@ -469,22 +376,6 @@ stepFunctions:
                       MaxAttempts: 3
                       BackoffRate: 2
                     End: True
-              - StartAt: open-trades-portfolio-manage-paperINV
-                States:
-                  open-trades-portfolio-manage-paperINV:
-                    Type: Task
-                    Resource:
-                      Fn::GetAtt: [open-trades-portfolio-manage-paper-inv, Arn]
-                    Retry:
-                    - ErrorEquals:
-                      - Lambda.ServiceException
-                      - Lambda.AWSLambdaException
-                      - Lambda.SdkClientException
-                      IntervalSeconds: 5
-                      MaxAttempts: 3
-                      BackoffRate: 2
-                    # ResultPath: $.open_positions
-                    End: True
             Next: PortfolioManagerINV
           PortfolioManagerINV:
             Type: Task
@@ -500,48 +391,69 @@ stepFunctions:
               IntervalSeconds: 5
               MaxAttempts: 3
               BackoffRate: 2
+            Next: OpenedOrdersProcessor
+          OpenedOrdersProcessor:
+            Type: Task
+            Resource: 
+              Fn::GetAtt: [opened-orders-data-processor, Arn]
+            Parameters:
+              Payload.$: "$.lambda_signifier"
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              IntervalSeconds: 5
+              MaxAttempts: 3
+              BackoffRate: 2
             Next: End
           End:
             Type: Succeed
-    # icarus-open-trades:
-    #   name: icarus-open-trades
-    #   role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
-    #   alarms:
-    #     topics:
-    #       alarm: !Ref yqalertsTopic
-    #     metrics:
-    #       - executionsTimedOut
-    #       - executionsFailed
-    #       - executionsAborted
-    #       - executionThrottled
-    #     treatMissingData: missing
-    #   definition:
-    #     Comment: "This state machine constructs and executes trades based on results of the modeling engine"
-    #     StartAt: PortfolioManager
-    #     States:
-    #       PortfolioManager:
-    #         Type: Task
-    #         Resource: arn:aws:lambda:us-east-1:456201388658:function:open-trades-portfolio-manager-sls
-    #         Retry:
-    #         - ErrorEquals:
-    #           - Lambda.ServiceException
-    #           - Lambda.AWSLambdaException
-    #           - Lambda.SdkClientException
-    #           IntervalSeconds: 5
-    #           MaxAttempts: 3
-    #           BackoffRate: 2
-    #         Next: End
-    #       TradeExecutor:
-    #         Type: Task
-    #         Resource: arn:aws:lambda:us-east-1:456201388658:function:trade-executor
-    #         Retry:
-    #         - ErrorEquals:
-    #           - Lambda.ServiceException
-    #           - Lambda.AWSLambdaException
-    #           - Lambda.SdkClientException
-    #           IntervalSeconds: 5
-    #           MaxAttempts: 3
-    #           BackoffRate: 2
-    #         Next: End
-    #       End:
-    #         Type: Succeed
+    icarus-open-trades:
+      name: icarus-open-trades
+      role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
+      alarms:
+        topics:
+          alarm: arn:aws:sns:us-east-1:456201388658:yqalerts-production-modeling
+        metrics:
+          - executionsTimedOut
+          - executionsFailed
+          - executionsAborted
+          - executionThrottled
+        treatMissingData: missing
+      definition:
+        Comment: "This state machine constructs and executes trades based on results of the modeling engine"
+        StartAt: PortfolioManager
+        States:
+          PortfolioManager:
+            Type: Task
+            Resource: 
+              Fn::GetAtt: [open-trades-portfolio-manage-paper, Arn]
+            Parameters:
+              Payload.$: $
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              IntervalSeconds: 5
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: ClosedOrdersProcessor
+          ClosedOrdersProcessor:
+            Type: Task
+            Resource: 
+              Fn::GetAtt: [closed-orders-data-processor, Arn]
+            Parameters:
+              lambda_signifier.$: "$.lambda_signifier"
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              IntervalSeconds: 5
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: End
+          End:
+            Type: Succeed

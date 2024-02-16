@@ -36,7 +36,7 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
     underlying_gain = ((float(min_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
     # Floor_pct = (row['threed] * ALGORITHM_CONFIG[row['trading_strategy']]['volatility_threshold'])
-    Floor_pct = (vol)
+    Floor_pct = (vol)* float(row['return_vol_10D'])
 
     if deriv_pct_change > 400:
         sell_code = "VCSell"
@@ -49,9 +49,12 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
     sell_code = 0
     reason = ""
     if day_diff < 3:
-        if pct_change > Floor_pct:
+        if current_weekday == 4 and hour > 12: 
             sell_code = 2
-            reason = f"Breached floor pct"
+            reason = f"Friday sell. {pct_change} {Floor_pct}"
+        elif pct_change >= Floor_pct:
+            sell_code = 2
+            reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
     elif day_diff > 3:
         sell_code = 3
         reason = "Held through confidence."
@@ -85,7 +88,7 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     underlying_gain = ((float(max_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
     # Floor_pct = (row['threeD_stddev50'] * ALGORITHM_CONFIG[row['trading_strategy']]['volatility_threshold'])
-    Floor_pct = (-vol)
+    Floor_pct = (-vol) * float(row['return_vol_10D'])
 
     if deriv_pct_change > 400:
         sell_code = "VCSell"
@@ -98,9 +101,12 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     sell_code = 0
     reason = ""
     if day_diff < 3:
-        if pct_change < Floor_pct:
+        if current_weekday == 4 and hour > 12: 
             sell_code = 2
-            reason = f"Breached floor pct"
+            reason = f"Friday sell. {pct_change} {Floor_pct}"
+        elif pct_change <= Floor_pct:
+            sell_code = 2
+            reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
     elif day_diff > 3:
         sell_code = 3
         reason = "Held through confidence."
@@ -134,7 +140,7 @@ def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     underlying_gain = ((float(min_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
     # Floor_pct = (row['oneD_stddev50'] * ALGORITHM_CONFIG[row['trading_strategy']]['volatility_threshold'])
-    Floor_pct = (vol)
+    Floor_pct = (vol)* float(row['return_vol_10D'])
 
     if deriv_pct_change > 400:
         sell_code = "VCSell"
@@ -146,9 +152,12 @@ def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     sell_code = 0
     reason = ""
     if day_diff < 1:
-        if pct_change > Floor_pct:
+        if current_weekday == 4 and hour > 12: 
             sell_code = 2
-            reason = f"Breached floor pct"
+            reason = f"Friday sell. {pct_change} {Floor_pct}"
+        elif pct_change >= Floor_pct:
+            sell_code = 2
+            reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
     elif day_diff > 1:
         sell_code = 3
         reason = "Held through confidence."
@@ -182,7 +191,7 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     underlying_gain = ((float(max_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
     # Floor_pct = (row['oneD_stddev50'] * ALGORITHM_CONFIG[row['trading_strategy']]['volatility_threshold'])
-    Floor_pct = (-vol)
+    Floor_pct = (-vol)* float(row['return_vol_10D'])
 
     if deriv_pct_change > 400:
         sell_code = "VCSell"
@@ -194,9 +203,12 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     sell_code = 0
     reason = ""
     if day_diff < 1:
-        if pct_change < Floor_pct:
+        if current_weekday == 4 and hour > 12: 
             sell_code = 2
-            reason = f"Breached floor pct"
+            reason = f"Friday sell. {pct_change} {Floor_pct}"
+        elif pct_change <= Floor_pct:
+            sell_code = 2
+            reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
     elif day_diff > 1:
         sell_code = 3
         reason = "Held through confidence."

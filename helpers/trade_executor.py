@@ -10,7 +10,7 @@ import logging
 from helpers.constants import *
 from helpers.trend_algorithms import *
 from helpers.cdvol_algorithms import *
-from helpers.helper import log_message_open, log_message_close
+from helpers.helper import log_message_open, log_message_close, log_message_open_error
 
 
 
@@ -32,8 +32,8 @@ duration = "GTC"
 acct_balance_min = 20000
 
 
-def run_executor(data, trading_mode, base_url, account_id, access_token, table):
-    order_ids = execute_new_trades(data, base_url, account_id, access_token, trading_mode, table)
+def run_executor(data, trading_mode, base_url, account_id, access_token, table, lambda_signifier):
+    order_ids = execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, lambda_signifier)
     return order_ids
 
      
@@ -44,7 +44,7 @@ def account_value_checkpoint(current_balance) -> dict:
     else:
         return False
     
-def execute_new_trades(data, base_url, account_id, access_token, trading_mode, table):
+def execute_new_trades(data, base_url, account_id, access_token, trading_mode, table, lambda_signifier):
     # transaction_data = []
     positions_data = []
     failed_transactions = []
@@ -67,6 +67,11 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                 continue
             all_trades = row['trade_details']
             trades = row['trade_details'][:3]
+            if row['strategy'] in CALL_STRATEGIES:
+                option_side = "call"
+            elif row['strategy'] in PUT_STRATEGIES:
+                option_side = "put"
+
             for detail in trades:
                 if detail['quantity'] == 0:
                     continue
@@ -78,17 +83,18 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
                     if status_code == 200:
                         row['order_id'] = open_order_id
                         row['position_id'] = position_id
+                        row['quantity'] = detail['quantity']
                         underlying_purchase_price = trade.call_polygon_last_price(row['symbol'])
                         row['underlying_purchase_price'] = underlying_purchase_price
+                        log_message_open(row, open_order_id, status_code, json_response,detail['contract_ticker'], option_side,lambda_signifier)
                         orders_list.append(open_order_id)
                         accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D']})
-                        log_message_open(row, open_order_id, status_code, json_response,detail['contract_ticker'])
                         positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D']})        
                     else:
                         trade_data = row.to_dict()
                         trade_data['response'] = status_code
                         failed_transactions.append(trade_data)
-                        log_message_open(row, open_order_id, status_code, json_response,detail['contract_ticker'])
+                        log_message_open_error(row, open_order_id, status_code, json_response,detail['contract_ticker'],None,lambda_signifier)
                         underlying_purchase_price = 0
                         continue
                 except Exception as e:
@@ -108,10 +114,10 @@ def execute_new_trades(data, base_url, account_id, access_token, trading_mode, t
     s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_orders_data/{user}/{date}.csv", Body=accepted_df.to_csv())
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_orders/{user}/{date}.csv", Body=failed_df.to_csv())
 
-    time.sleep(2)
+    # time.sleep(2)
 
-    processed_df = db.process_opened_ordersv2(accepted_df, base_url, account_id, access_token, trading_mode, table)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"processed_orders_enriched/{user}/{date}.csv", Body=processed_df.to_csv())
+    # processed_df = db.process_opened_ordersv2(accepted_df, base_url, account_id, access_token, trading_mode, table)
+    # s3.put_object(Bucket=trading_data_bucket, Key=f"processed_orders_enriched/{user}/{date}.csv", Body=processed_df.to_csv())
     return accepted_df
 
 def process_dynamo_orders(formatted_df, base_url, account_id, access_token, trading_mode, table):
@@ -119,7 +125,7 @@ def process_dynamo_orders(formatted_df, base_url, account_id, access_token, trad
     return processed_df
 
 
-def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, table, close_table):
+def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, table, close_table, lambda_signifier):
     position_ids = orders_df['position_id'].unique()
     accepted_orders = []
     rejected_orders = []
@@ -132,13 +138,13 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
             row_data = row.to_dict()
             row_data['closing_order_id'] = id
             accepted_orders.append(row_data)
-            log_message_close(row, id, status_code, error_json)
+            log_message_close(row, id, status_code, error_json,lambda_signifier)
             logger.info(f'Close order succesful {row["option_symbol"]} close order id:{id} open order id:{row["order_id"]} for {row["position_id"]}')
         else:
             row_data = row.to_dict()
             row_data['response'] = error_json
             rejected_orders.append(row_data)
-            log_message_close(row, id, status_code, error_json)
+            log_message_close(row, id, status_code, error_json,lambda_signifier)
 
     date = datetime.now().strftime("%Y/%m/%d/%H_%M")
 
@@ -158,18 +164,32 @@ def close_orders(orders_df,  base_url, account_id,access_token, trading_mode, ta
     s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{user}/{date}.csv", Body=csv)
     return "done"
 
-def date_performance_check(row):
+def close_order(row,trading_mode, reason,lambda_signifier):
+    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
+    id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
+    if status_code == 200:
+        row['closing_order_id'] = id
+        log_message_close(row, id, status_code, reason,error_json,lambda_signifier)
+        logger.info(f'Close order succesful {row["option_symbol"]} close order id:{id} open order id:{row["order_id"]} for {row["position_id"]}')
+    else:
+        row = row.to_dict()
+        row['response'] = error_json
+        log_message_close(row, id, status_code, error_json,lambda_signifier)
+        return None
+    return id
+
+def date_performance_check(row, trading_mode, lambda_signifier):
     last_price = trade.call_polygon_last_price(row['underlying_symbol'])
     derivative_price = trade.call_polygon_last_price(f"O:row['option_symbol']")
     if derivative_price is None:
         derivative_price = 0
     if user == "inv":
         sell_code, reason = evaluate_performance_inv(last_price, derivative_price, row)
-    logger.info(f'Performance check: {row["option_symbol"]} sell_code:{sell_code} reason:{reason}')
-    if sell_code != 0 or current_date > row['sellby_date']:
-        return sell_code, reason
-    else:
-        return sell_code, reason
+        if sell_code != 0:
+            order_id = close_order(row, trading_mode, reason,lambda_signifier)
+            return order_id
+        else:
+            return None
 
 def evaluate_performance_inv(current_price, derivative_price, row):
     if row['trading_strategy'] in CDVOL_STRATEGIES:
@@ -190,6 +210,8 @@ def evaluate_performance_inv(current_price, derivative_price, row):
             sell_code, reason = tda_CALL_1D_stdclsAGG(row, current_price,abs((.6*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
         elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
             sell_code, reason = tda_PUT_1D_stdclsAGG(row, current_price,abs((.6*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
+    else:
+        sell_code, reason = 1, "untracked"
     return sell_code, reason
 
 

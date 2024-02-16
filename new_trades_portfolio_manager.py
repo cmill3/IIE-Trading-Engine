@@ -23,6 +23,8 @@ user = os.getenv("USER")
 table = os.getenv("TABLE")
 now = datetime.now().astimezone(pytz.timezone('US/Eastern'))
 dt = now.strftime("%Y-%m-%dT%H:%M:%S")
+lambda_signifier = datetime.now().strftime("%Y%m%d+%H%M")
+
 
 
 def manage_portfolio_inv(event, context):
@@ -40,7 +42,9 @@ def manage_portfolio_inv(event, context):
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
     trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table)
-    return "trades_placed"
+    logger.info(f'Placed trades: {trades_placed}')
+    logger.info(f'Finished new trades PM: {lambda_signifier}')
+    return {"lambda_signifier": lambda_signifier}
 
 
 def pull_new_trades_inv(year, month, day, hour):
@@ -58,7 +62,6 @@ def pull_new_trades_inv(year, month, day, hour):
             print(e)
             print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
     full_df = pd.concat(trade_dfs)
-    print(full_df)
     return full_df
 
 
@@ -66,7 +69,7 @@ def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, acces
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
     if trading_mode == "DEV":
         return "test execution"
-    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table)
+    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table,lambda_signifier)
     return execution_result
 
 
@@ -116,9 +119,9 @@ def format_dates(now):
     return year, month, day, hour
     
 
-# if __name__ == "__main__":
-#     # accepted_df = pd.read_csv("17_19.csv")
-#     user="inv"
-#     trading_mode = "PAPER"
-#     table = "icarus-orders-table-inv"
-#     manage_portfolio_inv(None, None)
+if __name__ == "__main__":
+    # accepted_df = pd.read_csv("17_19.csv")
+     # user="inv"
+    # trading_mode = "PAPER"
+    # table = "icarus-orders-table-inv"
+    manage_portfolio_inv(None, None)

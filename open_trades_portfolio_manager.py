@@ -20,6 +20,7 @@ logger.setLevel(logging.INFO)
 
 dt = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 current_date = datetime.now().strftime("%Y-%m-%d")
+lambda_signifier = datetime.now().strftime("%Y%m%d+%H%M")
 
 order_side = "sell_to_close"
 order_type = "market"
@@ -39,42 +40,36 @@ def manage_portfolio(event, context):
     open_trades_df = db.get_all_orders_from_dynamo(table)
 
     if len(open_trades_df) == 0:
-        return {"open_positions": []}
+        {"lambda_signifier": lambda_signifier}
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
-
-    orders_to_close = evaluate_open_trades(open_trades_df)
+    closed_orders = evaluate_open_trades(open_trades_df)
     
-    if len(orders_to_close) == 0:
-        return {"open_positions": open_positions}
+    # if len(orders_to_close) == 0:
+    #     return {"open_positions": open_positions}
     
-    if trading_mode == "DEV":
-        return {"open_positions": open_positions}
+    # if trading_mode == "DEV":
+    #     return {"open_positions": open_positions}
     
-    trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
-    logger.info(f'Closing orders: {trade_response}')
+    # trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
+    # logger.info(f'Closing orders: {trade_response}')
 
-    if datetime.now().minute < 10:
-        open_trades_df = db.get_all_orders_from_dynamo(table)
-        open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
-        open_positions = open_trades_df['pos_id'].unique().tolist()
+    # if datetime.now().minute < 10:
+    #     open_trades_df = db.get_all_orders_from_dynamo(table)
+    #     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
+    #     open_positions = open_trades_df['pos_id'].unique().tolist()
 
-    return {"open_positions": open_positions}
+    logger.info(f"closed_orders: {closed_orders}")
+    return {"lambda_signifier": lambda_signifier}
 
-def evaluate_open_trades(orders_df):
+def  evaluate_open_trades(orders_df):
     orders_to_close = []
-    close_reasons = []
     for _, row in orders_df.iterrows():
-        sell_code, reason = te.date_performance_check(row)
-        if sell_code != 0:
-            orders_to_close.append(row['order_id'])
-            print(f'Closing order {row["option_symbol"]}: {reason}')
-            # logger.info(f'Closing order {row["option_symbol"]}: {reason}')
-            ### figure out how to add reason to the order
-            close_reasons.append(reason)
+        order_id = te.date_performance_check(row,trading_mode,lambda_signifier)
+        if order_id is not None:
+            orders_to_close.append(order_id)
     # positions_to_close = list(set(positions_to_close))
-    orders_to_close = orders_df.loc[orders_df['order_id'].isin(orders_to_close)]
-    orders_to_close['close_reason'] = close_reasons
+    logger.info(f'closing order ids: {orders_to_close}')
     return orders_to_close
 
 
