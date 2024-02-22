@@ -24,24 +24,40 @@ s3 = boto3.client('s3')
 logs = boto3.client('logs')
 
 def run_closed_trades_data_process(event,context):
+    pre_dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
     lambda_signifier = event.get('lambda_signifier', 'default_value')
     succesful_logs, unsuccesful_logs = pull_log_data("closed",lambda_signifier)
     create_dynamo_order_close(succesful_logs)
+    post_dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
+
     success_df = pd.DataFrame.from_dict(succesful_logs)
     failed_df = pd.DataFrame.from_dict(unsuccesful_logs)
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_close_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=failed_df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"successful_close_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=success_df.to_csv(index=False))
+
+    dynamo_record_diff = len(post_dynamo_trades) - len(pre_dynamo_trades)
+    if dynamo_record_diff != len(succesful_logs):
+        raise ValueError(f"Error: Dynamo record count: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
+    
     return "Created new dynamo records for closed orders"
 
 
 def run_opened_trades_data_process(event,context):
+    pre_dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
     lambda_signifier = event.get('lambda_signifier', 'default_value')
     succesful_logs, unsuccesful_logs = pull_log_data("opened",lambda_signifier)
     create_dynamo_order_open(succesful_logs)
+    post_dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
+
     success_df = pd.DataFrame.from_dict(succesful_logs)
     failed_df = pd.DataFrame.from_dict(unsuccesful_logs)
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_new_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=failed_df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"successful_new_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=success_df.to_csv(index=False))
+
+    dynamo_record_diff = len(post_dynamo_trades) - len(pre_dynamo_trades)
+    if dynamo_record_diff != len(succesful_logs):
+        raise ValueError(f"Error: Dynamo record count: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
+
     return "Created new dynamo records for open orders"
 
 
@@ -105,7 +121,8 @@ def pull_log_data(process_type,lambda_signifier):
 
                 if process_type == "closed":
                     if log_dict['log_type'] == "close_success":
-                        succesful_logs.append(log_dict)
+                        if log_dict['closing_order_id'] is not None:
+                            succesful_logs.append(log_dict)
                     elif log_dict['log_type'] == "close_error":
                         unsuccessful_logs.append(log_dict)
                 elif process_type == "opened":
