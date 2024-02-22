@@ -55,7 +55,7 @@ functions:
   new-trades-portfolio-manager-paper:
     handler: new_trades_portfolio_manager.manage_portfolio
     environment:
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
     layers:
@@ -66,7 +66,7 @@ functions:
   open-trades-portfolio-manage-paper:
     handler: open_trades_portfolio_manager.manage_portfolio
     environment:
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
@@ -81,7 +81,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "GAIN,GAIN_1D,GAINP,GAINP_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -93,7 +93,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "LOSERS,LOSERS_1D,LOSERSC,LOSERSC_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -105,7 +105,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "MA,MA_1D,MAP,MAP_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -117,7 +117,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "CDBFP,CDBFP_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -129,7 +129,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "CDBFC,CDBFC_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -141,7 +141,7 @@ functions:
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -153,7 +153,7 @@ functions:
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -162,7 +162,7 @@ functions:
   open-trades-reconciliation:
     handler: order_reconciliation.run_reconciliation
     environment:
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: "icarus-trading-data"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
@@ -178,7 +178,7 @@ functions:
           description: trigger to backup the dynamo schedule every 15 minutes
           schedule: rate(15 minutes)
     environment:
-      env: "prod_val"
+      ENV: "prod_val"
       TABLE_LIST: ${self:custom.${self:provider.stage}.tableList15min}
       FREQUENCY: "15MIN"
     layers:
@@ -194,7 +194,7 @@ functions:
           description: trigger to backup the dynamo schedule daily
           schedule: rate(24 hours)
     environment:
-      env: "prod_val"
+      ENV: "prod_val"
       TABLE_LIST: ${self:custom.${self:provider.stage}.tableListdaily}
       FREQUENCY: "DAILY"
     layers:
@@ -205,7 +205,7 @@ functions:
   order-controls:
       handler: order_control.run_order_control
       environment:
-        env: "prod_val"
+        ENV: "prod_val"
         TRADING_DATA_BUCKET: "icarus-trading-data"
       layers:
         - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
@@ -230,7 +230,7 @@ functions:
           description: trigger to log all of the closed orders in s3 each month
           schedule: rate(1 day)
     environment:
-      env: "prod_val"
+      ENV: "prod_val"
       TABLE_LIST: ${self:custom.${self:provider.stage}.closedTablelist}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
