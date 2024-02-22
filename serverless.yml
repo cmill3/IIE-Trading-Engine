@@ -29,7 +29,7 @@ custom:
     tradingDataBucketINV: inv-alerts-trading-data-dev
     ordersTableINV: icarus-orders-table-inv-dev
     closedOrdersTableINV: icarus-closed-orders-table-inv-dev
-    env: DEV
+    env: dev
     tableList15min: "['icarus-closed-orders-table-inv-dev', 'icarus-orders-table-inv-dev']"
     tableListdaily: "['icarus-model-results-table-dev']"
     closedTablelist: "['icarus-closed-orders-table-inv-dev']"
@@ -55,7 +55,7 @@ functions:
   new-trades-portfolio-manager-paper:
     handler: new_trades_portfolio_manager.manage_portfolio
     environment:
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
     layers:
@@ -66,7 +66,7 @@ functions:
   open-trades-portfolio-manage-paper:
     handler: open_trades_portfolio_manager.manage_portfolio
     environment:
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
@@ -81,7 +81,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "GAIN,GAIN_1D,GAINP,GAINP_1D"
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -93,7 +93,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "LOSERS,LOSERS_1D,LOSERSC,LOSERSC_1D"
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -105,7 +105,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "MA,MA_1D,MAP,MAP_1D"
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -117,7 +117,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "CDBFP,CDBFP_1D"
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -129,7 +129,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "CDBFC,CDBFC_1D"
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -141,7 +141,7 @@ functions:
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -153,39 +153,16 @@ functions:
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
-      env: ${self:custom.${self:provider.stage}.tradingMode}
+      env: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: opened-orders-data-processor-${self:provider.stage}
-  new-trades-portfolio-manager-paper-inv:
-    handler: new_trades_portfolio_manager.manage_portfolio_inv
-    environment:
-      env: ${self:custom.${self:provider.stage}.tradingMode}
-      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-      TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
-    layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
-      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
-    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: new-trades-portfolio-manager-inv-${self:provider.stage}
-  open-trades-portfolio-manage-paper-inv:
-    handler: open_trades_portfolio_manager.manage_portfolio
-    environment:
-      env: "prod_val"
-      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-      TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
-      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
-    layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
-      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
-    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: open-trades-portfolio-manager-inv-${self:provider.stage}
   open-trades-reconciliation:
     handler: order_reconciliation.run_reconciliation
     environment:
-      env: "prod_val"
+      env: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: "icarus-trading-data"
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
