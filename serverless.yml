@@ -348,7 +348,7 @@ stepFunctions:
           PortfolioManagerINV:
             Type: Task
             Resource: 
-              Fn::GetAtt: [new-trades-portfolio-manager-paper-inv, Arn]
+              Fn::GetAtt: [new-trades-portfolio-manager-paper, Arn]
             Parameters:
               Payload.$: $
             Retry:

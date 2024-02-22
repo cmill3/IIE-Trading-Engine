@@ -68,9 +68,9 @@ def create_dynamo_order_close(log_messages):
 def pull_log_data(process_type,lambda_signifier):
     log_messages = {}
     if process_type == "closed":
-        log_group_name = '/aws/lambda/open-trades-portfolio-manager-inv-prod-val'
+        log_group_name = '/aws/lambda/open-trades-portfolio-manager-prod-val'
     elif process_type == "opened":
-        log_group_name = '/aws/lambda/new-trades-portfolio-manager-inv-prod-val'
+        log_group_name = '/aws/lambda/new-trades-portfolio-manager-prod-val'
     minute_ms = 60000
     minutes_back = 15
 
