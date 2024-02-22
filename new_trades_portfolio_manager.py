@@ -14,12 +14,11 @@ import pytz
 from helpers.constants import ACTIVE_STRATEGIES
 
 s3 = boto3.client('s3')
-trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-user = os.getenv("USER")
+env = os.getenv("ENV")
 table = os.getenv("TABLE")
 now = datetime.now().astimezone(pytz.timezone('US/Eastern'))
 dt = now.strftime("%Y-%m-%dT%H:%M:%S")
@@ -36,12 +35,12 @@ def manage_portfolio_inv(event, context):
 
     year, month, day, hour = format_dates(now)
     logger.info(f'Initializing new trades PM: {dt}')
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
+    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     new_trades_df = pull_new_trades_inv(year, month, day, hour)
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
-    trades_placed = evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table)
+    trades_placed = evaluate_new_trades(new_trades_df, env, base_url, account_id, access_token, table)
     logger.info(f'Placed trades: {trades_placed}')
     logger.info(f'Finished new trades PM: {lambda_signifier}')
     return {"lambda_signifier": lambda_signifier}
@@ -65,11 +64,11 @@ def pull_new_trades_inv(year, month, day, hour):
     return full_df
 
 
-def evaluate_new_trades(new_trades_df, trading_mode, base_url, account_id, access_token, table):
+def evaluate_new_trades(new_trades_df, env, base_url, account_id, access_token, table):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    if trading_mode == "DEV":
+    if env == "DEV":
         return "test execution"
-    execution_result = te.run_executor(approved_trades_df, trading_mode, base_url, account_id, access_token, table,lambda_signifier)
+    execution_result = te.run_executor(approved_trades_df, env, base_url, account_id, access_token, table,lambda_signifier)
     return execution_result
 
 
@@ -121,7 +120,7 @@ def format_dates(now):
 
 if __name__ == "__main__":
     # accepted_df = pd.read_csv("17_19.csv")
-     # user="inv"
-    # trading_mode = "PAPER"
+     # env = env
+    # env = "DEV"
     # table = "icarus-orders-table-inv"
     manage_portfolio_inv(None, None)

@@ -20,7 +20,7 @@ def write_csv(table_name, row):
     order_item = {
         'order_id': str(row[0]),
         'closing_order_id': str(row[5]),
-        'trading_mode': str(row[17]),
+        'env': str(row[17]),
         'execution_strategy': str(row[6]),
         'underlying_symbol': str(row[20]),
         'position_id': str(row[14]),

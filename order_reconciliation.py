@@ -14,11 +14,10 @@ date = datetime.now().strftime("%Y-%m-%d")
 logger = logging.getLogger()
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
-trading_mode = os.getenv('TRADING_MODE')
-user = os.getenv("USER")
+env = os.getenv("ENV")
 
 def run_reconciliation(event, context):
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
+    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     tradier_trades = trade.get_account_orders(base_url, account_id, access_token)
     tradier_df = pd.DataFrame.from_dict(tradier_trades)
     dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
@@ -52,7 +51,7 @@ def compare_order_dfs(tradier_trades, dynamo_trades,base_url, account_id, access
             dt = datetime.strptime(order_info_obj['created_date'],"%Y-%m-%dT%H:%M:%S.%fZ")
             underlying_symbol = order_info_obj['position_id'].split("-")[0]
             underlying_purchase_price = trade.call_polygon_price_reconciliation(underlying_symbol,dt)
-            db.create_new_dynamo_record_order_reconciliation(order_info_obj, order_info_obj['position_id'], underlying_symbol,order_id, underlying_purchase_price, trading_mode, table="icarus-orders-table-inv")
+            db.create_new_dynamo_record_order_reconciliation(order_info_obj, order_info_obj['position_id'], underlying_symbol,order_id, underlying_purchase_price, env, table="icarus-orders-table-inv")
         
 
 
@@ -61,7 +60,7 @@ def exposure_totalling():
     # account_id = "VA72174659"
     # access_token = "ld0Mx4KbsOBYwmJApdowZdFcIxO7"
     #pull all open contract symbols & contract values
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode, user)
+    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     position_list = trade.get_account_positions(base_url, account_id, access_token)
     # total open trades & values in df
     df = pd.DataFrame.from_dict(position_list)
@@ -77,10 +76,10 @@ def exposure_totalling():
     return "Exposure Analysis Complete"
 
 # def run_reconciliation(event, context):
-#     base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode)
+#     base_url, account_id, access_token = trade.get_tradier_credentials(env)
 #     trades_df = pull_pending_trades()
 #     formatted_df = format_pending_df(trades_df)
-#     still_pending  = process_dynamo_orders(formatted_df, base_url, account_id, access_token, trading_mode)
+#     still_pending  = process_dynamo_orders(formatted_df, base_url, account_id, access_token, env)
 #     # if len(trades_df) > 0:
 #     #     still_pending  = process_dynamo_orders(trades_df, base_url, account_id, access_token)
 #     #     pending_df = pd.DataFrame.from_dict(still_pending)
@@ -107,10 +106,10 @@ def exposure_totalling():
 #     # pending_df = pd.concat(dfs)
 #     return pending_df
 
-# def process_dynamo_orders(trades_df, base_url, account_id, access_token, trading_mode):
+# def process_dynamo_orders(trades_df, base_url, account_id, access_token, env):
 #     for index, row in trades_df.iterrows():
-#         unfilled_order = db.process_opened_orders(row, row['position_id'],base_url, account_id, access_token, trading_mode)
-#     # unfulfilled_orders = db.process_opened_ordersv2(trades_df, base_url, account_id, access_token, trading_mode)
+#         unfilled_order = db.process_opened_orders(row, row['position_id'],base_url, account_id, access_token, env)
+#     # unfulfilled_orders = db.process_opened_ordersv2(trades_df, base_url, account_id, access_token, env)
 #     return unfilled_order
 
 # def format_pending_df(df):

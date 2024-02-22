@@ -10,7 +10,6 @@ import helpers.dynamo_helper as db
 import pytz
 
 s3 = boto3.client('s3')
-trading_mode = os.getenv('TRADING_MODE')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 table = os.getenv('TABLE')
 close_table = os.getenv("CLOSE_TABLE")
@@ -26,7 +25,7 @@ order_side = "sell_to_close"
 order_type = "market"
 duration = "gtc"
 
-user = os.getenv("USER")
+env = os.getenv("ENV")
 
 
 def manage_portfolio(event, context):
@@ -36,7 +35,7 @@ def manage_portfolio(event, context):
     except ValueError as e:
         return "disallowed"
     
-    base_url, account_id, access_token = trade.get_tradier_credentials(trading_mode,user)
+    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     open_trades_df = db.get_all_orders_from_dynamo(table)
 
     if len(open_trades_df) == 0:
@@ -48,10 +47,10 @@ def manage_portfolio(event, context):
     # if len(orders_to_close) == 0:
     #     return {"open_positions": open_positions}
     
-    # if trading_mode == "DEV":
+    # if env == "DEV":
     #     return {"open_positions": open_positions}
     
-    # trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, trading_mode, table, close_table)
+    # trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, env, table, close_table)
     # logger.info(f'Closing orders: {trade_response}')
 
     # if datetime.now().minute < 10:
@@ -65,9 +64,9 @@ def manage_portfolio(event, context):
 def  evaluate_open_trades(orders_df):
     orders_to_close = []
     for _, row in orders_df.iterrows():
-        order_id = te.date_performance_check(row,trading_mode,lambda_signifier)
-        if order_id is not None:
-            orders_to_close.append(order_id)
+        order_data = te.date_performance_check(row,env,lambda_signifier)
+        if order_data is not None:
+            orders_to_close.append({"open_order_id":order_data['order_id'],"closing_order_id":order_data['closing_order_id']})
     # positions_to_close = list(set(positions_to_close))
     logger.info(f'closing order ids: {orders_to_close}')
     return orders_to_close

@@ -3,7 +3,7 @@ import json
 import os
 import pandas as pd
 from datetime import datetime
-from helpers.credentials import ACCOUNTID, ACCESSTOKEN, PAPER_ACCESSTOKEN, PAPER_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PAPER_ACCESSTOKEN_INV, PAPER_ACCOUNTID_INV
+from helpers.credentials import CM3ACCOUNTID, CM3ACCESSTOKEN, DEV_ACCESSTOKEN, DEV_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PRODVAL_ACCOUNTID, PRODVAL_ACCESSTOKEN, DIZPROD_ACCESSTOKEN, DIZPROD_ACCOUNTID
 
 base_url = os.getenv("BASE_URL")
 account_id = os.getenv("ACCOUNT_ID")
@@ -24,19 +24,29 @@ def get_account_balance(base_url: str, account_id: str, access_token:str) -> dic
     except:
         return "Account Balance pull unsuccessful"
     
-def get_tradier_credentials(trading_mode: str, user):
-    if trading_mode == "PAPER":
+def get_tradier_credentials(env: str):
+    user = ''
+    if env == "dev":
+        user == "dev"
         base_url = PAPER_BASE_URL
-        if user == "inv":
-            access_token = PAPER_ACCESSTOKEN_INV
-            account_id = PAPER_ACCOUNTID_INV
-        else:
-            access_token = PAPER_ACCESSTOKEN
-            account_id = PAPER_ACCOUNTID
-    elif trading_mode == "LIVE":
+        access_token == DEV_ACCOUNTID
+        account_id == DEV_ACCESSTOKEN
+    elif env == "prod_val":
+        base_url = PAPER_BASE_URL
+        user == "inv"
+        access_token == PRODVAL_ACCESSTOKEN
+        account_id == PRODVAL_ACCOUNTID
+    elif env == "diz_prod":
+        user == "diz"
         base_url = LIVE_BASE_URL
-        access_token = ACCESSTOKEN
-        account_id = ACCOUNTID
+        access_token == DIZPROD_ACCESSTOKEN
+        account_id == DIZPROD_ACCOUNTID
+    elif env == "cm3_prod":
+        user == "cm3"
+        base_url = LIVE_BASE_URL
+        access_token == CM3ACCESSTOKEN
+        account_id == CM3ACCOUNTID
+
     return base_url, account_id, access_token
 
 

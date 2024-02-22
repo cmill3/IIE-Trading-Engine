@@ -14,8 +14,7 @@ from helpers.constants import PREFIXES, CALL_STRATEGIES, PUT_STRATEGIES, ACTIVE_
 s3 = boto3.client('s3')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-user = os.getenv("USER")
-trading_mode = os.getenv('TRADING_MODE')
+env = os.getenv("ENV")
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
