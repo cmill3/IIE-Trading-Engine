@@ -3,7 +3,7 @@ import json
 import os
 import pandas as pd
 from datetime import datetime
-from helpers.credentials import CM3ACCOUNTID, CM3ACCESSTOKEN, DEV_ACCESSTOKEN, DEV_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PRODVAL_ACCOUNTID, PRODVAL_ACCESSTOKEN, DIZPROD_ACCESSTOKEN, DIZPROD_ACCOUNTID
+from helpers.credentials import CM3_ACCOUNTID, CM3_ACCESSTOKEN, DEV_ACCESSTOKEN, DEV_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PRODVAL_ACCOUNTID, PRODVAL_ACCESSTOKEN, DIZPROD_ACCESSTOKEN, DIZPROD_ACCOUNTID
 
 base_url = os.getenv("BASE_URL")
 account_id = os.getenv("ACCOUNT_ID")
@@ -44,8 +44,8 @@ def get_tradier_credentials(env: str):
     elif env == "cm3_prod":
         user == "cm3"
         base_url = LIVE_BASE_URL
-        access_token == CM3ACCESSTOKEN
-        account_id == CM3ACCOUNTID
+        access_token == CM3_ACCESSTOKEN
+        account_id == CM3_ACCOUNTID
 
     return base_url, account_id, access_token
 

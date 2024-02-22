@@ -9,7 +9,7 @@ frameworkVersion: '3'
 provider:
   name: aws
   region: us-east-1
-  runtime: python3.9
+  runtime: python3.7
   stage: ${self:custom.stage}
   timeout: 900
   deploymentBucket: 
