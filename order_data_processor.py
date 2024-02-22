@@ -12,7 +12,7 @@ import json
 import pandas as pd
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
-table = os.getenv('TABLE')
+orders_table = os.getenv('TABLE')
 close_table = os.getenv("CLOSE_TABLE")
 env = os.getenv("ENV")
 urllib3.disable_warnings(category=InsecureRequestWarning)
@@ -22,20 +22,21 @@ est = pytz.timezone('US/Eastern')
 
 s3 = boto3.client('s3')
 logs = boto3.client('logs')
+ddb = boto3.client('dynamodb')
 
 def run_closed_trades_data_process(event,context):
-    pre_dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
+    preprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
     lambda_signifier = event.get('lambda_signifier', 'default_value')
     succesful_logs, unsuccesful_logs = pull_log_data("closed",lambda_signifier)
     create_dynamo_order_close(succesful_logs)
-    post_dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
+    postprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
 
     success_df = pd.DataFrame.from_dict(succesful_logs)
     failed_df = pd.DataFrame.from_dict(unsuccesful_logs)
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_close_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=failed_df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"successful_close_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=success_df.to_csv(index=False))
 
-    dynamo_record_diff = len(post_dynamo_trades) - len(pre_dynamo_trades)
+    dynamo_record_diff = len(preprocess_order_count) - len(postprocess_order_count)
     if dynamo_record_diff != len(succesful_logs):
         raise ValueError(f"Error: Dynamo record count: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
     
@@ -43,20 +44,20 @@ def run_closed_trades_data_process(event,context):
 
 
 def run_opened_trades_data_process(event,context):
-    pre_dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
+    preprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
     lambda_signifier = event.get('lambda_signifier', 'default_value')
     succesful_logs, unsuccesful_logs = pull_log_data("opened",lambda_signifier)
     create_dynamo_order_open(succesful_logs)
-    post_dynamo_trades = db.get_all_orders_from_dynamo(table="icarus-orders-table-inv")
+    postprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
 
     success_df = pd.DataFrame.from_dict(succesful_logs)
     failed_df = pd.DataFrame.from_dict(unsuccesful_logs)
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_new_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=failed_df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"successful_new_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=success_df.to_csv(index=False))
 
-    dynamo_record_diff = len(post_dynamo_trades) - len(pre_dynamo_trades)
+    dynamo_record_diff = len(postprocess_order_count) - len(preprocess_order_count)
     if dynamo_record_diff != len(succesful_logs):
-        raise ValueError(f"Error: Dynamo record count: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
+        raise ValueError(f"Error: Dynamo record count open: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
 
     return "Created new dynamo records for open orders"
 
@@ -65,8 +66,8 @@ def create_dynamo_order_open(log_messages):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     for log in log_messages:
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, log['order_id'])
-        db.create_new_dynamo_record_order_logmessage(order_info_obj,log, env, table)
-        logger.info(f"Created new dynamo record for order_id: {log['order_id']} in {table}")
+        db.create_new_dynamo_record_order_logmessage(order_info_obj,log, env, orders_table)
+        logger.info(f"Created new dynamo record for order_id: {log['order_id']} in {orders_table}")
 
     return "Created new dynamo records for open orders"
 
@@ -74,7 +75,7 @@ def create_dynamo_order_close(log_messages):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     for log in log_messages:
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, log['order_id'])
-        original_order = db.delete_order_record(log['order_id'], table)
+        original_order = db.delete_order_record(log['order_id'], orders_table)
         create_response = db.create_new_dynamo_record_closed_order_logmessage(order_info_obj, original_order, log, env, close_table)
         logger.info(f"Created new dynamo record for order_id: {log['order_id']} {log['closing_order_id']} in {close_table}")
 
