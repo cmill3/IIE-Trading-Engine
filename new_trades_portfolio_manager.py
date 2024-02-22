@@ -27,14 +27,13 @@ lambda_signifier = datetime.now().strftime("%Y%m%d+%H%M")
 
 
 def manage_portfolio_inv(event, context):
-    # current_positions = event['Payload'][-1]['open_positions']
+    logger.info(f'Initializing open trades PM: {dt} for {lambda_signifier}')
     try:
         check_time()
     except ValueError as e:
         return "disallowed"
 
     year, month, day, hour = format_dates(now)
-    logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     new_trades_df = pull_new_trades_inv(year, month, day, hour)
     ## Future feature to deal with descrepancies between our records and tradier
@@ -45,6 +44,9 @@ def manage_portfolio_inv(event, context):
     logger.info(f'Finished new trades PM: {lambda_signifier}')
     return {"lambda_signifier": lambda_signifier}
 
+
+def store_signifier(signifier):
+    s3.put_object(Bucket=trading_data_bucket, Key=f"lambda_signifiers/recent_signifier_new_trades.txt", Body=str(signifier).encode('utf-8'))
 
 def pull_new_trades_inv(year, month, day, hour):
     trade_dfs = []

@@ -29,7 +29,8 @@ env = os.getenv("ENV")
 
 
 def manage_portfolio(event, context):
-    logger.info(f'Initializing open trades PM: {dt}')
+    logger.info(f'Initializing open trades PM: {dt} for {lambda_signifier}')
+    store_signifier(lambda_signifier)
     try:
         check_time()
     except ValueError as e:
@@ -61,6 +62,9 @@ def manage_portfolio(event, context):
     logger.info(f"closed_orders: {closed_orders}")
     return {"lambda_signifier": lambda_signifier}
 
+def store_signifier(signifier):
+    s3.put_object(Bucket=trading_data_bucket, Key=f"lambda_signifiers/recent_signifier_open_trades.txt", Body=str(signifier).encode('utf-8'))
+
 def  evaluate_open_trades(orders_df):
     orders_to_close = []
     for _, row in orders_df.iterrows():
@@ -86,4 +90,4 @@ def check_time():
         raise ValueError("The current time is outside the allowed window!")
     
 if __name__ == "__main__":
-   manage_portfolio(None, None)
+   store_signifier("TEST+000")

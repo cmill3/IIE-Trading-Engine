@@ -27,6 +27,8 @@ ddb = boto3.client('dynamodb')
 def run_closed_trades_data_process(event,context):
     preprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
     lambda_signifier = event.get('lambda_signifier', 'default_value')
+    if lambda_signifier == "default_value":
+        lambda_signifier = retrieve_signifier()
     succesful_logs, unsuccesful_logs = pull_log_data("closed",lambda_signifier)
     create_dynamo_order_close(succesful_logs)
     postprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
@@ -42,6 +44,9 @@ def run_closed_trades_data_process(event,context):
     
     return "Created new dynamo records for closed orders"
 
+def retrieve_signifier():
+    signifier = s3.get_object(Bucket=trading_data_bucket, Key="lambda_signifiers/recent_signifier_open_trades.txt")
+    return signifier['Body'].read().decode('utf-8')
 
 def run_opened_trades_data_process(event,context):
     preprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
@@ -138,7 +143,8 @@ def pull_log_data(process_type,lambda_signifier):
 
 
 if __name__ == "__main__":
-    run_opened_trades_data_process(None,None)
+    lambda_signifier = retrieve_signifier()
+    print(lambda_signifier)
     # run_new_trades_data_process(None,None)
 
     

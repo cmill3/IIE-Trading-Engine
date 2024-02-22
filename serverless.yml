@@ -53,7 +53,7 @@ plugins:
 
 functions:
   new-trades-portfolio-manager-paper:
-    handler: new_trades_portfolio_manager.manage_portfolio
+    handler: new_trades_portfolio_manager.manage_portfolio_inv
     environment:
       ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
@@ -64,7 +64,7 @@ functions:
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: new-trades-portfolio-manager-${self:provider.stage}
   open-trades-portfolio-manage-paper:
-    handler: open_trades_portfolio_manager.manage_portfolio
+    handler: open_trades_portfolio_manager.manage_portfolio_inv
     environment:
       ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
@@ -205,7 +205,7 @@ functions:
   order-controls:
       handler: order_control.run_order_control
       environment:
-      ENV: ${self:custom.${self:provider.stage}.env}
+        ENV: ${self:custom.${self:provider.stage}.env}
         TRADING_DATA_BUCKET: "icarus-trading-data"
       layers:
         - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
@@ -382,8 +382,11 @@ stepFunctions:
               - Lambda.AWSLambdaException
               - Lambda.SdkClientException
               IntervalSeconds: 5
-              MaxAttempts: 3
+              MaxAttempts: 1
               BackoffRate: 2
+            Catch:
+            - ErrorEquals: ["States.ALL"]
+              Next: ClosedOrdersProcessor
             Next: ClosedOrdersProcessor
           ClosedOrdersProcessor:
             Type: Task
