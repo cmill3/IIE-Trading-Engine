@@ -164,7 +164,7 @@ def close_orders(orders_df,  base_url, account_id, access_token, env, table, clo
     s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{env}/{date}.csv", Body=csv)
     return "done"
 
-def close_order(row,env, lambda_signifier, reason):
+def close_order(row, env, lambda_signifier, reason):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
     if status_code == 200:
