@@ -29,7 +29,7 @@ custom:
     tradingDataBucketINV: inv-alerts-trading-data-dev
     ordersTableINV: icarus-orders-table-inv-dev
     closedOrdersTableINV: icarus-closed-orders-table-inv-dev
-    env: dev
+    env: DEV
     tableList15min: "['icarus-closed-orders-table-inv-dev', 'icarus-orders-table-inv-dev']"
     tableListdaily: "['icarus-model-results-table-dev']"
     closedTablelist: "['icarus-closed-orders-table-inv-dev']"
@@ -38,7 +38,7 @@ custom:
     tradingDataBucketINV: inv-alerts-trading-data
     ordersTableINV: icarus-orders-table-inv
     closedOrdersTableINV: icarus-closed-orders-table-inv
-    env: prod_val
+    env: PROD_VAL
     tableList15min: "['icarus-closed-orders-table-inv', 'icarus-orders-table-inv']"
     tableListdaily: "['icarus-model-results-table']"
     closedTablelist: "['icarus-closed-orders-table-inv']"
@@ -178,7 +178,7 @@ functions:
           description: trigger to backup the dynamo schedule every 15 minutes
           schedule: rate(15 minutes)
     environment:
-      ENV: "prod_val"
+      ENV: ${self:custom.${self:provider.stage}.env}
       TABLE_LIST: ${self:custom.${self:provider.stage}.tableList15min}
       FREQUENCY: "15MIN"
     layers:
@@ -194,7 +194,7 @@ functions:
           description: trigger to backup the dynamo schedule daily
           schedule: rate(24 hours)
     environment:
-      ENV: "prod_val"
+      ENV: ${self:custom.${self:provider.stage}.env}
       TABLE_LIST: ${self:custom.${self:provider.stage}.tableListdaily}
       FREQUENCY: "DAILY"
     layers:
@@ -205,7 +205,7 @@ functions:
   order-controls:
       handler: order_control.run_order_control
       environment:
-        ENV: "prod_val"
+      ENV: ${self:custom.${self:provider.stage}.env}
         TRADING_DATA_BUCKET: "icarus-trading-data"
       layers:
         - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
@@ -230,7 +230,7 @@ functions:
           description: trigger to log all of the closed orders in s3 each month
           schedule: rate(1 day)
     environment:
-      ENV: "prod_val"
+      ENV: ${self:custom.${self:provider.stage}.env}
       TABLE_LIST: ${self:custom.${self:provider.stage}.closedTablelist}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5

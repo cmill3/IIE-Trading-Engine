@@ -26,26 +26,22 @@ def get_account_balance(base_url: str, account_id: str, access_token:str) -> dic
     
 def get_tradier_credentials(env: str):
     user = ''
-    if env == "dev":
-        user == "dev"
+    if env == "DEV":
         base_url = PAPER_BASE_URL
-        access_token == DEV_ACCOUNTID
-        account_id == DEV_ACCESSTOKEN
-    elif env == "prod_val":
+        access_token = DEV_ACCOUNTID
+        account_id = DEV_ACCESSTOKEN
+    elif env == "PROD_VAL":
         base_url = PAPER_BASE_URL
-        user == "inv"
-        access_token == PRODVAL_ACCESSTOKEN
-        account_id == PRODVAL_ACCOUNTID
-    elif env == "diz_prod":
-        user == "diz"
+        access_token = PRODVAL_ACCESSTOKEN
+        account_id = PRODVAL_ACCOUNTID
+    elif env == "DIZ_PROD":
         base_url = LIVE_BASE_URL
-        access_token == DIZPROD_ACCESSTOKEN
-        account_id == DIZPROD_ACCOUNTID
-    elif env == "cm3_prod":
-        user == "cm3"
+        access_token = DIZPROD_ACCESSTOKEN
+        account_id = DIZPROD_ACCOUNTID
+    elif env == "CM3_PROD":
         base_url = LIVE_BASE_URL
-        access_token == CM3_ACCESSTOKEN
-        account_id == CM3_ACCOUNTID
+        access_token = CM3_ACCESSTOKEN
+        account_id = CM3_ACCOUNTID
 
     return base_url, account_id, access_token
 
