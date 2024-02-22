@@ -242,8 +242,8 @@ functions:
  
 stepFunctions:
   stateMachines:
-    icarus-new-trades-inv:
-      name: icarus-new-trades-inv-${self:provider.stage}
+    icarus-new-trades:
+      name: icarus-new-trades-${self:provider.stage}
       role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
       alarms:
         topics:
@@ -355,7 +355,7 @@ stepFunctions:
           End:
             Type: Succeed
     icarus-open-trades:
-      name: icarus-open-trades
+      name: icarus-open-trades-${self:provider.stage}
       role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
       alarms:
         topics:
