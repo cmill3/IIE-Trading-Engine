@@ -38,7 +38,7 @@ def run_closed_trades_data_process(event,context):
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_close_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=failed_df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"successful_close_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=success_df.to_csv(index=False))
 
-    dynamo_record_diff = len(preprocess_order_count) - len(postprocess_order_count)
+    dynamo_record_diff = preprocess_order_count - postprocess_order_count
     if dynamo_record_diff != len(succesful_logs):
         raise ValueError(f"Error: Dynamo record count: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
     
@@ -60,7 +60,7 @@ def run_opened_trades_data_process(event,context):
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_new_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=failed_df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"successful_new_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=success_df.to_csv(index=False))
 
-    dynamo_record_diff = len(postprocess_order_count) - len(preprocess_order_count)
+    dynamo_record_diff = postprocess_order_count - preprocess_order_count
     if dynamo_record_diff != len(succesful_logs):
         raise ValueError(f"Error: Dynamo record count open: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
 
