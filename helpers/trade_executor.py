@@ -31,12 +31,6 @@ order_type = "market"
 duration = "GTC"
 acct_balance_min = 20000
 
-
-def run_executor(data, env, base_url, account_id, access_token, table, lambda_signifier):
-    order_ids = execute_new_trades(data, base_url, account_id, access_token, env, table, lambda_signifier)
-    return order_ids
-
-     
 #The portion that takes the account balance and allocates a certain amount will be below - currently unweighted**
 def account_value_checkpoint(current_balance) -> dict:
     if  current_balance >= acct_balance_min:
@@ -54,6 +48,8 @@ def execute_new_trades(data, base_url, account_id, access_token, env, table, lam
         is_valid = False
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
+        spread_start = ALGORITHM_CONFIG[row['strategy']]['spread_start']
+        spread_end = ALGORITHM_CONFIG[row['strategy']]['spread_end']
                                     
         if row['strategy'] in THREED_STRATEGIES and now.date().weekday() <= 2:
             is_valid = True
@@ -66,7 +62,7 @@ def execute_new_trades(data, base_url, account_id, access_token, env, table, lam
             except:
                 continue
             all_trades = row['trade_details']
-            trades = row['trade_details'][:3]
+            trades = row['trade_details'][spread_start:(spread_end+spread_start)]
             if row['strategy'] in CALL_STRATEGIES:
                 option_side = "call"
             elif row['strategy'] in PUT_STRATEGIES:
@@ -194,13 +190,13 @@ def date_performance_check(row, env, lambda_signifier):
 def evaluate_performance_inv(current_price, derivative_price, row):
     if row['trading_strategy'] in CDVOL_STRATEGIES:
         if row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
-            sell_code, reason = tda_CALL_3D_CDVOLAGG(row, current_price,abs((.8*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
+            sell_code, reason = tda_CALL_3D_CDVOLAGG(row, current_price,vol=.5)
         elif row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
-            sell_code, reason = tda_PUT_3D_CDVOLAGG(row, current_price,abs((.8*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
+            sell_code, reason = tda_PUT_3D_CDVOLAGG(row, current_price,vol=.5)
         elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
-            sell_code, reason = tda_CALL_1D_CDVOLAGG(row, current_price,abs((.6*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
+            sell_code, reason = tda_CALL_1D_CDVOLAGG(row, current_price,vol=.5)
         elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
-            sell_code, reason = tda_PUT_1D_CDVOLAGG(row, current_price,abs((.6*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))
+            sell_code, reason = tda_PUT_1D_CDVOLAGG(row, current_price,vol=.5)
     elif row['trading_strategy'] in TREND_STRATEGIES:
         if row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
             sell_code, reason = tda_CALL_3D_stdclsAGG(row, current_price,abs((.8*ALGORITHM_CONFIG[row['trading_strategy']]['target_value'])))

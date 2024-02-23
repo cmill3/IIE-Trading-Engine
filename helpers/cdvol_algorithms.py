@@ -35,7 +35,6 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(min_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    # Floor_pct = (row['threed] * ALGORITHM_CONFIG[row['trading_strategy']]['volatility_threshold'])
     Floor_pct = (vol)* float(row['return_vol_10D'])
 
     if deriv_pct_change > 400:
@@ -87,7 +86,6 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(max_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    # Floor_pct = (row['threeD_stddev50'] * ALGORITHM_CONFIG[row['trading_strategy']]['volatility_threshold'])
     Floor_pct = (-vol) * float(row['return_vol_10D'])
 
     if deriv_pct_change > 400:
@@ -190,7 +188,6 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(max_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    # Floor_pct = (row['oneD_stddev50'] * ALGORITHM_CONFIG[row['trading_strategy']]['volatility_threshold'])
     Floor_pct = (-vol)* float(row['return_vol_10D'])
 
     if deriv_pct_change > 400:

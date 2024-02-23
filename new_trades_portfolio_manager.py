@@ -70,7 +70,7 @@ def evaluate_new_trades(new_trades_df, env, base_url, account_id, access_token, 
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
     if env == "DEV":
         return "test execution"
-    execution_result = te.run_executor(approved_trades_df, env, base_url, account_id, access_token, table,lambda_signifier)
+    execution_result = te.execute_new_trades(approved_trades_df, env, base_url, account_id, access_token, table,lambda_signifier)
     return execution_result
 
 
