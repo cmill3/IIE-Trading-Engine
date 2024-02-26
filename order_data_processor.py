@@ -20,6 +20,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 est = pytz.timezone('US/Eastern')
 
+
 s3 = boto3.client('s3')
 logs = boto3.client('logs')
 ddb = boto3.client('dynamodb')
@@ -29,6 +30,8 @@ def run_closed_trades_data_process(event,context):
     lambda_signifier = event.get('lambda_signifier', 'default_value')
     if lambda_signifier == "default_value":
         lambda_signifier = retrieve_signifier()
+    logger.info(f"LAMBDA SIGNIFIER: {lambda_signifier}")
+
     succesful_logs, unsuccesful_logs = pull_log_data("closed",lambda_signifier)
     create_dynamo_order_close(succesful_logs)
     postprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
@@ -49,9 +52,12 @@ def retrieve_signifier():
     return signifier['Body'].read().decode('utf-8')
 
 def run_opened_trades_data_process(event,context):
+    lambda_signifier = datetime.now().strftime("%Y%m%d+%H")
     preprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
-    lambda_signifier = event.get('lambda_signifier', 'default_value')
     succesful_logs, unsuccesful_logs = pull_log_data("opened",lambda_signifier)
+    logger.info(f"LAMBDA SIGNIFIER: {lambda_signifier}")
+
+
     create_dynamo_order_open(succesful_logs)
     postprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
 
@@ -89,12 +95,19 @@ def create_dynamo_order_close(log_messages):
 
 def pull_log_data(process_type,lambda_signifier):
     log_messages = {}
-    if process_type == "closed":
-        log_group_name = '/aws/lambda/open-trades-portfolio-manager-prod-val'
-    elif process_type == "opened":
-        log_group_name = '/aws/lambda/new-trades-portfolio-manager-prod-val'
+    if env == "DEV":
+        if process_type == "closed":
+            log_group_name = '/aws/lambda/open-trades-portfolio-manager-dev'
+        elif process_type == "opened":
+            log_group_name = '/aws/lambda/new-trades-portfolio-manager-dev'
+    elif env == "PROD_VAL":
+        if process_type == "closed":
+            log_group_name = '/aws/lambda/open-trades-portfolio-manager-prod-val'
+        elif process_type == "opened":
+            log_group_name = '/aws/lambda/new-trades-portfolio-manager-prod-val'
+
     minute_ms = 60000
-    minutes_back = 15
+    minutes_back = 660
 
     # Calculate the time range for the last 24 hours
     end_time = int((datetime.utcnow()).timestamp() * 1000)
@@ -124,7 +137,6 @@ def pull_log_data(process_type,lambda_signifier):
 
                 if log_dict['lambda_signifier'] != lambda_signifier:
                     continue
-
                 if process_type == "closed":
                     if log_dict['log_type'] == "close_success":
                         if log_dict['closing_order_id'] is not None:
@@ -143,8 +155,8 @@ def pull_log_data(process_type,lambda_signifier):
 
 
 if __name__ == "__main__":
-    lambda_signifier = retrieve_signifier()
-    print(lambda_signifier)
-    # run_new_trades_data_process(None,None)
+    # lambda_signifier = retrieve_signifier()
+    # print(lambda_signifier)
+    run_opened_trades_data_process(None,None)
 
     

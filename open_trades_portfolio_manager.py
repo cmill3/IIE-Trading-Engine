@@ -28,7 +28,7 @@ duration = "gtc"
 env = os.getenv("ENV")
 
 
-def manage_portfolio(event, context):
+def manage_portfolio_inv(event, context):
     logger.info(f'Initializing open trades PM: {dt} for {lambda_signifier}')
     store_signifier(lambda_signifier)
     try:
@@ -44,20 +44,6 @@ def manage_portfolio(event, context):
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
     closed_orders = evaluate_open_trades(open_trades_df)
-    
-    # if len(orders_to_close) == 0:
-    #     return {"open_positions": open_positions}
-    
-    # if env == "DEV":
-    #     return {"open_positions": open_positions}
-    
-    # trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, env, table, close_table)
-    # logger.info(f'Closing orders: {trade_response}')
-
-    # if datetime.now().minute < 10:
-    #     open_trades_df = db.get_all_orders_from_dynamo(table)
-    #     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
-    #     open_positions = open_trades_df['pos_id'].unique().tolist()
 
     logger.info(f"closed_orders: {closed_orders}")
     return {"lambda_signifier": lambda_signifier}

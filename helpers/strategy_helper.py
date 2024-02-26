@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy
-import requests
 import boto3
 from datetime import datetime
 

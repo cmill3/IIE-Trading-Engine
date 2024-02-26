@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import logging
 from helpers.helper import get_business_days, polygon_call_stocks, calculate_floor_pct  
-import numpy as np  
 import math
 
 logger = logging.getLogger()

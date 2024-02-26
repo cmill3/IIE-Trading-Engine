@@ -1,7 +1,6 @@
 # Purpose: This script is used to build trades for the Icarus Trading Bot
 import pandas as pd
 from datetime import datetime, timedelta
-from yahooquery import Ticker
 from helpers import strategy_helper, tradier, helper
 import boto3
 import os
@@ -24,25 +23,23 @@ model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
 
 est = pytz.timezone('US/Eastern')
 now = datetime.now(est)
+
 d = now.date() # Monday
 
 def build_trade_inv(event, context):
     year, month, day, hour = format_dates(now)
-    strategy_names = os.getenv("TRADING_STRATEGY")
-    logger.info('build_trade function started.')
-    strategy_names = strategy_names.split(",")
-    logger.info(strategy_names)
-    for trading_strategy in strategy_names:
-        logger.info(f'Initializing trade builder: {year}-{month}-{day}-{hour}')
-        df  = pull_data_inv(trading_strategy,year, month, day, hour)
-        df['strategy'] = trading_strategy
-        if trading_strategy == "IDXC_1D" or trading_strategy == "IDXP_1D" or trading_strategy == "IDXC" or trading_strategy == "IDXP":
-            results_df = process_data_index(df)
-        else:
-            results_df = process_data(df)
-        csv = results_df.to_csv()
-        logger.info(f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
-        response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
+    trading_strategy = os.getenv("TRADING_STRATEGY")
+    logger.info(trading_strategy)
+    logger.info(f'Initializing trade builder: {year}-{month}-{day}-{hour}')
+    df  = pull_data_inv(trading_strategy,year, month, day, hour)
+    df['strategy'] = trading_strategy
+    if trading_strategy == "IDXC_1D" or trading_strategy == "IDXP_1D" or trading_strategy == "IDXC" or trading_strategy == "IDXP":
+        results_df = process_data_index(df)
+    else:
+        results_df = process_data(df)
+    csv = results_df.to_csv()
+    logger.info(f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
+    response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     return {
         'statusCode': 200
     }

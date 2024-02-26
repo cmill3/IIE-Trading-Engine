@@ -9,7 +9,7 @@ frameworkVersion: '3'
 provider:
   name: aws
   region: us-east-1
-  runtime: python3.12
+  runtime: python3.9
   stage: ${self:custom.stage}
   timeout: 900
   deploymentBucket: 
@@ -60,7 +60,7 @@ functions:
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: new-trades-portfolio-manager-${self:provider.stage}
   open-trades-portfolio-manage-paper:
@@ -71,7 +71,7 @@ functions:
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-portfolio-manager-${self:provider.stage}
@@ -83,7 +83,7 @@ functions:
       TRADING_STRATEGY: "CDBFC_1D"
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-CDVOLBFC1D-${self:provider.stage}
@@ -95,7 +95,7 @@ functions:
       TRADING_STRATEGY: "CDBFP_1D"
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-CDVOLBFP1D-${self:provider.stage}
@@ -107,7 +107,7 @@ functions:
       TRADING_STRATEGY: "CDBFP"
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-CDVOLBFP-${self:provider.stage}
@@ -119,7 +119,7 @@ functions:
       TRADING_STRATEGY: "CDBFC"
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-CDVOLBFC-${self:provider.stage}
@@ -131,7 +131,7 @@ functions:
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: closed-orders-data-processor-${self:provider.stage}
@@ -143,7 +143,7 @@ functions:
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: opened-orders-data-processor-${self:provider.stage}
@@ -153,7 +153,7 @@ functions:
       ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: "icarus-trading-data"
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-reconciliation-${self:provider.stage}
@@ -170,7 +170,7 @@ functions:
       TABLE_LIST: ${self:custom.${self:provider.stage}.tableList15min}
       FREQUENCY: "15MIN"
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: dynamo-backup-15-min-${self:provider.stage}
@@ -186,7 +186,7 @@ functions:
       TABLE_LIST: ${self:custom.${self:provider.stage}.tableListdaily}
       FREQUENCY: "DAILY"
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: dynamo-backup-daily-${self:provider.stage}
@@ -196,7 +196,7 @@ functions:
         ENV: ${self:custom.${self:provider.stage}.env}
         TRADING_DATA_BUCKET: "icarus-trading-data"
       layers:
-        - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+        - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
       name: order-controls-${self:provider.stage}
   trading-activity-monitor:
@@ -207,7 +207,7 @@ functions:
             description: trigger to log all of the closed orders in s3 each month
             schedule: 'cron(30 23 * * ? *)'
       layers:
-        - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+        - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
       name: trading-activity-monitor-${self:provider.stage}
   closed-order-monthly-log:
@@ -221,7 +221,7 @@ functions:
       ENV: ${self:custom.${self:provider.stage}.env}
       TABLE_LIST: ${self:custom.${self:provider.stage}.closedTablelist}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: closed-orders-log-${self:provider.stage}
@@ -264,7 +264,7 @@ stepFunctions:
                       MaxAttempts: 3
                       BackoffRate: 2
                     End: True
-              - StartAt: BuildTradeBFC1D
+              - StartAt: BuildTradeCDVOLBFC1D
                 States:
                   BuildTradeCDVOLBFC1D:
                     Type: Task

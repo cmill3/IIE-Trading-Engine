@@ -38,7 +38,8 @@ def account_value_checkpoint(current_balance) -> dict:
     else:
         return False
     
-def execute_new_trades(data, base_url, account_id, access_token, env, table, lambda_signifier):
+def execute_new_trades(data,table, lambda_signifier):
+    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     # transaction_data = []
     positions_data = []
     failed_transactions = []
@@ -49,7 +50,7 @@ def execute_new_trades(data, base_url, account_id, access_token, env, table, lam
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         pos_id = f"{row['symbol']}{(row['strategy'].replace('_',''))}"
         spread_start = ALGORITHM_CONFIG[row['strategy']]['spread_start']
-        spread_end = ALGORITHM_CONFIG[row['strategy']]['spread_end']
+        spread_length = ALGORITHM_CONFIG[row['strategy']]['spread_length']
                                     
         if row['strategy'] in THREED_STRATEGIES and now.date().weekday() <= 2:
             is_valid = True
@@ -62,7 +63,7 @@ def execute_new_trades(data, base_url, account_id, access_token, env, table, lam
             except:
                 continue
             all_trades = row['trade_details']
-            trades = row['trade_details'][spread_start:(spread_end+spread_start)]
+            trades = row['trade_details'][spread_start:(spread_length+spread_start)]
             if row['strategy'] in CALL_STRATEGIES:
                 option_side = "call"
             elif row['strategy'] in PUT_STRATEGIES:
