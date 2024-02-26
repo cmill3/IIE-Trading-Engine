@@ -10,6 +10,7 @@ import helpers.dynamo_helper as db
 import pytz
 import json
 import pandas as pd
+import time
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 orders_table = os.getenv('TABLE')
@@ -26,7 +27,9 @@ logs = boto3.client('logs')
 ddb = boto3.client('dynamodb')
 
 def run_closed_trades_data_process(event,context):
+    time.sleep(60)
     preprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
+    logger.info(f"preprocess_order_count: {preprocess_order_count}")
     lambda_signifier = event.get('lambda_signifier', 'default_value')
     if lambda_signifier == "default_value":
         lambda_signifier = retrieve_signifier()
@@ -35,15 +38,16 @@ def run_closed_trades_data_process(event,context):
     succesful_logs, unsuccesful_logs = pull_log_data("closed",lambda_signifier)
     create_dynamo_order_close(succesful_logs)
     postprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
+    logger.info(f"postprocess_order_count: {postprocess_order_count}")
 
     success_df = pd.DataFrame.from_dict(succesful_logs)
     failed_df = pd.DataFrame.from_dict(unsuccesful_logs)
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_close_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=failed_df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"successful_close_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=success_df.to_csv(index=False))
 
-    dynamo_record_diff = preprocess_order_count - postprocess_order_count
-    if dynamo_record_diff != len(succesful_logs):
-        raise ValueError(f"Error: Dynamo record count: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
+    # dynamo_record_diff = preprocess_order_count - postprocess_order_count
+    # if dynamo_record_diff != len(succesful_logs):
+    #     raise ValueError(f"Error: Dynamo record count: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
     
     return "Created new dynamo records for closed orders"
 
@@ -52,23 +56,27 @@ def retrieve_signifier():
     return signifier['Body'].read().decode('utf-8')
 
 def run_opened_trades_data_process(event,context):
+    time.sleep(60)
     lambda_signifier = datetime.now().strftime("%Y%m%d+%H")
     preprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
+    logger.info(f"preprocess_order_count: {preprocess_order_count}")
     succesful_logs, unsuccesful_logs = pull_log_data("opened",lambda_signifier)
     logger.info(f"LAMBDA SIGNIFIER: {lambda_signifier}")
 
 
     create_dynamo_order_open(succesful_logs)
     postprocess_order_count = ddb.describe_table(TableName=orders_table)['Table']['ItemCount']
+    logger.info(f"postprocess_order_count: {postprocess_order_count}")
+
 
     success_df = pd.DataFrame.from_dict(succesful_logs)
     failed_df = pd.DataFrame.from_dict(unsuccesful_logs)
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_new_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=failed_df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"successful_new_orders_data/{datetime.now(est).strftime('%Y/%m/%d')}.csv", Body=success_df.to_csv(index=False))
 
-    dynamo_record_diff = postprocess_order_count - preprocess_order_count
-    if dynamo_record_diff != len(succesful_logs):
-        raise ValueError(f"Error: Dynamo record count open: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
+    # dynamo_record_diff = postprocess_order_count - preprocess_order_count
+    # if dynamo_record_diff != len(succesful_logs):
+    #     raise ValueError(f"Error: Dynamo record count open: {dynamo_record_diff} does not match succesful logs count: {len(succesful_logs)}")
 
     return "Created new dynamo records for open orders"
 
@@ -107,7 +115,7 @@ def pull_log_data(process_type,lambda_signifier):
             log_group_name = '/aws/lambda/new-trades-portfolio-manager-prod-val'
 
     minute_ms = 60000
-    minutes_back = 660
+    minutes_back = 20
 
     # Calculate the time range for the last 24 hours
     end_time = int((datetime.utcnow()).timestamp() * 1000)

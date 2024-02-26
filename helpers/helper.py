@@ -395,6 +395,7 @@ def log_message_close(row, id, status_code, reason, error,lambda_signifier):
         logger.error(log_entry)
 
 def log_message_open(row, id, status_code, error, contract_ticker, option_side,lambda_signifier):
+    model_config = pull_model_config(row['strategy'])
     log_entry = json.dumps({
         "lambda_signifier": lambda_signifier,
         "log_type": "open_success",
@@ -406,7 +407,7 @@ def log_message_open(row, id, status_code, error, contract_ticker, option_side,l
         "underlying_purchase_price": row['underlying_purchase_price'],
         "quantity": row['quantity'],
         "strategy": row['strategy'],
-        "target_value": ALGORITHM_CONFIG[row['strategy']]['target_value'],
+        "target_value": model_config['target_value'],
         'underlying_symbol': row['symbol'],
         'option_side': option_side,
         'return_vol_10D': row['return_vol_10D']
@@ -424,6 +425,16 @@ def log_message_open_error(row, id, status_code, error, contract_ticker, option_
         "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
     logger.error(log_entry)
+
+def pull_model_config(trading_strategy):
+    s3 = boto3.client('s3')
+    weekday = date.weekday()
+    monday = date - timedelta(days=weekday)
+    date_prefix = monday.strftime("%Y/%m/%d")
+    model_config = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"model_configurations/{date_prefix}.csv")
+    model_config = pd.read_csv(model_config.get("Body"))
+    model_config = model_config.loc[model_config['strategy'] == trading_strategy]
+    return {"target_value": model_config['target_value'].values[0], "strategy": model_config['strategy'].values[0]}
 
 if __name__ == "__main__":
     print('2024-02-05T17:18:25.415Z')

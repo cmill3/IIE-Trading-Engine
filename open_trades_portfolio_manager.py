@@ -54,9 +54,9 @@ def store_signifier(signifier):
 def  evaluate_open_trades(orders_df):
     orders_to_close = []
     for _, row in orders_df.iterrows():
-        order_data = te.date_performance_check(row,env,lambda_signifier)
-        if order_data is not None:
-            orders_to_close.append({"open_order_id":order_data['order_id'],"closing_order_id":order_data['closing_order_id']})
+        closing_order_id = te.date_performance_check(row,env,lambda_signifier)
+        if closing_order_id is not None:
+            orders_to_close.append({"open_order_id":row['order_id'],"closing_order_id": closing_order_id})
     # positions_to_close = list(set(positions_to_close))
     logger.info(f'closing order ids: {orders_to_close}')
     return orders_to_close
