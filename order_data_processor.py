@@ -173,7 +173,7 @@ def update_balance_opened_trades(capital_spent):
     df = df.append({'date': datetime.now().strftime("%Y-%m-%d:%H:%M"), 'balance': new_balance}, ignore_index=True)
     
     # Save the updated DataFrame back to S3
-    s3.put_object(Bucket=trading_data_bucket, Key=f"trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}", Body=df.to_csv(index=False))
+    s3.put_object(Bucket=trading_data_bucket, Key=f'trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}', Body=df.to_csv(index=False))
     
     return df
 
@@ -186,7 +186,7 @@ def update_balance_closed_trades(capital_received):
     df = df.append({'date': datetime.now().strftime("%Y-%m-%d:%H:%M"), 'balance': new_balance}, ignore_index=True)
     
     # Save the updated DataFrame back to S3
-    s3.put_object(Bucket=trading_data_bucket, Key=f"trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}", Body=df.to_csv(index=False))
+    s3.put_object(Bucket=trading_data_bucket, Key=f'trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}', Body=df.to_csv(index=False))
     
     return df
 
