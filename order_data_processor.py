@@ -91,16 +91,21 @@ def create_dynamo_order_open(log_messages):
         db.create_new_dynamo_record_order_logmessage(order_info_obj,log, env, orders_table)
         logger.info(f"Created new dynamo record for order_id: {log['order_id']} in {orders_table}")
 
+    update_balance_opened_trades(capital_spent)
+
     return "Created new dynamo records for open orders"
 
 def create_dynamo_order_close(log_messages):
+    capital_received = 0
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     for log in log_messages:
         order_info_obj = trade.get_order_info(base_url, account_id, access_token, log['order_id'])
         original_order = db.delete_order_record(log['order_id'], orders_table)
         create_response = db.create_new_dynamo_record_closed_order_logmessage(order_info_obj, original_order, log, env, close_table)
         logger.info(f"Created new dynamo record for order_id: {log['order_id']} {log['closing_order_id']} in {close_table}")
+        capital_received += float(order_info_obj['exec_quantity']) * float(order_info_obj['average_fill_price'])
 
+    update_balance_closed_trades(capital_received)
     return "Created new dynamo records for close orders"
 
 
