@@ -28,8 +28,9 @@ duration = "gtc"
 env = os.getenv("ENV")
 
 
-def manage_portfolio(event, context):
-    logger.info(f'Initializing open trades PM: {dt}')
+def manage_portfolio_inv(event, context):
+    logger.info(f'Initializing open trades PM: {dt} for {lambda_signifier}')
+    store_signifier(lambda_signifier)
     try:
         check_time()
     except ValueError as e:
@@ -43,30 +44,19 @@ def manage_portfolio(event, context):
     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
     open_positions = open_trades_df['pos_id'].unique().tolist()
     closed_orders = evaluate_open_trades(open_trades_df)
-    
-    # if len(orders_to_close) == 0:
-    #     return {"open_positions": open_positions}
-    
-    # if env == "DEV":
-    #     return {"open_positions": open_positions}
-    
-    # trade_response = te.close_orders(orders_to_close, base_url, account_id, access_token, env, table, close_table)
-    # logger.info(f'Closing orders: {trade_response}')
-
-    # if datetime.now().minute < 10:
-    #     open_trades_df = db.get_all_orders_from_dynamo(table)
-    #     open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
-    #     open_positions = open_trades_df['pos_id'].unique().tolist()
 
     logger.info(f"closed_orders: {closed_orders}")
     return {"lambda_signifier": lambda_signifier}
 
+def store_signifier(signifier):
+    s3.put_object(Bucket=trading_data_bucket, Key=f"lambda_signifiers/recent_signifier_open_trades.txt", Body=str(signifier).encode('utf-8'))
+
 def  evaluate_open_trades(orders_df):
     orders_to_close = []
     for _, row in orders_df.iterrows():
-        order_data = te.date_performance_check(row,env,lambda_signifier)
-        if order_data is not None:
-            orders_to_close.append({"open_order_id":order_data['order_id'],"closing_order_id":order_data['closing_order_id']})
+        closing_order_id = te.date_performance_check(row,env,lambda_signifier)
+        if closing_order_id is not None:
+            orders_to_close.append({"open_order_id":row['order_id'],"closing_order_id": closing_order_id})
     # positions_to_close = list(set(positions_to_close))
     logger.info(f'closing order ids: {orders_to_close}')
     return orders_to_close
@@ -86,4 +76,4 @@ def check_time():
         raise ValueError("The current time is outside the allowed window!")
     
 if __name__ == "__main__":
-   manage_portfolio(None, None)
+   store_signifier("TEST+000")

@@ -6,7 +6,6 @@ import pandas as pd
 from datetime import datetime, timedelta, time
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
-from yahooquery import Ticker
 import boto3
 import os
 import logging
@@ -22,29 +21,31 @@ env = os.getenv("ENV")
 table = os.getenv("TABLE")
 now = datetime.now().astimezone(pytz.timezone('US/Eastern'))
 dt = now.strftime("%Y-%m-%dT%H:%M:%S")
-lambda_signifier = datetime.now().strftime("%Y%m%d+%H%M")
+lambda_signifier = datetime.now().strftime("%Y%m%d+%H")
 
 
 
 def manage_portfolio_inv(event, context):
-    # current_positions = event['Payload'][-1]['open_positions']
+    logger.info(f'Initializing open trades PM: {dt} for {lambda_signifier}')
     try:
         check_time()
     except ValueError as e:
         return "disallowed"
 
     year, month, day, hour = format_dates(now)
-    logger.info(f'Initializing new trades PM: {dt}')
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     new_trades_df = pull_new_trades_inv(year, month, day, hour)
     ## Future feature to deal with descrepancies between our records and tradier
     # if len(open_trades_df) > len(open_trades_list):
     # TO-DO create an alarm mechanism to report this 
-    trades_placed = evaluate_new_trades(new_trades_df, env, base_url, account_id, access_token, table)
+    trades_placed = evaluate_new_trades(new_trades_df, table)
     logger.info(f'Placed trades: {trades_placed}')
     logger.info(f'Finished new trades PM: {lambda_signifier}')
     return {"lambda_signifier": lambda_signifier}
 
+
+def store_signifier(signifier):
+    s3.put_object(Bucket=trading_data_bucket, Key=f"lambda_signifiers/recent_signifier_new_trades.txt", Body=str(signifier).encode('utf-8'))
 
 def pull_new_trades_inv(year, month, day, hour):
     trade_dfs = []
@@ -64,15 +65,14 @@ def pull_new_trades_inv(year, month, day, hour):
     return full_df
 
 
-def evaluate_new_trades(new_trades_df, env, base_url, account_id, access_token, table):
+def evaluate_new_trades(new_trades_df,table):
     approved_trades_df = new_trades_df.loc[new_trades_df['classifier_prediction'] > .5]
-    if env == "DEV":
-        return "test execution"
-    execution_result = te.run_executor(approved_trades_df, env, base_url, account_id, access_token, table,lambda_signifier)
+    execution_result = te.execute_new_trades(approved_trades_df, table,lambda_signifier)
     return execution_result
 
 
-def get_open_trades(base_url, account_id, access_token):
+def get_open_trades():
+    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     order_id_list = []
     open_trades_list = trade.get_account_positions(base_url, account_id, access_token)
     if open_trades_list == "No Positions":

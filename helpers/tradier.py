@@ -3,11 +3,11 @@ import json
 import os
 import pandas as pd
 from datetime import datetime
-from helpers.credentials import CM3ACCOUNTID, CM3ACCESSTOKEN, DEV_ACCESSTOKEN, DEV_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PRODVAL_ACCOUNTID, PRODVAL_ACCESSTOKEN, DIZPROD_ACCESSTOKEN, DIZPROD_ACCOUNTID
+from helpers.credentials import CM3PROD_ACCOUNTID, CM3PROD_ACCESSTOKEN, DEV_ACCESSTOKEN, DEV_ACCOUNTID, PAPER_BASE_URL, LIVE_BASE_URL, PRODVAL_ACCOUNTID, PRODVAL_ACCESSTOKEN, DIZPROD_ACCESSTOKEN, DIZPROD_ACCOUNTID
 
-base_url = os.getenv("BASE_URL")
-account_id = os.getenv("ACCOUNT_ID")
-access_token = os.getenv("ACCESS_TOKEN")
+# base_url = os.getenv("BASE_URL")
+# account_id = os.getenv("ACCOUNT_ID")
+# access_token = os.getenv("ACCESS_TOKEN")
 now = datetime.now()
 
 def get_account_balance(base_url: str, account_id: str, access_token:str) -> dict:
@@ -25,27 +25,22 @@ def get_account_balance(base_url: str, account_id: str, access_token:str) -> dic
         return "Account Balance pull unsuccessful"
     
 def get_tradier_credentials(env: str):
-    user = ''
-    if env == "dev":
-        user == "dev"
+    if env == "DEV":
         base_url = PAPER_BASE_URL
-        access_token == DEV_ACCOUNTID
-        account_id == DEV_ACCESSTOKEN
-    elif env == "prod_val":
+        access_token = DEV_ACCESSTOKEN
+        account_id = DEV_ACCOUNTID
+    elif env == "PROD_VAL":
         base_url = PAPER_BASE_URL
-        user == "inv"
-        access_token == PRODVAL_ACCESSTOKEN
-        account_id == PRODVAL_ACCOUNTID
-    elif env == "diz_prod":
-        user == "diz"
+        access_token = PRODVAL_ACCESSTOKEN
+        account_id = PRODVAL_ACCOUNTID
+    elif env == "DIZ_PROD":
         base_url = LIVE_BASE_URL
-        access_token == DIZPROD_ACCESSTOKEN
-        account_id == DIZPROD_ACCOUNTID
-    elif env == "cm3_prod":
-        user == "cm3"
+        access_token = DIZPROD_ACCESSTOKEN
+        account_id = DIZPROD_ACCOUNTID
+    elif env == "CM3_PROD":
         base_url = LIVE_BASE_URL
-        access_token == CM3ACCESSTOKEN
-        account_id == CM3ACCOUNTID
+        access_token = CM3PROD_ACCESSTOKEN
+        account_id = CM3PROD_ACCOUNTID
 
     return base_url, account_id, access_token
 
@@ -74,12 +69,13 @@ def place_order(base_url: str, account_id: str, access_token:str, symbol: str, o
     response = requests.post(f'{base_url}accounts/{account_id}/orders', 
             data={"class": 'option', "symbol": symbol, "option_symbol": option_symbol, "side": "buy_to_open", "quantity": quantity, "type": order_type, "duration": duration, "tag": position_id}, 
             headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+    json_response = response.json()
     if response.status_code == 200:
-        json_response = response.json()
         id = json_response['order']['id']
         # successful_trades.append(option_symbol)
         return id, response.status_code, json_response
-    else:    
+    else:
+        json_response = response.json()
         return "None", response.status_code, json_response
     
 

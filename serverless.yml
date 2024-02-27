@@ -29,7 +29,7 @@ custom:
     tradingDataBucketINV: inv-alerts-trading-data-dev
     ordersTableINV: icarus-orders-table-inv-dev
     closedOrdersTableINV: icarus-closed-orders-table-inv-dev
-    env: dev
+    env: DEV
     tableList15min: "['icarus-closed-orders-table-inv-dev', 'icarus-orders-table-inv-dev']"
     tableListdaily: "['icarus-model-results-table-dev']"
     closedTablelist: "['icarus-closed-orders-table-inv-dev']"
@@ -38,7 +38,7 @@ custom:
     tradingDataBucketINV: inv-alerts-trading-data
     ordersTableINV: icarus-orders-table-inv
     closedOrdersTableINV: icarus-closed-orders-table-inv
-    env: prod_val
+    env: PROD_VAL
     tableList15min: "['icarus-closed-orders-table-inv', 'icarus-orders-table-inv']"
     tableListdaily: "['icarus-model-results-table']"
     closedTablelist: "['icarus-closed-orders-table-inv']"
@@ -53,73 +53,61 @@ plugins:
 
 functions:
   new-trades-portfolio-manager-paper:
-    handler: new_trades_portfolio_manager.manage_portfolio
+    handler: new_trades_portfolio_manager.manage_portfolio_inv
     environment:
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
     layers:
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: new-trades-portfolio-manager-${self:provider.stage}
   open-trades-portfolio-manage-paper:
-    handler: open_trades_portfolio_manager.manage_portfolio
+    handler: open_trades_portfolio_manager.manage_portfolio_inv
     environment:
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-portfolio-manager-${self:provider.stage}
-  icarus-trade-builder-GAIN:
+  icarus-trade-builder-CDVOLBFC1D:
     handler: icarus_trade_builder.build_trade_inv
     environment:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-      TRADING_STRATEGY: "GAIN,GAIN_1D,GAINP,GAINP_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      TRADING_STRATEGY: "CDBFC_1D"
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: icarus-trade-builder-GAIN-${self:provider.stage}
-  icarus-trade-builder-LOSERS:
+    name: icarus-trade-builder-CDVOLBFC1D-${self:provider.stage}
+  icarus-trade-builder-CDVOLBFP1D:
     handler: icarus_trade_builder.build_trade_inv
     environment:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-      TRADING_STRATEGY: "LOSERS,LOSERS_1D,LOSERSC,LOSERSC_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      TRADING_STRATEGY: "CDBFP_1D"
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: icarus-trade-builder-LOSERS-${self:provider.stage}
-  icarus-trade-builder-MA:
-    handler: icarus_trade_builder.build_trade_inv
-    environment:
-      MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-      TRADING_STRATEGY: "MA,MA_1D,MAP,MAP_1D"
-      env: ${self:custom.${self:provider.stage}.env}
-    layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
-      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
-    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: icarus-trade-builder-MA-${self:provider.stage}
+    name: icarus-trade-builder-CDVOLBFP1D-${self:provider.stage}
   icarus-trade-builder-CDVOLBFP:
     handler: icarus_trade_builder.build_trade_inv
     environment:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-      TRADING_STRATEGY: "CDBFP,CDBFP_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      TRADING_STRATEGY: "CDBFP"
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-CDVOLBFP-${self:provider.stage}
@@ -128,10 +116,10 @@ functions:
     environment:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
-      TRADING_STRATEGY: "CDBFC,CDBFC_1D"
-      env: ${self:custom.${self:provider.stage}.env}
+      TRADING_STRATEGY: "CDBFC"
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-CDVOLBFC-${self:provider.stage}
@@ -141,9 +129,9 @@ functions:
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: closed-orders-data-processor-${self:provider.stage}
@@ -153,19 +141,19 @@ functions:
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: opened-orders-data-processor-${self:provider.stage}
   open-trades-reconciliation:
     handler: order_reconciliation.run_reconciliation
     environment:
-      env: ${self:custom.${self:provider.stage}.env}
+      ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: "icarus-trading-data"
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-reconciliation-${self:provider.stage}
@@ -178,11 +166,11 @@ functions:
           description: trigger to backup the dynamo schedule every 15 minutes
           schedule: rate(15 minutes)
     environment:
-      env: "prod_val"
+      ENV: ${self:custom.${self:provider.stage}.env}
       TABLE_LIST: ${self:custom.${self:provider.stage}.tableList15min}
       FREQUENCY: "15MIN"
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: dynamo-backup-15-min-${self:provider.stage}
@@ -194,21 +182,21 @@ functions:
           description: trigger to backup the dynamo schedule daily
           schedule: rate(24 hours)
     environment:
-      env: "prod_val"
+      ENV: ${self:custom.${self:provider.stage}.env}
       TABLE_LIST: ${self:custom.${self:provider.stage}.tableListdaily}
       FREQUENCY: "DAILY"
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: dynamo-backup-daily-${self:provider.stage}
   order-controls:
       handler: order_control.run_order_control
       environment:
-        env: "prod_val"
+        ENV: ${self:custom.${self:provider.stage}.env}
         TRADING_DATA_BUCKET: "icarus-trading-data"
       layers:
-        - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+        - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
       name: order-controls-${self:provider.stage}
   trading-activity-monitor:
@@ -219,7 +207,7 @@ functions:
             description: trigger to log all of the closed orders in s3 each month
             schedule: 'cron(30 23 * * ? *)'
       layers:
-        - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+        - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
       name: trading-activity-monitor-${self:provider.stage}
   closed-order-monthly-log:
@@ -230,10 +218,10 @@ functions:
           description: trigger to log all of the closed orders in s3 each month
           schedule: rate(1 day)
     environment:
-      env: "prod_val"
+      ENV: ${self:custom.${self:provider.stage}.env}
       TABLE_LIST: ${self:custom.${self:provider.stage}.closedTablelist}
     layers:
-      - arn:aws:lambda:us-east-1:456201388658:layer:scout_lambdas_ta:5
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: closed-orders-log-${self:provider.stage}
@@ -242,8 +230,8 @@ functions:
  
 stepFunctions:
   stateMachines:
-    icarus-new-trades-inv:
-      name: icarus-new-trades-inv-${self:provider.stage}
+    icarus-new-trades:
+      name: icarus-new-trades-${self:provider.stage}
       role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
       alarms:
         topics:
@@ -261,12 +249,12 @@ stepFunctions:
           ParallelProcessorINV:
             Type: Parallel
             Branches:
-              - StartAt: BuildTradeGAIN
+              - StartAt: BuildTradeCDVOLBFP1D
                 States:
-                  BuildTradeGAIN:
+                  BuildTradeCDVOLBFP1D:
                     Type: Task
                     Resource: 
-                      Fn::GetAtt: [icarus-trade-builder-GAIN, Arn]
+                      Fn::GetAtt: [icarus-trade-builder-CDVOLBFP1D, Arn]
                     Retry:
                     - ErrorEquals:
                       - Lambda.ServiceException
@@ -276,12 +264,12 @@ stepFunctions:
                       MaxAttempts: 3
                       BackoffRate: 2
                     End: True
-              - StartAt: BuildTradeLOSERS
+              - StartAt: BuildTradeCDVOLBFC1D
                 States:
-                  BuildTradeLOSERS:
+                  BuildTradeCDVOLBFC1D:
                     Type: Task
                     Resource:
-                      Fn::GetAtt: [icarus-trade-builder-LOSERS, Arn]
+                      Fn::GetAtt: [icarus-trade-builder-CDVOLBFC1D, Arn]
                     Retry:
                     - ErrorEquals:
                       - Lambda.ServiceException
@@ -355,7 +343,7 @@ stepFunctions:
           End:
             Type: Succeed
     icarus-open-trades:
-      name: icarus-open-trades
+      name: icarus-open-trades-${self:provider.stage}
       role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
       alarms:
         topics:
@@ -382,8 +370,11 @@ stepFunctions:
               - Lambda.AWSLambdaException
               - Lambda.SdkClientException
               IntervalSeconds: 5
-              MaxAttempts: 3
+              MaxAttempts: 1
               BackoffRate: 2
+            Catch:
+            - ErrorEquals: ["States.ALL"]
+              Next: ClosedOrdersProcessor
             Next: ClosedOrdersProcessor
           ClosedOrdersProcessor:
             Type: Task
