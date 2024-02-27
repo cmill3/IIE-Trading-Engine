@@ -28,10 +28,12 @@ def run_order_control(event, context):
     print(untracked_closed_orders)
     if len(untracked_open_orders) > 0:
         helper.write_to_s3(untracked_open_orders, 'orders_data', bucket, date_prefix)
-    if len(untracked_closed_orders) > 0:
-        for order in untracked_closed_orders:
-            order_info_obj = tradier.get_order_info(base_url, account_id, access_token, order)
-            create_response, full_order_record = db.create_new_dynamo_record_closed_order_reconciliation(order_info_obj, env)
+
+
+    # if len(untracked_closed_orders) > 0:
+    #     for order in untracked_closed_orders:
+    #         order_info_obj = tradier.get_order_info(base_url, account_id, access_token, order)
+    #         create_response, full_order_record = db.create_new_dynamo_record_closed_order_reconciliation(order_info_obj, env)
     # dynamo_open_trades_df = get_all_orders_from_dynamo(orders_table)
     # dynamo_closed_trades_df = get_all_orders_from_dynamo(closed_orders_table)
 

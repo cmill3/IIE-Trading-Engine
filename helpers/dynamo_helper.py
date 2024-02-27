@@ -352,6 +352,9 @@ def delete_order_record(order_id, table):
             'order_id': str(order_id)
         }
     )
+
+    if env == "DEV":
+        return "order"
     return order_info['Item']
 
 
