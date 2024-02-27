@@ -4,6 +4,7 @@ from urllib3.exceptions import InsecureRequestWarning
 import boto3
 import os
 import logging
+import helpers.helper as hp
 import helpers.trade_executor as te
 import helpers.tradier as trade
 import helpers.dynamo_helper as db
@@ -165,7 +166,7 @@ def pull_log_data(process_type,lambda_signifier):
 
 
 def update_balance_opened_trades(capital_spent):
-    df = pull_balance_df()
+    df = hp.pull_balance_df()
 
     previous_balance = df['balance'].iloc[-1]
     new_balance = previous_balance - capital_spent
@@ -178,7 +179,7 @@ def update_balance_opened_trades(capital_spent):
     return df
 
 def update_balance_closed_trades(capital_received):
-    df = pull_balance_df()
+    df = hp.pull_balance_df()
 
     previous_balance = df['balance'].iloc[-1]
     new_balance = previous_balance + capital_received
@@ -188,19 +189,6 @@ def update_balance_closed_trades(capital_received):
     # Save the updated DataFrame back to S3
     s3.put_object(Bucket=trading_data_bucket, Key=f'trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}', Body=df.to_csv(index=False))
     
-    return df
-
-def pull_balance_df():
-    s3 = boto3.client('s3')
-    objects = s3.list_objects_v2(Bucket=trading_data_bucket,Prefix=f'trading_balance/{env}')['Contents']
-    
-    # Sort the objects by last modified date and get the most recent one
-    latest_file = sorted(objects, key=lambda x: x['LastModified'], reverse=True)[0]
-    
-    # Download the most recent file and load it into a pandas DataFrame
-    csv_obj = s3.get_object(Bucket=trading_data_bucket, Key=latest_file['Key'])
-    df = pd.read_csv(csv_obj.get("Body"))
-
     return df
 
 if __name__ == "__main__":
