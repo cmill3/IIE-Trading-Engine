@@ -355,7 +355,7 @@ def delete_order_record(order_id, table):
 
     if env == "DEV":
         return "order"
-    return order_info['Item']
+    return "order"
 
 
 def process_opened_orders(data, position_id, base_url, account_id, access_token, env, table):
