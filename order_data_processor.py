@@ -170,10 +170,10 @@ def update_balance_opened_trades(capital_spent):
     previous_balance = df['balance'].iloc[-1]
     new_balance = previous_balance - capital_spent
     logger.info(f"previous_balance: {previous_balance} new_balance: {new_balance} capital_spent: {capital_spent}")
-    df = df.append({'date': datetime.now().strftime("%Y-%m-%d"), 'balance': new_balance}, ignore_index=True)
+    df = df.append({'date': datetime.now().strftime("%Y-%m-%d:%H:%M"), 'balance': new_balance}, ignore_index=True)
     
     # Save the updated DataFrame back to S3
-    s3.put_object(Bucket=trading_data_bucket, Key=f"trading_balance/{datetime.now().strftime("%Y/%m/%d/%H/%M")}", Body=df.to_csv(index=False))
+    s3.put_object(Bucket=trading_data_bucket, Key=f"trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}", Body=df.to_csv(index=False))
     
     return df
 
@@ -183,16 +183,16 @@ def update_balance_closed_trades(capital_received):
     previous_balance = df['balance'].iloc[-1]
     new_balance = previous_balance + capital_received
     logger.info(f"previous_balance: {previous_balance} new_balance: {new_balance} capital_received: {capital_received}")
-    df = df.append({'date': datetime.now().strftime("%Y-%m-%d"), 'balance': new_balance}, ignore_index=True)
+    df = df.append({'date': datetime.now().strftime("%Y-%m-%d:%H:%M"), 'balance': new_balance}, ignore_index=True)
     
     # Save the updated DataFrame back to S3
-    s3.put_object(Bucket=trading_data_bucket, Key=f"trading_balance/{datetime.now().strftime("%Y/%m/%d/%H/%M")}", Body=df.to_csv(index=False))
+    s3.put_object(Bucket=trading_data_bucket, Key=f"trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}", Body=df.to_csv(index=False))
     
     return df
 
 def pull_balance_df():
     s3 = boto3.client('s3')
-    objects = s3.list_objects_v2(Bucket=trading_data_bucket,Prefix='trading_balance/')['Contents']
+    objects = s3.list_objects_v2(Bucket=trading_data_bucket,Prefix=f'trading_balance/{env}')['Contents']
     
     # Sort the objects by last modified date and get the most recent one
     latest_file = sorted(objects, key=lambda x: x['LastModified'], reverse=True)[0]
