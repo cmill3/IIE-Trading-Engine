@@ -26,6 +26,7 @@ order_type = "market"
 duration = "gtc"
 
 env = os.getenv("ENV")
+strategy = os.getenv("STRATEGY")
 
 
 def manage_portfolio_inv(event, context):
@@ -38,6 +39,7 @@ def manage_portfolio_inv(event, context):
     
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     open_trades_df = db.get_all_orders_from_dynamo(table)
+    open_trades_df = open_trades_df.loc[open_trades_df['trading_strategy'] == strategy]
 
     if len(open_trades_df) == 0:
         {"lambda_signifier": lambda_signifier}

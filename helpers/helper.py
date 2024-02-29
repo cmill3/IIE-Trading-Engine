@@ -256,8 +256,9 @@ def bet_sizer(contracts, date, spread_length, call_put,strategy):
 #         return 0
 
 def pull_trading_balance():
-    trading_data = pull_balance_df()
-    return trading_data['balance'].values[-1]
+    # trading_data = pull_balance_df()
+    # return trading_data['balance'].values[-1]
+    return 10000
 
 def calculate_spread_cost(contracts_details):
     cost = 0
@@ -441,13 +442,13 @@ def pull_model_config(trading_strategy):
 
 def pull_balance_df():
     s3 = boto3.client('s3')
-    objects = s3.list_objects_v2(Bucket=trading_data_bucket,Prefix=f'trading_balance/{env}')['Contents']
+    objects = s3.list_objects_v2(Bucket='inv-alerts-trading-data',Prefix=f'trading_balance/{env}')['Contents']
     
     # Sort the objects by last modified date and get the most recent one
     latest_file = sorted(objects, key=lambda x: x['LastModified'], reverse=True)[0]
     
     # Download the most recent file and load it into a pandas DataFrame
-    csv_obj = s3.get_object(Bucket=trading_data_bucket, Key=latest_file['Key'])
+    csv_obj = s3.get_object(Bucket='inv-alerts-trading-data', Key=latest_file['Key'])
     df = pd.read_csv(csv_obj.get("Body"))
 
     return df

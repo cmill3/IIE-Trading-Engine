@@ -121,57 +121,17 @@ def process_dynamo_orders(formatted_df, base_url, account_id, access_token, tabl
     processed_df = db.process_opened_ordersv2(formatted_df, base_url, account_id, access_token, env, table)
     return processed_df
 
-
-def close_orders(orders_df,  base_url, account_id, access_token, env, table, close_table, lambda_signifier):
-    position_ids = orders_df['position_id'].unique()
-    accepted_orders = []
-    rejected_orders = []
-
-    for index, row in orders_df.iterrows():
-        id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
-        print(status_code)
-        print(error_json)
-        if error_json == None:
-            row_data = row.to_dict()
-            row_data['closing_order_id'] = id
-            accepted_orders.append(row_data)
-            log_message_close(row, id, status_code, error_json,lambda_signifier)
-            logger.info(f'Close order succesful {row["option_symbol"]} close order id:{id} open order id:{row["order_id"]} for {row["position_id"]}')
-        else:
-            row_data = row.to_dict()
-            row_data['response'] = error_json
-            rejected_orders.append(row_data)
-            log_message_close(row, id, status_code, error_json,lambda_signifier)
-
-    date = datetime.now().strftime("%Y/%m/%d/%H_%M")
-
-    accepted_df = pd.DataFrame.from_dict(accepted_orders)
-    accepted_csv = accepted_df.to_csv()
-    rejected_df = pd.DataFrame.from_dict(rejected_orders)
-    rejected_csv = rejected_df.to_csv()
-    
-    s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_closed_orders_data/{env}/{date}.csv", Body=accepted_csv)
-    s3.put_object(Bucket=trading_data_bucket, Key=f"rejected_closed_orders_data/{env}/{date}.csv", Body=rejected_csv)
-
-    time.sleep(5)
-    closed_orders = db.process_closed_orders(accepted_df, base_url, account_id, access_token, position_ids, env, table, close_table)
-    closed_df = pd.DataFrame.from_dict(closed_orders)
-    csv = closed_df.to_csv()
-
-    s3_response = s3.put_object(Bucket=trading_data_bucket, Key=f"enriched_closed_orders_data/{env}/{date}.csv", Body=csv)
-    return "done"
-
 def close_order(row, env, lambda_signifier, reason):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     id, status_code, error_json = trade.position_exit(base_url, account_id, access_token, row['underlying_symbol'], row['option_symbol'], 'sell_to_close', row['qty_executed_open'], order_type, duration, row['position_id'])
     if status_code == 200:
         row['closing_order_id'] = id
-        log_message_close(row, id, status_code, reason,error_json,lambda_signifier)
+        log_message_close(row, id, status_code, reason, error_json,lambda_signifier)
         logger.info(f'Close order succesful {row["option_symbol"]} close order id:{id} open order id:{row["order_id"]} for {row["position_id"]}')
     else:
         row = row.to_dict()
         row['response'] = error_json
-        log_message_close(row, id, status_code, error_json,lambda_signifier)
+        log_message_close(row, id, status_code, reason, error_json,lambda_signifier)
         return None
     return id
 

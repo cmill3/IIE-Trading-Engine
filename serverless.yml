@@ -63,18 +63,58 @@ functions:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: new-trades-portfolio-manager-${self:provider.stage}
-  open-trades-portfolio-manage-paper:
+  open-trades-portfolio-manage-paperCDBFP:
     handler: open_trades_portfolio_manager.manage_portfolio_inv
     environment:
       ENV: ${self:custom.${self:provider.stage}.env}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
+      STRATEGY: "CDBFP"
     layers:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: open-trades-portfolio-manager-${self:provider.stage}
+    name: open-trades-portfolio-manager-CDBFP-${self:provider.stage}
+  open-trades-portfolio-manage-paperCDBFC:
+    handler: open_trades_portfolio_manager.manage_portfolio_inv
+    environment:
+      ENV: ${self:custom.${self:provider.stage}.env}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
+      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
+      STRATEGY: "CDBFC"
+    layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: open-trades-portfolio-manager-CDBFC-${self:provider.stage}
+  open-trades-portfolio-manage-paperCDBFP1D:
+    handler: open_trades_portfolio_manager.manage_portfolio_inv
+    environment:
+      ENV: ${self:custom.${self:provider.stage}.env}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
+      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
+      STRATEGY: "CDBFP_1D"
+    layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: open-trades-portfolio-manager-CDBFP1D-${self:provider.stage}
+  open-trades-portfolio-manage-paperCDBFC1D:
+    handler: open_trades_portfolio_manager.manage_portfolio_inv
+    environment:
+      ENV: ${self:custom.${self:provider.stage}.env}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
+      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
+      STRATEGY: "CDBFC_1D"
+    layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: open-trades-portfolio-manager-CDBFC1D-${self:provider.stage}
   icarus-trade-builder-CDVOLBFC1D:
     handler: icarus_trade_builder.build_trade_inv
     environment:
@@ -359,29 +399,91 @@ stepFunctions:
         StartAt: PortfolioManager
         States:
           PortfolioManager:
-            Type: Task
-            Resource: 
-              Fn::GetAtt: [open-trades-portfolio-manage-paper, Arn]
-            Parameters:
-              Payload.$: $
-            Retry:
-            - ErrorEquals:
-              - Lambda.ServiceException
-              - Lambda.AWSLambdaException
-              - Lambda.SdkClientException
-              IntervalSeconds: 5
-              MaxAttempts: 1
-              BackoffRate: 2
-            Catch:
-            - ErrorEquals: ["States.ALL"]
-              Next: ClosedOrdersProcessor
+            Type: Parallel
+            Branches:
+              - StartAt: TradeManagerCDBFC
+                States:
+                  TradeManagerCDBFC:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [open-trades-portfolio-manage-paperCDBFC, Arn]
+                    Parameters:
+                      Payload.$: $
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 1
+                      BackoffRate: 2
+                    # Catch:
+                    # - ErrorEquals: ["States.ALL"]
+                    End: True
+              - StartAt: TradeManagerCDBFP
+                States:
+                  TradeManagerCDBFP:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [open-trades-portfolio-manage-paperCDBFP, Arn]
+                    Parameters:
+                      Payload.$: $
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 1
+                      BackoffRate: 2
+                    # Catch:
+                    # - ErrorEquals: ["States.ALL"]
+                    End: True
+              - StartAt: TradeManagerCDBFC1D
+                States:
+                  TradeManagerCDBFC1D:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [open-trades-portfolio-manage-paperCDBFC1D, Arn]
+                    Parameters:
+                      Payload.$: $
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 1
+                      BackoffRate: 2
+                    # Catch:
+                    # - ErrorEquals: ["States.ALL"]
+                    End: True
+              - StartAt: TradeManagerCDBFP1D
+                States:
+                  TradeManagerCDBFP1D:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [open-trades-portfolio-manage-paperCDBFP1D, Arn]
+                    Parameters:
+                      Payload.$: $
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 1
+                      BackoffRate: 2
+                    # Catch:
+                    # - ErrorEquals: ["States.ALL"]
+                    End: True
             Next: ClosedOrdersProcessor
           ClosedOrdersProcessor:
             Type: Task
             Resource: 
               Fn::GetAtt: [closed-orders-data-processor, Arn]
             Parameters:
-              lambda_signifier.$: "$.lambda_signifier"
+              Payload.$: "$"
             Retry:
             - ErrorEquals:
               - Lambda.ServiceException
