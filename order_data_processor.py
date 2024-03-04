@@ -12,6 +12,8 @@ import pytz
 import json
 import pandas as pd
 import time
+import warnings
+warnings.filterwarnings('ignore')
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 orders_table = os.getenv('TABLE')
@@ -33,6 +35,10 @@ def run_closed_trades_data_process(event,context):
     total_capital_return = 0
     for cap_return in capital_returns:
         value = cap_return['capital_return']
+        if type(value) != (float or int):
+            value = 0
+            logger.error(f"Error: capital_return is not a float or int: {value}")
+        
         total_capital_return += value
     
     logger.info(f"Total Capital Return all strategies: {total_capital_return}")

@@ -354,21 +354,6 @@ stepFunctions:
               IntervalSeconds: 5
               MaxAttempts: 3
               BackoffRate: 2
-            Next: OpenedOrdersProcessor
-          OpenedOrdersProcessor:
-            Type: Task
-            Resource: 
-              Fn::GetAtt: [opened-orders-data-processor, Arn]
-            Parameters:
-              Payload.$: "$.lambda_signifier"
-            Retry:
-            - ErrorEquals:
-              - Lambda.ServiceException
-              - Lambda.AWSLambdaException
-              - Lambda.SdkClientException
-              IntervalSeconds: 5
-              MaxAttempts: 3
-              BackoffRate: 2
             Next: End
           End:
             Type: Succeed

@@ -124,11 +124,11 @@ def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase
         'execution_strategy': execution_strategy,
         'underlying_purchase_price': str(underlying_purchase_price),
         # 'transaction_ids': transactions,
-        'underlying_symbol': row['underlying_symbol'],
+        'underlying_symbol': row['symbol'],
         'position_id': row['position_id'],
         'trading_strategy': row['strategy'],
         'option_symbol': order_info_obj['option_symbol'],
-        'option_side': row['option_side'],
+        'option_side': row['Call/Put'],
         # 'two_week_contract_expiry': position['expiry_2wk'],
         'avg_fill_price_open': str(order_info_obj['average_fill_price']),
         'last_fill_price_open': str(order_info_obj['last_fill_price']),
@@ -138,7 +138,6 @@ def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase
         'order_status': order_info_obj['status'],
         'env': env,
         'return_vol_10D': str(row['return_vol_10D']),
-        'target_value': str(row['target_value']),
     }
 
     response = table.put_item(
@@ -208,25 +207,25 @@ def create_new_dynamo_record_closed_order(order_info_obj, transaction, env, tabl
         )   
     return response
 
-def create_new_dynamo_record_closed_order_logmessage(close_order_info_obj, original_order_info_obj, open_order_id, env, table, reason):    
+def create_new_dynamo_record_closed_order_logmessage(close_order_info_obj, original_order_info_obj, open_order_id, env, table, reason,row):    
     table = ddb.Table(table) 
     order_item ={
         'order_id': open_order_id,
         'closing_order_id': str(close_order_info_obj['id']),
         'env': env,
         'execution_strategy': str(execution_strategy),
-        'underlying_symbol': original_order_info_obj['underlying_symbol'],
+        'underlying_symbol': row['underlying_symbol'],
         'position_id': original_order_info_obj['position_id'],
-        'trading_strategy': original_order_info_obj['trading_strategy'],
+        # 'trading_strategy': original_order_info_obj['trading_strategy'],
         'option_symbol': close_order_info_obj['option_symbol'],
-        'avg_fill_price_open': str(original_order_info_obj['avg_fill_price_open']),
-        'last_fill_price_open': str(original_order_info_obj['last_fill_price_open']),
-        'qty_executed_open': str(original_order_info_obj['qty_executed_open']),
-        'order_creation_date': str(original_order_info_obj['order_creation_date']),
-        'order_transaction_date': str(original_order_info_obj['order_transaction_date']),
+        'average_fill_price_open': str(original_order_info_obj['average_fill_price']),
+        'last_fill_price_open': str(original_order_info_obj['last_fill_price']),
+        'qty_executed_open': str(original_order_info_obj['exec_quantity']),
+        'order_creation_date': str(original_order_info_obj['created_date']),
+        'order_transaction_date': str(original_order_info_obj['transaction_date']),
         'close_creation_date': str(original_order_info_obj['created_date']),
         'close_transaction_date': str(close_order_info_obj['transaction_date']),
-        'avg_fill_price_close': str(close_order_info_obj['average_fill_price']),
+        'average_fill_price_close': str(close_order_info_obj['average_fill_price']),
         'last_fill_price_close': str(close_order_info_obj['last_fill_price']),
         'qty_executed_close': str(close_order_info_obj['exec_quantity']),
         'env': env,
@@ -344,6 +343,19 @@ def delete_order_record(order_id, table):
         }
     )
     return "order"
+
+def get_trading_balance(trading_strategy, env):
+    strat_env = f"{trading_strategy}-{env}"
+    print(strat_env)
+    trading_balance_table = ddb.Table('icarus-trading-balances')
+    response = trading_balance_table.get_item(
+        Key={
+            'strategy_name': strat_env  
+        }
+    )
+    print(response) 
+    trading_balance = float(response['Item']['trading_balance'])
+    return trading_balance
 
 def update_trading_balance(capital_spent, trading_strategy, env, action_type):
     strat_env = f"{trading_strategy}-{env}"
@@ -490,4 +502,5 @@ def break_array_into_partitions(arr):
     
 
 if __name__ == "__main__":
-    update_trading_balance(50, "CDVOLBF", "DEV", "close")
+    balnce = get_trading_balance("CDVOLBF", "DEV")
+    print(balnce)
