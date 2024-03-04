@@ -32,8 +32,11 @@ def run_order_control(event, context):
     
     mismatched_symbols = compare_dataframes(tradier_df, ddb_symbol_count)
     if len(mismatched_symbols) > 0:
-        logger.info(f"Mismatched symbols: {mismatched_symbols}")
-        raise ValueError(f"Mismatched symbols: {mismatched_symbols}")
+        logger.error(f"Mismatched symbols: {mismatched_symbols}")
+        if (env == "PROD_VAL") or (env == "PROD"):
+            raise ValueError(f"Mismatched symbols: {mismatched_symbols}")
+        
+    exposure_totalling()
     
 
 def compare_dataframes(tradier_df, ddb_symbol_count):
@@ -80,6 +83,23 @@ def process_orders_data(tradier_df, opened_orders_df, closed_orders_df):
                     print(e)
                 untracked_closed_orders.append(row.to_dict())
     return untracked_open_orders, untracked_closed_orders
+
+def exposure_totalling():
+    base_url, account_id, access_token = db.get_tradier_credentials(env)
+    position_list = db.get_account_positions(base_url, account_id, access_token)
+
+    # total open trades & values in df
+    df = pd.DataFrame.from_dict(position_list)
+    df['underlying_symbol'] = df['symbol'].apply(lambda symbol: helper.pull_symbol(symbol))
+    agg_functions = {'cost_basis': ['sum', 'mean'], 'quantity': 'sum'}
+    df_new = df.groupby(df['underlying_symbol']).aggregate(agg_functions)
+
+    # export df as csv --> AWS S3
+    year, month, day, hour = helper.date_and_time()
+    df_csv = df_new.to_csv()
+    s3_resource = boto3.resource('s3')
+    s3_resource.Object("inv-alerts-trading-data", f'positions_exposure/{env}/{year}/{month}/{day}/{hour}.csv').put(Body=df_csv.getvalue())
+    return "Exposure Analysis Complete"
 
 def process_opened_data(df):
     all_orders = []

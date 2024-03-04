@@ -177,17 +177,6 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: closed-orders-data-processor-${self:provider.stage}
-  open-trades-reconciliation:
-    handler: order_reconciliation.run_reconciliation
-    environment:
-      ENV: ${self:custom.${self:provider.stage}.env}
-      TRADING_DATA_BUCKET: "icarus-trading-data"
-    layers:
-      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
-      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
-    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
-    name: open-trades-reconciliation-${self:provider.stage}
-    #####
   dynamo-backup-15-min:
     handler: alt-storage.dynamo_backup.lambda_handler
     events:
@@ -457,6 +446,21 @@ stepFunctions:
             Type: Task
             Resource: 
               Fn::GetAtt: [closed-orders-data-processor, Arn]
+            Parameters:
+              Payload.$: "$"
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              IntervalSeconds: 5
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: OrderControl
+          OrderControl:
+            Type: Task
+            Resource: 
+              Fn::GetAtt: [order-controls, Arn]
             Parameters:
               Payload.$: "$"
             Retry:
