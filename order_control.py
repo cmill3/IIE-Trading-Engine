@@ -7,10 +7,9 @@ from datetime import datetime
 
 bucket = os.getenv("TRADING_BUCKET")
 env = os.getenv("ENV")
+orders_table = os.getenv("ORDERS_TABLE")
 
 ddb = boto3.resource('dynamodb','us-east-1')
-orders_table = ddb.Table('icarus-orders-table')
-closed_orders_table = ddb.Table('icarus-closed-orders-table')
 s3 = boto3.client("s3")
 
 logger = logging.getLogger()
@@ -19,25 +18,40 @@ logger = logging.getLogger()
 def run_order_control(event, context):
     date_prefix = helper.calculate_date_prefix()
     base_url, account_id, access_token = tradier.get_tradier_credentials(env=env)
-    closed_orders_df = helper.pull_data_s3(path='enriched_closed_orders_data',bucket=bucket,date_prefix=date_prefix)
-    opened_orders_df = helper.pull_opened_data_s3(path='orders_data',bucket=bucket,date_prefix=date_prefix)
-    tradier_orders = tradier.get_account_orders(base_url, account_id, access_token)
+    dynamo_orders_df = db.get_all_orders_from_dynamo(orders_table)
+    tradier_orders = tradier.get_account_positions(base_url, account_id, access_token)
+
+    ddb_symbol_count = dynamo_orders_df.groupby('option_symbol').size().reset_index(name='count')
     tradier_df = pd.DataFrame.from_dict(tradier_orders)
-    untracked_open_orders, untracked_closed_orders = process_orders_data(tradier_df, opened_orders_df, closed_orders_df)
-    print(untracked_open_orders)
-    print(untracked_closed_orders)
-    if len(untracked_open_orders) > 0:
-        helper.write_to_s3(untracked_open_orders, 'orders_data', bucket, date_prefix)
+    print(tradier_df)
+    print(ddb_symbol_count)
+    tradier_df = tradier_df[['symbol','quantity']]
+    tradier_df.rename(columns={'symbol':'option_symbol'}, inplace=True)
+    tradier_df['quantity'] = tradier_df['quantity'].astype(int)
+    ddb_symbol_count['count'] = ddb_symbol_count['count'].astype(int)
+    
+    mismatched_symbols = compare_dataframes(tradier_df, ddb_symbol_count)
+    if len(mismatched_symbols) > 0:
+        logger.info(f"Mismatched symbols: {mismatched_symbols}")
+        raise ValueError(f"Mismatched symbols: {mismatched_symbols}")
+    
 
-
-    # if len(untracked_closed_orders) > 0:
-    #     for order in untracked_closed_orders:
-    #         order_info_obj = tradier.get_order_info(base_url, account_id, access_token, order)
-    #         create_response, full_order_record = db.create_new_dynamo_record_closed_order_reconciliation(order_info_obj, env)
-    # dynamo_open_trades_df = get_all_orders_from_dynamo(orders_table)
-    # dynamo_closed_trades_df = get_all_orders_from_dynamo(closed_orders_table)
-
-    # process_opened_data(opened_orders_df)
+def compare_dataframes(tradier_df, ddb_symbol_count):
+    mismatched_symbols = {}
+    
+    for index, row in tradier_df.iterrows():
+        symbol = row['option_symbol']
+        quantity_tradier = row['quantity']
+        
+        if symbol in ddb_symbol_count['option_symbol'].values:
+            quantity_ddb = ddb_symbol_count.loc[ddb_symbol_count['option_symbol'] == symbol, 'count'].values[0]
+            
+            if quantity_tradier != quantity_ddb:
+                mismatched_symbols[symbol] = quantity_tradier - quantity_ddb
+        else:
+            mismatched_symbols[symbol] = quantity_tradier
+    
+    return mismatched_symbols
 
 
 def process_orders_data(tradier_df, opened_orders_df, closed_orders_df):
