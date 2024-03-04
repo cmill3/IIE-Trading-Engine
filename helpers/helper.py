@@ -34,16 +34,10 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
     return current_date
 
 def pull_symbol(symbol):
-    sym = " ".join(re.findall("[a-zA-Z]+", symbol))
-    underlying_symbol = sym[:-1]
-    return underlying_symbol
+    return symbol[:-15]
     
 def date_and_time():
-    year = date.today().year
-    month = date.today().month
-    day = date.today().day
-    hour = datetime.datetime.now().hour
-    return year, month, day, hour
+    return date.year, date.month, date.day, date.hour, date.minute
     
 def calculate_dt_features(transaction_date, sell_by):
     transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")

@@ -59,8 +59,8 @@ def compare_dataframes(tradier_df, ddb_symbol_count):
     return mismatched_symbols
 
 def exposure_totalling():
-    base_url, account_id, access_token = db.get_tradier_credentials(env)
-    position_list = db.get_account_positions(base_url, account_id, access_token)
+    base_url, account_id, access_token = te.get_tradier_credentials(env)
+    position_list = te.get_account_positions(base_url, account_id, access_token)
 
     # total open trades & values in df
     df = pd.DataFrame.from_dict(position_list)
@@ -69,10 +69,10 @@ def exposure_totalling():
     df_new = df.groupby(df['underlying_symbol']).aggregate(agg_functions)
 
     # export df as csv --> AWS S3
-    year, month, day, hour = helper.date_and_time()
+    year, month, day, hour, minute = helper.date_and_time()
     df_csv = df_new.to_csv()
     s3_resource = boto3.resource('s3')
-    s3_resource.Object("inv-alerts-trading-data", f'positions_exposure/{env}/{year}/{month}/{day}/{hour}.csv').put(Body=df_csv.getvalue())
+    s3_resource.Object("inv-alerts-trading-data", f'positions_exposure/{env}/{year}/{month}/{day}/{hour}/{minute}.csv').put(Body=df_csv.getvalue())
     return "Exposure Analysis Complete"
 
 if __name__ == "__main__":
