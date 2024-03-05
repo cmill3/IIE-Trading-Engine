@@ -70,9 +70,7 @@ def exposure_totalling():
 
     # export df as csv --> AWS S3
     year, month, day, hour, minute = helper.date_and_time()
-    df_csv = df_new.to_csv()
-    s3_resource = boto3.resource('s3')
-    s3_resource.Object("inv-alerts-trading-data", f'positions_exposure/{env}/{year}/{month}/{day}/{hour}/{minute}.csv').put(Body=df_csv.getvalue())
+    s3.put_object(Bucket='inv-alerts-trading-data', Key=f'positions_exposure/{env}/{year}/{month}/{day}/{hour}/{minute}.csv', Body=df_new.to_csv(index=False))
     return "Exposure Analysis Complete"
 
 if __name__ == "__main__":

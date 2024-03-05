@@ -33,6 +33,8 @@ ddb = boto3.client('dynamodb')
 def run_closed_trades_data_process(event,context):
     capital_returns = event['Payload']
     total_capital_return = 0
+    current_balance = db.get_trading_balance(portfolio_strategy,env)  
+    logger.info(f"Current Balance: {current_balance}")
     for cap_return in capital_returns:
         value = cap_return['capital_return']
         if type(value) != (float or int):
@@ -43,6 +45,10 @@ def run_closed_trades_data_process(event,context):
     
     logger.info(f"Total Capital Return all strategies: {total_capital_return}")
     db.update_trading_balance(total_capital_return,portfolio_strategy,env,action_type="close")
+    new_balance = db.get_trading_balance(portfolio_strategy,env)
+    logger.info(f"New Balance: {new_balance}")
+
+    assert new_balance == current_balance + total_capital_return, f"Error: new_balance: {new_balance} does not match current_balance: {current_balance} + total_capital_return: {total_capital_return}"
     return "Created new dynamo records for closed orders"
 
 def retrieve_signifier():

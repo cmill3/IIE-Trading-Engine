@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from helpers.constants import *
+import helpers.dynamo_helper as db
 import requests
 import pandas as pd
 import json
@@ -18,6 +19,7 @@ now_str = datetime.now().strftime("%Y/%m/%d/%H:%M")
 current_date = datetime.now().strftime("%Y-%m-%d")
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+portfolio_strategy = os.getenv('PORTFOLIO_STRATEGY')
 env = os.getenv("ENV")
 
 limit = 50000
@@ -221,38 +223,22 @@ def bet_sizer(contracts, date, spread_length, call_put,strategy):
     else:
         vol_check = "True"
     spread_cost = calculate_spread_cost(contracts)
-    quantities = finalize_trade(contracts, spread_cost, target_cost)
-    for index, contract in enumerate(contracts):
-        if index < 3:
-            try:
-                contract['quantity'] = quantities[index]
-                print(contract['quantity'])
-            except Exception as e:
-                logger.info(f"ERROR of {e} for {contract['contract_ticker']}")
-                print(contracts)
-                print(quantities)
-        else:
-            contract['quantity'] = 0
-    return contracts, vol_check
-
-# def pull_trading_balance(strategy):
-#     s3 = boto3.client('s3')
-#     if strategy in CDVOL_STRATEGIES:
-#         data = s3.get_object(Bucket="inv-alerts-trading-data", Key="trading_balance/cd_vol.csv")
-#         data = pd.read_csv(data.get("Body"))
-#         return data['balance'].values[0]
-#     elif strategy in TREND_STRATEGIES:
-#         data = s3.get_object(Bucket="inv-alerts-trading-data", Key="trading_balance/trend.csv")
-#         data = pd.read_csv(data.get("Body"))
-#         return data['balance'].values[0]
-#     else:
-#         logger.error(f"ERROR: STRATEGY NOT FOUND {strategy} in bet_sizer")
-#         return 0
+    contracts = size_spread_quantities(contracts, spread_cost, target_cost)
+    # for index, contract in enumerate(contracts):
+    #     if index < 3:
+    #         try:
+    #             contract['quantity'] = quantities[index]
+    #             print(contract['quantity'])
+    #         except Exception as e:
+    #             logger.info(f"ERROR of {e} for {contract['contract_ticker']}")
+    #             print(contracts)
+    #             print(quantities)
+    #     else:
+    #         contract['quantity'] = 0
+    return contracts
 
 def pull_trading_balance():
-    # trading_data = pull_balance_df()
-    # return trading_data['balance'].values[-1]
-    return 10000
+    return db.get_trading_balance(portfolio_strategy, env)
 
 def calculate_spread_cost(contracts_details):
     cost = 0
@@ -331,6 +317,41 @@ def finalize_trade(contracts_details, spread_cost, target_cost):
             return [0,0,0]
     else:
         return "NO TRADES"
+    
+def size_spread_quantities(contracts_details, spread_cost, target_cost):
+    spread_length = ALGORITHM_CONFIG['strategy']['spread_length']
+    spread_adjustment = ALGORITHM_CONFIG['strategy']['spread_adjustment']
+    adjusted_contracts = contracts_details[spread_adjustment:]
+    total_cost = spread_cost
+    quantities = []
+
+    if total_cost < target_cost:
+        quantity = 1
+        while total_cost < target_cost:
+            total_cost += spread_cost
+            quantity += 1
+        quantities.append({"ticker": adjusted_contracts[spread_adjustment]['contract_ticker'], "quantity": quantity}) 
+        next_contract_cost = calculate_spread_cost(adjusted_contracts[spread_adjustment+1])
+
+        quantity = 0
+        while total_cost < target_cost:
+            total_cost += next_contract_cost    
+            quantity += 1
+        quantities.append({"ticker": adjusted_contracts[spread_adjustment+1]['contract_ticker'], "quantity": quantity})
+
+    elif total_cost > target_cost:
+        adjustment = spread_adjustment + 1
+        adjusted_contracts = contracts_details[adjustment:]
+        for contract in adjusted_contracts:
+            contract_cost = calculate_spread_cost(contract)
+            if contract_cost < target_cost:
+                quantities.append({"ticker": contract['contract_ticker'], "quantity": 1})
+
+    details_df = pd.DataFrame(contracts_details)
+    for quantity in quantities:
+        details_df.loc[details_df['contract_ticker'] == quantity['ticker'], 'quantity'] = quantity['quantity']
+    details_dict = details_df.to_dict(orient='records')
+    return details_dict
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):
     add_one = False

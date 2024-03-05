@@ -64,9 +64,15 @@ def evaluate_open_trades(orders_df):
         if closing_order_id is not None:
             total_capital_return += capital_return
             logger.info(f'Total Capital Return: {capital_return}')
-            orders_to_close.append({"open_order_id":row['order_id'],"closing_order_id": closing_order_id})
+            orders_to_close.append({
+                "open_order_id":row['order_id'],
+                "closing_order_id": closing_order_id,
+                "option_symbol": row['option_symbol'], 
+                "position_id": row['position_id'],
+                })
     # positions_to_close = list(set(positions_to_close))
     logger.info(f'closing order ids: {orders_to_close}')
+    s3.put_object(Bucket=trading_data_bucket, Key=f"lambda_signifiers/orders_to_close_{lambda_signifier}.json", Body=str(orders_to_close).encode('utf-8'))
     return total_capital_return
 
 

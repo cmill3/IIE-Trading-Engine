@@ -122,6 +122,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "CDBFC_1D"
+      PORTFOLIO_STRATEGY: "CDVOLBF"
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
@@ -134,6 +135,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "CDBFP_1D"
+      PORTFOLIO_STRATEGY: "CDVOLBF"
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
@@ -146,6 +148,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "CDBFP"
+      PORTFOLIO_STRATEGY: "CDVOLBF"
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
@@ -158,6 +161,7 @@ functions:
       MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TRADING_STRATEGY: "CDBFC"
+      PORTFOLIO_STRATEGY: "CDVOLBF"
       ENV: ${self:custom.${self:provider.stage}.env}
     layers:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
