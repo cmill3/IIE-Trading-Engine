@@ -7,6 +7,7 @@ import pytz
 import boto3
 import math
 import logging
+import os
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -16,6 +17,8 @@ date = datetime.now(est)
 now_str = datetime.now().strftime("%Y/%m/%d/%H:%M")
 current_date = datetime.now().strftime("%Y-%m-%d")
 
+trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+env = os.getenv("ENV")
 
 limit = 50000
 key = "A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp"
@@ -31,16 +34,10 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
     return current_date
 
 def pull_symbol(symbol):
-    sym = " ".join(re.findall("[a-zA-Z]+", symbol))
-    underlying_symbol = sym[:-1]
-    return underlying_symbol
+    return symbol[:-15]
     
 def date_and_time():
-    year = date.today().year
-    month = date.today().month
-    day = date.today().day
-    hour = datetime.datetime.now().hour
-    return year, month, day, hour
+    return date.year, date.month, date.day, date.hour, date.minute
     
 def calculate_dt_features(transaction_date, sell_by):
     transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -253,8 +250,9 @@ def bet_sizer(contracts, date, spread_length, call_put,strategy):
 #         return 0
 
 def pull_trading_balance():
-    ### This is hardcoded for now, but will be replaced with a call to the tradier API
-    return 100000
+    # trading_data = pull_balance_df()
+    # return trading_data['balance'].values[-1]
+    return 10000
 
 def calculate_spread_cost(contracts_details):
     cost = 0
@@ -395,6 +393,7 @@ def log_message_close(row, id, status_code, reason, error,lambda_signifier):
         logger.error(log_entry)
 
 def log_message_open(row, id, status_code, error, contract_ticker, option_side,lambda_signifier):
+    model_config = pull_model_config(row['strategy'])
     log_entry = json.dumps({
         "lambda_signifier": lambda_signifier,
         "log_type": "open_success",
@@ -406,7 +405,7 @@ def log_message_open(row, id, status_code, error, contract_ticker, option_side,l
         "underlying_purchase_price": row['underlying_purchase_price'],
         "quantity": row['quantity'],
         "strategy": row['strategy'],
-        "target_value": ALGORITHM_CONFIG[row['strategy']]['target_value'],
+        "target_value": model_config['target_value'],
         'underlying_symbol': row['symbol'],
         'option_side': option_side,
         'return_vol_10D': row['return_vol_10D']
@@ -424,6 +423,29 @@ def log_message_open_error(row, id, status_code, error, contract_ticker, option_
         "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
     logger.error(log_entry)
+
+def pull_model_config(trading_strategy):
+    s3 = boto3.client('s3')
+    weekday = date.weekday()
+    monday = date - timedelta(days=weekday)
+    date_prefix = monday.strftime("%Y/%m/%d")
+    model_config = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"model_configurations/{date_prefix}.csv")
+    model_config = pd.read_csv(model_config.get("Body"))
+    model_config = model_config.loc[model_config['strategy'] == trading_strategy]
+    return {"target_value": model_config['target_value'].values[0], "strategy": model_config['strategy'].values[0]}
+
+def pull_balance_df():
+    s3 = boto3.client('s3')
+    objects = s3.list_objects_v2(Bucket='inv-alerts-trading-data',Prefix=f'trading_balance/{env}')['Contents']
+    
+    # Sort the objects by last modified date and get the most recent one
+    latest_file = sorted(objects, key=lambda x: x['LastModified'], reverse=True)[0]
+    
+    # Download the most recent file and load it into a pandas DataFrame
+    csv_obj = s3.get_object(Bucket='inv-alerts-trading-data', Key=latest_file['Key'])
+    df = pd.read_csv(csv_obj.get("Body"))
+
+    return df
 
 if __name__ == "__main__":
     print('2024-02-05T17:18:25.415Z')
