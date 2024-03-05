@@ -39,7 +39,7 @@ def build_trade_inv(event, context):
         results_df = process_data(df)
     csv = results_df.to_csv()
     logger.info(f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
-    response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
+    response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     return {
         'statusCode': 200
     }
