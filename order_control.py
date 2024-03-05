@@ -1,16 +1,17 @@
 import boto3
 import pandas as pd
 import os
-from helpers import helper, tradier, dynamo_helper as db
+from helpers import helper as helper
+from helpers import tradier as te 
+from helpers import dynamo_helper as db
 import logging
 from datetime import datetime
 
 bucket = os.getenv("TRADING_BUCKET")
 env = os.getenv("ENV")
+orders_table = os.getenv("ORDERS_TABLE")
 
 ddb = boto3.resource('dynamodb','us-east-1')
-orders_table = ddb.Table('icarus-orders-table')
-closed_orders_table = ddb.Table('icarus-closed-orders-table')
 s3 = boto3.client("s3")
 
 logger = logging.getLogger()
@@ -18,89 +19,61 @@ logger = logging.getLogger()
 
 def run_order_control(event, context):
     date_prefix = helper.calculate_date_prefix()
-    base_url, account_id, access_token = tradier.get_tradier_credentials(env=env)
-    closed_orders_df = helper.pull_data_s3(path='enriched_closed_orders_data',bucket=bucket,date_prefix=date_prefix)
-    opened_orders_df = helper.pull_opened_data_s3(path='orders_data',bucket=bucket,date_prefix=date_prefix)
-    tradier_orders = tradier.get_account_orders(base_url, account_id, access_token)
+    base_url, account_id, access_token = te.get_tradier_credentials(env=env)
+    dynamo_orders_df = db.get_all_orders_from_dynamo(orders_table)
+    tradier_orders = te.get_account_positions(base_url, account_id, access_token)
+
+    ddb_symbol_count = dynamo_orders_df.groupby('option_symbol').size().reset_index(name='count')
     tradier_df = pd.DataFrame.from_dict(tradier_orders)
-    untracked_open_orders, untracked_closed_orders = process_orders_data(tradier_df, opened_orders_df, closed_orders_df)
-    print(untracked_open_orders)
-    print(untracked_closed_orders)
-    if len(untracked_open_orders) > 0:
-        helper.write_to_s3(untracked_open_orders, 'orders_data', bucket, date_prefix)
-    if len(untracked_closed_orders) > 0:
-        for order in untracked_closed_orders:
-            order_info_obj = tradier.get_order_info(base_url, account_id, access_token, order)
-            create_response, full_order_record = db.create_new_dynamo_record_closed_order_reconciliation(order_info_obj, env)
-    # dynamo_open_trades_df = get_all_orders_from_dynamo(orders_table)
-    # dynamo_closed_trades_df = get_all_orders_from_dynamo(closed_orders_table)
+    print(tradier_df)
+    print(ddb_symbol_count)
+    tradier_df = tradier_df[['symbol','quantity']]
+    tradier_df.rename(columns={'symbol':'option_symbol'}, inplace=True)
+    tradier_df['quantity'] = tradier_df['quantity'].astype(int)
+    ddb_symbol_count['count'] = ddb_symbol_count['count'].astype(int)
+    
+    mismatched_symbols = compare_dataframes(tradier_df, ddb_symbol_count)
+    if len(mismatched_symbols) > 0:
+        logger.error(f"Mismatched symbols: {mismatched_symbols}")
+        if (env == "PROD_VAL") or (env == "PROD"):
+            raise ValueError(f"Mismatched symbols: {mismatched_symbols}")
+        
+    exposure_totalling()
+    
 
-    # process_opened_data(opened_orders_df)
-
-
-def process_orders_data(tradier_df, opened_orders_df, closed_orders_df):
-    untracked_open_orders = []
-    untracked_closed_orders = []
-    closed_orders = process_closed_data(closed_orders_df)
-    opened_orders = process_opened_data(opened_orders_df)
-    print(tradier_df['reason_description'])
+def compare_dataframes(tradier_df, ddb_symbol_count):
+    mismatched_symbols = {}
+    
     for index, row in tradier_df.iterrows():
-        if row['side'] == 'buy':
-            if row['id'] in opened_orders:
-                continue
-            else:
-                untracked_open_orders.append(row.to_dict())
-        elif row['side'] == 'sell_to_close':
-            if row['id'] in closed_orders:
-                continue
-            elif row['status'] == 'filled':
-                continue
-            else:
-                try:
-                    if 'Sell order cannot be placed unless you are' in row['reason_description']:
-                        continue
-                except Exception as e:
-                    print(row)
-                    print(e)
-                untracked_closed_orders.append(row.to_dict())
-    return untracked_open_orders, untracked_closed_orders
-
-def process_opened_data(df):
-    all_orders = []
-    for order_list in all_orders:
-        for order in order_list:
-            all_orders.append(order)
+        symbol = row['option_symbol']
+        quantity_tradier = row['quantity']
+        
+        if symbol in ddb_symbol_count['option_symbol'].values:
+            quantity_ddb = ddb_symbol_count.loc[ddb_symbol_count['option_symbol'] == symbol, 'count'].values[0]
+            
+            if quantity_tradier != quantity_ddb:
+                mismatched_symbols[symbol] = quantity_tradier - quantity_ddb
+        else:
+            mismatched_symbols[symbol] = quantity_tradier
     
-    return all_orders
+    return mismatched_symbols
 
-def process_closed_data(df):
-    orders_list = df['closing_order_id']
-    return orders_list
+def exposure_totalling():
+    base_url, account_id, access_token = te.get_tradier_credentials(env)
+    position_list = te.get_account_positions(base_url, account_id, access_token)
 
-def get_all_orders_from_dynamo(table):
-    response = table.scan()
-    data = response['Items']
+    # total open trades & values in df
+    df = pd.DataFrame.from_dict(position_list)
+    df['underlying_symbol'] = df['symbol'].apply(lambda symbol: helper.pull_symbol(symbol))
+    agg_functions = {'cost_basis': ['sum', 'mean'], 'quantity': 'sum'}
+    df_new = df.groupby(df['underlying_symbol']).aggregate(agg_functions)
 
-    while 'LastEvaluatedKey' in response:
-        response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
-        data.extend(response['Items'])
-    df = pd.DataFrame(data)
-    return df
-
-def open_orders_reconciliation(orders,base_url, account_id, access_token):
-    untracked_info = []
-    date_str = datetime.now().strftime("%Y/%m/%d")
-    for order_id in orders:
-        order_info_obj = tradier.get_order_info(base_url, account_id, access_token, order_id)
-        db.create_new_dynamo_record_order_reconciliation(order_info_obj, env)
-        logger.info(f"Error getting order info {order_id}: {e}")
-        untracked_info.append(order_info_obj)
-    
-    df = pd.DataFrame.from_dict(untracked_info)
-    csv = df.to_csv(index=False)
-
-    s3.put_object(Body=csv, Bucket=bucket, Key=f"untracked_orders/{date_str}.csv")
-
+    # export df as csv --> AWS S3
+    year, month, day, hour, minute = helper.date_and_time()
+    df_csv = df_new.to_csv()
+    s3_resource = boto3.resource('s3')
+    s3_resource.Object("inv-alerts-trading-data", f'positions_exposure/{env}/{year}/{month}/{day}/{hour}/{minute}.csv').put(Body=df_csv.getvalue())
+    return "Exposure Analysis Complete"
 
 if __name__ == "__main__":
     run_order_control(None, None)

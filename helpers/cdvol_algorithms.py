@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 import logging
 from helpers.helper import get_business_days, polygon_call_stocks, calculate_floor_pct, get_derivative_max_value, pull_model_config
 import pytz
+import warnings
+warnings.filterwarnings('ignore')
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

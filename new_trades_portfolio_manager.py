@@ -11,6 +11,8 @@ import os
 import logging
 import pytz
 from helpers.constants import ACTIVE_STRATEGIES
+import warnings
+warnings.filterwarnings('ignore')
 
 s3 = boto3.client('s3')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
@@ -48,10 +50,10 @@ def store_signifier(signifier):
     s3.put_object(Bucket=trading_data_bucket, Key=f"lambda_signifiers/recent_signifier_new_trades.txt", Body=str(signifier).encode('utf-8'))
 
 def pull_new_trades_inv(year, month, day, hour):
+    # logger.info(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
     trade_dfs = []
     for stratgey in ACTIVE_STRATEGIES:
         try:
-            print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             df = pd.read_csv(dataset.get("Body"))
             df.dropna(subset=["trade_details2wk"],inplace=True)
