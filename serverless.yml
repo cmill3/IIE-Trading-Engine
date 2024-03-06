@@ -25,7 +25,6 @@ custom:
     - prod-val
     # - prod
   dev:
-    tradingDataBucket: icarus-trading-data-dev
     tradingDataBucketINV: inv-alerts-trading-data-dev
     ordersTableINV: icarus-orders-table-inv-dev
     closedOrdersTableINV: icarus-closed-orders-table-inv-dev
@@ -34,7 +33,6 @@ custom:
     tableListdaily: "['icarus-model-results-table-dev']"
     closedTablelist: "['icarus-closed-orders-table-inv-dev']"
   prod-val:
-    tradingDataBucket: icarus-trading-data
     tradingDataBucketINV: inv-alerts-trading-data
     ordersTableINV: icarus-orders-table-inv
     closedOrdersTableINV: icarus-closed-orders-table-inv
@@ -56,7 +54,7 @@ functions:
     handler: new_trades_portfolio_manager.manage_portfolio_inv
     environment:
       ENV: ${self:custom.${self:provider.stage}.env}
-      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       PORTFOLIO_STRATEGY: "CDVOLBF"
     layers:
@@ -68,7 +66,7 @@ functions:
     handler: open_trades_portfolio_manager.manage_portfolio_inv
     environment:
       ENV: ${self:custom.${self:provider.stage}.env}
-      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       STRATEGY: "CDBFP"
@@ -81,7 +79,7 @@ functions:
     handler: open_trades_portfolio_manager.manage_portfolio_inv
     environment:
       ENV: ${self:custom.${self:provider.stage}.env}
-      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       STRATEGY: "CDBFC"
@@ -94,7 +92,7 @@ functions:
     handler: open_trades_portfolio_manager.manage_portfolio_inv
     environment:
       ENV: ${self:custom.${self:provider.stage}.env}
-      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       STRATEGY: "CDBFP_1D"
@@ -107,7 +105,7 @@ functions:
     handler: open_trades_portfolio_manager.manage_portfolio_inv
     environment:
       ENV: ${self:custom.${self:provider.stage}.env}
-      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucket}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       STRATEGY: "CDBFC_1D"

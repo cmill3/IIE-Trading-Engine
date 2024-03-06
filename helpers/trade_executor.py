@@ -46,7 +46,7 @@ def execute_new_trades(data,table, lambda_signifier):
         is_valid = False
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
         spread_start = ALGORITHM_CONFIG[row['strategy']]['spread_start']
-        spread_length = ALGORITHM_CONFIG[row['strategy']]['spread_length']
+        spread_length = ALGORITHM_CONFIG[row['strategy']]['spread_adjustment']
                                     
         if (row['strategy'] in THREED_STRATEGIES and now.date().weekday() <= 2) or (row['strategy'] in ONED_STRATEGIES and now.date().weekday() <= 3):
             is_valid = True

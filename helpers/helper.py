@@ -20,6 +20,7 @@ current_date = datetime.now().strftime("%Y-%m-%d")
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 portfolio_strategy = os.getenv('PORTFOLIO_STRATEGY')
+trading_strategy = os.getenv('TRADING_STRATEGY')
 env = os.getenv("ENV")
 
 limit = 50000
@@ -202,7 +203,6 @@ def convert_timestamp_est(timestamp):
 
 def bet_sizer(contracts, date, spread_length, call_put,strategy):
     target_cost = (.004* pull_trading_balance())
-
     to_stamp = (date - timedelta(days=1)).strftime("%Y-%m-%d")
     from_stamp = (date - timedelta(days=5)).strftime("%Y-%m-%d")
     volumes = []
@@ -222,8 +222,8 @@ def bet_sizer(contracts, date, spread_length, call_put,strategy):
         vol_check = "False"
     else:
         vol_check = "True"
-    spread_cost = calculate_spread_cost(contracts)
-    contracts = size_spread_quantities(contracts, spread_cost, target_cost)
+    # spread_cost = calculate_spread_cost(contracts)
+    contracts = size_spread_quantities(contracts, target_cost)
     # for index, contract in enumerate(contracts):
     #     if index < 3:
     #         try:
@@ -240,10 +240,9 @@ def bet_sizer(contracts, date, spread_length, call_put,strategy):
 def pull_trading_balance():
     return db.get_trading_balance(portfolio_strategy, env)
 
-def calculate_spread_cost(contracts_details):
-    cost = 0
-    for contract in contracts_details:
-        cost += (100*contract['last_price'])
+def calculate_spread_cost(contract):
+    cost = (100*float(contract['last_price']))
+    print(cost)
     return cost
 
 def build_volume_features(df):
@@ -318,39 +317,68 @@ def finalize_trade(contracts_details, spread_cost, target_cost):
     else:
         return "NO TRADES"
     
-def size_spread_quantities(contracts_details, spread_cost, target_cost):
-    spread_length = ALGORITHM_CONFIG['strategy']['spread_length']
-    spread_adjustment = ALGORITHM_CONFIG['strategy']['spread_adjustment']
+def size_spread_quantities(contracts_details, target_cost):
+    ## There is slight imprecision with valuing the second contract on a spread in the first conditional.
+    ## It is about 8-10 dollars off so we are goign to accept it for now.
+    spread_length = ALGORITHM_CONFIG[trading_strategy]['spread_length']
+    spread_adjustment = ALGORITHM_CONFIG[trading_strategy]['spread_adjustment']
     adjusted_contracts = contracts_details[spread_adjustment:]
-    total_cost = spread_cost
+    total_cost = 0
     quantities = []
+    print("ADJ")
+    print()
+    first_contract_cost = calculate_spread_cost(adjusted_contracts[0])
+    print(f"FIRST: {first_contract_cost}")
 
-    if total_cost < target_cost:
+    quantity = 0
+
+    if first_contract_cost < target_cost:
         quantity = 1
-        while total_cost < target_cost:
-            total_cost += spread_cost
-            quantity += 1
-        quantities.append({"ticker": adjusted_contracts[spread_adjustment]['contract_ticker'], "quantity": quantity}) 
-        next_contract_cost = calculate_spread_cost(adjusted_contracts[spread_adjustment+1])
+        total_cost += first_contract_cost
 
+        while total_cost < target_cost:
+            total_cost += first_contract_cost
+            quantity += 1
+        
+        quantities.append({"ticker": adjusted_contracts[0]['contract_ticker'], "quantity": (quantity-1)}) 
+        total_cost = quantities[0]['quantity'] * first_contract_cost
+
+        next_contract_cost = calculate_spread_cost(adjusted_contracts[1])
+        print(f"NEXT: {next_contract_cost}")
         quantity = 0
         while total_cost < target_cost:
             total_cost += next_contract_cost    
             quantity += 1
-        quantities.append({"ticker": adjusted_contracts[spread_adjustment+1]['contract_ticker'], "quantity": quantity})
+        if quantity > 1:
+            quantities.append({"ticker": adjusted_contracts[1]['contract_ticker'], "quantity": (quantity-1)})
+            total_cost -= next_contract_cost
+        elif quantity == 1:
+            quantities.append({"ticker": adjusted_contracts[2]['contract_ticker'], "quantity": 1})
 
-    elif total_cost > target_cost:
+    elif first_contract_cost > target_cost:
         adjustment = spread_adjustment + 1
         adjusted_contracts = contracts_details[adjustment:]
         for contract in adjusted_contracts:
-            contract_cost = calculate_spread_cost(contract)
-            if contract_cost < target_cost:
-                quantities.append({"ticker": contract['contract_ticker'], "quantity": 1})
+                print("2")
+                contract_cost = calculate_spread_cost(contract)
+                if (total_cost + contract_cost) < target_cost:
+                    quantities.append({"ticker": contract['contract_ticker'], "quantity": 1})
+                    total_cost += contract_cost
+                
+                if len(quantities) == spread_length or (total_cost > target_cost):
+                    break
 
+    print()
+    print(quantities)
     details_df = pd.DataFrame(contracts_details)
+    print(details_df)
     for quantity in quantities:
         details_df.loc[details_df['contract_ticker'] == quantity['ticker'], 'quantity'] = quantity['quantity']
+
+    print(quantities)
+    print(details_df)
     details_dict = details_df.to_dict(orient='records')
+    print(f"TOTAL COST: {total_cost} vs. TARGET: {target_cost}")
     return details_dict
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):

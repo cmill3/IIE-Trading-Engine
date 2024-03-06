@@ -50,11 +50,10 @@ def store_signifier(signifier):
     s3.put_object(Bucket=trading_data_bucket, Key=f"lambda_signifiers/recent_signifier_new_trades.txt", Body=str(signifier).encode('utf-8'))
 
 def pull_new_trades_inv(year, month, day, hour):
-    # logger.info(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
     trade_dfs = []
     for stratgey in ACTIVE_STRATEGIES:
         try:
-            dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/{env}/{stratgey}/{year}/{month}/{day}/{hour}.csv")
+            dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             df = pd.read_csv(dataset.get("Body"))
             df.dropna(subset=["trade_details2wk"],inplace=True)
             df.dropna(subset=["trade_details1wk"],inplace=True)
@@ -62,7 +61,7 @@ def pull_new_trades_inv(year, month, day, hour):
             trade_dfs.append(df)
         except Exception as e:
             print(e)
-            print(f"invalerts_potential_trades/{stratgey}/{year}/{month}/{day}/{hour}.csv")
+            print(f"invalerts_potential_trades/{env}/{stratgey}/{year}/{month}/{day}/{hour}.csv")
     full_df = pd.concat(trade_dfs)
     return full_df
 

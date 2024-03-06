@@ -120,26 +120,26 @@ ALGORITHM_CONFIG = {
     "CDBFC": {
         "target_label": "three_max_vol",
         "target_value": 1.731,
-        "spread_start": 1,
+        "spread_adjustment": 1,
         "spread_length": 2,
     },
     "CDBFP": {
         "target_label": "three_min_vol",
         "target_value": -1.546,
-        "spread_start": 1,
+        "spread_adjustment": 1,
         "spread_length": 2,
         
     },
     "CDBFC_1D": {
         "target_label": "one_max_vol",
         "target_value": 1.096,
-        "spread_start": 1,
+        "spread_adjustment": 1,
         "spread_length": 2,
     },
     "CDBFP_1D": {
         "target_label": "one_min_vol",
         "target_value": -1.007,
-        "spread_start": 1,
+        "spread_adjustment": 1,
         "spread_length": 2,
     },
 }
