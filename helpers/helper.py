@@ -336,11 +336,9 @@ def size_spread_quantities(contracts_details, target_cost):
             if (spread_cost + total_cost) < adjusted_target_cost:
                 total_cost += spread_cost
                 contract_quantity += 1
-                print("triuth")
             else:
                 break
-    print(f"countract quantity: {contract_quantity}")
-            
+                        
     formatted_spread_cost = 0
     for candidate in spread_candidates:
             quantities.append({"contract_ticker": candidate['contract_ticker'], "quantity": contract_quantity,"contract_cost": candidate['contract_cost']})
@@ -358,7 +356,8 @@ def size_spread_quantities(contracts_details, target_cost):
     details_df = details_df.loc[details_df['quantity'] > 0]
     details_df.reset_index(drop=True, inplace=True)
     details_df['spread_position'] = details_df.index
-    return details_df
+    details = details_df.to_dict(orient='records')
+    return details
 
 def configure_contracts_for_trade(contracts_details, target_cost, spread_length):
     spread_candidates = []

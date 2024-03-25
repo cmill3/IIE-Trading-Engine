@@ -56,6 +56,8 @@ def execute_new_trades(data,table, lambda_signifier):
                 continue
             all_trades = row['trade_details']
             trades = pd.DataFrame.from_dict(all_trades)
+            if len(trades) == 0:
+                continue
             trades = trades.loc[trades['quantity'] != 0]
             if row['strategy'] in CALL_STRATEGIES:
                 option_side = "call"

@@ -131,8 +131,6 @@ def build_trade_structure_1wk(row):
             option_chain = get_option_chain(row['symbol'], row['expiry_1d'], row['Call/Put'])
         else:
             option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
-        print("ROW")
-        print(row)
         contracts_1wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_1wk = smart_spreads_filter(contracts_1wk,underlying_price)
         trade_details_1wk = helper.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
@@ -140,7 +138,8 @@ def build_trade_structure_1wk(row):
         print("FAIL")
         logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
         print(f"Could not build spread for {row['symbol']}: {e} 1WK")
-        return pd.DataFrame(), "FALSE"
+        return [], "FALSE"
+    print(trade_details_1wk)
     return trade_details_1wk
 
 def build_trade_structure_2wk(row):
@@ -157,7 +156,7 @@ def build_trade_structure_2wk(row):
         trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e} 2WK")
         print(f"Could not build spread for {row['symbol']}: {e} 2WK")
-        return pd.DataFrame(), "FALSE"
+        return [], "FALSE"
     return trade_details_2wk
 
 def volume_check(trade_details):
