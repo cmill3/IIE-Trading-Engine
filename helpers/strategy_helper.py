@@ -4,6 +4,9 @@ from datetime import datetime
 
 def build_spread(chain_df, spread_length, cp, current_price):
     contract_list = []
+    print(chain_df) 
+    if len(chain_df) == 0:
+        return contract_list
     if cp == "call":
         chain_df = chain_df.loc[chain_df['strike_price'] > current_price]
         chain_df.sort_values('strike_price',ascending=True,inplace=True)

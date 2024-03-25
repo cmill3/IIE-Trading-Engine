@@ -45,8 +45,6 @@ def execute_new_trades(data,table, lambda_signifier):
     for i, row in data.iterrows():
         is_valid = False
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
-        spread_start = ALGORITHM_CONFIG[row['strategy']]['spread_start']
-        spread_length = ALGORITHM_CONFIG[row['strategy']]['spread_adjustment']
                                     
         if (row['strategy'] in THREED_STRATEGIES and now.date().weekday() <= 2) or (row['strategy'] in ONED_STRATEGIES and now.date().weekday() <= 3):
             is_valid = True
@@ -57,15 +55,14 @@ def execute_new_trades(data,table, lambda_signifier):
             except:
                 continue
             all_trades = row['trade_details']
-            trades = row['trade_details'][spread_start:(spread_length+spread_start)]
+            trades = pd.DataFrame.from_dict(all_trades)
+            trades = trades.loc[trades['quantity'] != 0]
             if row['strategy'] in CALL_STRATEGIES:
                 option_side = "call"
             elif row['strategy'] in PUT_STRATEGIES:
                 option_side = "put"
 
-            for detail in trades:
-                if detail['quantity'] == 0:
-                    continue
+            for _, detail in trades.iterrows():
                 try: 
                     open_order_id, status_code, json_response = trade.place_order(base_url, account_id, access_token, row['symbol'], 
                                                                             detail["contract_ticker"], detail['quantity'], 
@@ -142,7 +139,7 @@ def close_order(row, env, lambda_signifier, reason):
             log_message_close(row, closing_id, status_code, reason, error_json,lambda_signifier)
             db.delete_order_record(row['order_id'],orders_table)
             create_response = db.create_new_dynamo_record_closed_order_logmessage(close_order_info_obj, open_order_info_obj, row['order_id'], env, close_table, reason,row)
-            logger.info(f'Close order succesful {row["option_symbol"]} close order id:{id} open order id:{row["order_id"]} for {row["position_id"]}')
+            logger.info(f'Close order succesful {row["option_symbol"]} close order id:{closing_id} open order id:{row["order_id"]} for {row["position_id"]}')
         except Exception as e:
             logger.info(f"FAILURE IN CLOSED ORDER for {row['option_symbol']}")
             logger.info(e)
@@ -153,9 +150,9 @@ def close_order(row, env, lambda_signifier, reason):
     else:
         row = row.to_dict()
         row['response'] = error_json
-        log_message_close(row, id, status_code, reason, error_json,lambda_signifier)
+        log_message_close(row, closing_id, status_code, reason, error_json,lambda_signifier)
         return None, 0
-    return id, capital_return
+    return closing_id, capital_return
 
 def date_performance_check(row, env, lambda_signifier):
     last_price = trade.call_polygon_last_price(row['underlying_symbol'])

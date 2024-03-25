@@ -9,6 +9,7 @@ import helpers.tradier as trade
 import helpers.dynamo_helper as db
 import pytz
 import warnings
+import pandas as pd
 warnings.filterwarnings('ignore')
 
 s3 = boto3.client('s3')
@@ -72,7 +73,9 @@ def evaluate_open_trades(orders_df):
                 })
     # positions_to_close = list(set(positions_to_close))
     logger.info(f'closing order ids: {orders_to_close}')
-    s3.put_object(Bucket=trading_data_bucket, Key=f"lambda_signifiers/orders_to_close_{lambda_signifier}.json", Body=str(orders_to_close).encode('utf-8'))
+    closed_df = pd.DataFrame.from_dict(orders_to_close)   
+    date_str = datetime.now().strftime("%Y/%m/%d/%H/%M")
+    s3.put_object(Bucket=trading_data_bucket, Key=f"closed_orders/{env}/{strategy}/{date_str}.csv", Body=closed_df.to_csv())
     return total_capital_return
 
 
