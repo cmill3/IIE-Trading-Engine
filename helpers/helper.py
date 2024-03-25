@@ -318,57 +318,68 @@ def finalize_trade(contracts_details, spread_cost, target_cost):
         return "NO TRADES"
     
 def size_spread_quantities(contracts_details, target_cost):
-    ## There is slight imprecision with valuing the second contract on a spread in the first conditional.
-    ## It is about 8-10 dollars off so we are goign to accept it for now.
-    spread_length = ALGORITHM_CONFIG[trading_strategy]['spread_length']
-    spread_adjustment = ALGORITHM_CONFIG[trading_strategy]['spread_adjustment']
-    adjusted_contracts = contracts_details[spread_adjustment:]
-    total_cost = 0
+    adjusted_target_cost = target_cost
+    adjusted_contracts = contracts_details[1:4]
+    spread_length = 2
+
     quantities = []
-    first_contract_cost = calculate_spread_cost(adjusted_contracts[0])
+    contract_quantity = 0
+    # print("SPREAD CANDIDATES")
+    # print(spread_candidates)
+    spread_candidates, spread_cost = configure_contracts_for_trade(adjusted_contracts, adjusted_target_cost, spread_length)
+    total_cost = 0
 
-    quantity = 0
+    print("CAn")
+    print(spread_candidates)
+    print(spread_cost)
+    if len(spread_candidates) == 0:
+        return []
+    else:
+        while total_cost < adjusted_target_cost:
+            if (spread_cost + total_cost) < adjusted_target_cost:
+                total_cost += spread_cost
+                contract_quantity += 1
+                print("triuth")
+            else:
+                break
+    print(f"countract quantity: {contract_quantity}")
+            
+    formatted_spread_cost = 0
+    for candidate in spread_candidates:
+            quantities.append({"contract_ticker": candidate['contract_ticker'], "quantity": contract_quantity,"contract_cost": candidate['contract_cost']})
+            formatted_spread_cost += (candidate['contract_cost'] * contract_quantity)
 
-    if first_contract_cost < target_cost:
-        quantity = 1
-        total_cost += first_contract_cost
+    cost_remaining = adjusted_target_cost - formatted_spread_cost
+    # adjusted_quantities = []
+    if cost_remaining > 0:
+        for quantity in quantities:
+            if quantity["contract_cost"] < cost_remaining:
+                cost_remaining -= quantity['contract_cost']
+                quantity['quantity'] += 1
 
-        while total_cost < target_cost:
-            total_cost += first_contract_cost
-            quantity += 1
-        
-        quantities.append({"ticker": adjusted_contracts[0]['contract_ticker'], "quantity": (quantity-1)}) 
-        total_cost = quantities[0]['quantity'] * first_contract_cost
+    print(quantities)
+    details_df = pd.DataFrame(quantities)
+    details_df = details_df.loc[details_df['quantity'] > 0]
+    details_df.reset_index(drop=True, inplace=True)
+    details_df['spread_position'] = details_df.index
+    print("QUAN")
+    print(details_df)
+    print()
+    return details_df
 
-        next_contract_cost = calculate_spread_cost(adjusted_contracts[1])
-        quantity = 0
-        while total_cost < target_cost:
-            total_cost += next_contract_cost    
-            quantity += 1
-        if quantity > 1:
-            quantities.append({"ticker": adjusted_contracts[1]['contract_ticker'], "quantity": (quantity-1)})
-            total_cost -= next_contract_cost
-        elif quantity == 1:
-            quantities.append({"ticker": adjusted_contracts[2]['contract_ticker'], "quantity": 1})
-
-    elif first_contract_cost > target_cost:
-        adjustment = spread_adjustment + 1
-        adjusted_contracts = contracts_details[adjustment:]
-        for contract in adjusted_contracts:
-                contract_cost = calculate_spread_cost(contract)
-                if (total_cost + contract_cost) < target_cost:
-                    quantities.append({"ticker": contract['contract_ticker'], "quantity": 1})
-                    total_cost += contract_cost
-                
-                if len(quantities) == spread_length or (total_cost > target_cost):
-                    break
-
-    details_df = pd.DataFrame(contracts_details)
-    for quantity in quantities:
-        details_df.loc[details_df['contract_ticker'] == quantity['ticker'], 'quantity'] = quantity['quantity']
-
-    details_dict = details_df.to_dict(orient='records')
-    return details_dict
+def configure_contracts_for_trade(contracts_details, target_cost, spread_length):
+    spread_candidates = []
+    total_cost = 0
+    cost_remaining = target_cost
+    for contract in contracts_details:
+        contract['contract_cost'] = 100 * contract['last_price']    
+        if contract['contract_cost'] < cost_remaining:
+            spread_candidates.append(contract)
+            cost_remaining -= contract['contract_cost']
+            total_cost += contract['contract_cost']
+        if len(spread_candidates) == spread_length:
+            return spread_candidates, total_cost
+    return spread_candidates, total_cost
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):
     add_one = False

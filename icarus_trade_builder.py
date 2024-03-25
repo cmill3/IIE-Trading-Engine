@@ -50,7 +50,7 @@ def pull_data_inv(trading_strategy,year, month, day, hour):
         print(f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/13.csv")
         dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/13.csv")
     else:
-        dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/13.csv")
+        dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
@@ -135,7 +135,9 @@ def build_trade_structure_1wk(row):
             option_chain = get_option_chain(row['symbol'], row['expiry_1d'], row['Call/Put'])
         else:
             option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
-        contracts_1wk = strategy_helper.build_spread(option_chain, 22, row['Call/Put'], underlying_price)
+        print("ROW")
+        print(row)
+        contracts_1wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_1wk = smart_spreads_filter(contracts_1wk,underlying_price)
         trade_details_1wk = helper.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
     except Exception as e:
@@ -152,7 +154,7 @@ def build_trade_structure_2wk(row):
             option_chain = get_option_chain(row['symbol'], row['expiry_3d'], row['Call/Put'])
         else:
             option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
-        contracts_2wk = strategy_helper.build_spread(option_chain, 22, row['Call/Put'], underlying_price)
+        contracts_2wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_2wk = smart_spreads_filter(contracts_2wk,underlying_price)
         trade_details_2wk = helper.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
     except Exception as e:
@@ -220,6 +222,11 @@ def advance_weekday(days):
 
 
 def get_option_chain(symbol, expiry, call_put):
+    if symbol == "IWM"  and expiry == "2024-03-29":
+        expiry = "2024-03-28"
+    elif expiry == "2024-03-29":
+        expiry = "2024-03-28"
+
     url = f"https://api.polygon.io/v3/snapshot/options/{symbol}?expiration_date={expiry}&contract_type={call_put}&limit=250&apiKey=A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp"
     headers = {}
     payload = {}
