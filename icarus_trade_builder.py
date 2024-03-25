@@ -16,7 +16,6 @@ logger.setLevel(logging.INFO)
 env = os.getenv("ENV")
 
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
-model_results_bucket = os.getenv('MODEL_RESULTS_BUCKET')
 
 
 
@@ -47,8 +46,7 @@ def build_trade_inv(event, context):
 
 def pull_data_inv(trading_strategy,year, month, day, hour):
     if env == "DEV":
-        print(f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/13.csv")
-        dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/13.csv")
+        dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     else:
         dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     df = pd.read_csv(dataset.get("Body"))
@@ -65,8 +63,6 @@ def process_data(df):
     df['expiry_3d'] = df['symbol'].apply(lambda x: date_3d(x))
     df['trade_details1wk'] = df.apply(lambda row: build_trade_structure_1wk(row), axis=1)
     df['trade_details2wk'] = df.apply(lambda row: build_trade_structure_2wk(row), axis=1)
-    # df['trade_details1wk'] = pd.DataFrame(result_df1, index=df.index)
-    # df['trade_details2wk'] = pd.DataFrame(result_df2, index=df.index)
     df['sector'] = df['symbol'].apply(lambda Sym: strategy_helper.match_sector(Sym))
     df['sellby_date'] = calculate_sellby_date(d, 3)
     logger.info(f"Data processed successfully: {d}")
@@ -256,8 +252,11 @@ def smart_spreads_filter(contracts,underlying_price):
     new_contracts = []
     for contract in contracts:
         contract['pct_to_money'] = abs(underlying_price - contract['strike'])/underlying_price
-        if contract['pct_to_money'] < .15:
+        if contract['pct_to_money'] < .075:
             new_contracts.append(contract)
+    print("NEW CONTRACTS")
+    print(new_contracts)
+    print()
     return new_contracts
 
 def format_dates(now):

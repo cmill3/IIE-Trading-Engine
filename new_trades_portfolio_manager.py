@@ -35,12 +35,10 @@ def manage_portfolio_inv(event, context):
         return "disallowed"
 
     year, month, day, hour = format_dates(now)
-    base_url, account_id, access_token = trade.get_tradier_credentials(env)
+
     new_trades_df = pull_new_trades_inv(year, month, day, hour)
-    ## Future feature to deal with descrepancies between our records and tradier
-    # if len(open_trades_df) > len(open_trades_list):
-    # TO-DO create an alarm mechanism to report this 
     trades_placed = evaluate_new_trades(new_trades_df, table)
+    
     logger.info(f'Placed trades: {trades_placed}')
     logger.info(f'Finished new trades PM: {lambda_signifier}')
     return {"lambda_signifier": lambda_signifier}
@@ -53,6 +51,8 @@ def pull_new_trades_inv(year, month, day, hour):
     trade_dfs = []
     for stratgey in ACTIVE_STRATEGIES:
         try:
+            if env == "DEV":
+                dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/PROD_VAL/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             df = pd.read_csv(dataset.get("Body"))
             df.dropna(subset=["trade_details2wk"],inplace=True)

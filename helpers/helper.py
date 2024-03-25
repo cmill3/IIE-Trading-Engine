@@ -329,9 +329,6 @@ def size_spread_quantities(contracts_details, target_cost):
     spread_candidates, spread_cost = configure_contracts_for_trade(adjusted_contracts, adjusted_target_cost, spread_length)
     total_cost = 0
 
-    print("CAn")
-    print(spread_candidates)
-    print(spread_cost)
     if len(spread_candidates) == 0:
         return []
     else:
@@ -357,14 +354,10 @@ def size_spread_quantities(contracts_details, target_cost):
                 cost_remaining -= quantity['contract_cost']
                 quantity['quantity'] += 1
 
-    print(quantities)
     details_df = pd.DataFrame(quantities)
     details_df = details_df.loc[details_df['quantity'] > 0]
     details_df.reset_index(drop=True, inplace=True)
     details_df['spread_position'] = details_df.index
-    print("QUAN")
-    print(details_df)
-    print()
     return details_df
 
 def configure_contracts_for_trade(contracts_details, target_cost, spread_length):
