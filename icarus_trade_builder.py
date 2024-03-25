@@ -130,19 +130,19 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
 
 def build_trade_structure_1wk(row):
     underlying_price = tradier.call_polygon_last_price(row['symbol'])
-    # try:
-    if row['symbol'] in ["IWM","SPY","QQQ"]:
-        option_chain = get_option_chain(row['symbol'], row['expiry_1d'], row['Call/Put'])
-    else:
-        option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
-    contracts_1wk = strategy_helper.build_spread(option_chain, 22, row['Call/Put'], underlying_price)
-    contracts_1wk = smart_spreads_filter(contracts_1wk,underlying_price)
-    trade_details_1wk = helper.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
-    # except Exception as e:
-    #     print("FAIL")
-    #     logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
-    #     print(f"Could not build spread for {row['symbol']}: {e} 1WK")
-    #     return pd.DataFrame(), "FALSE"
+    try:
+        if row['symbol'] in ["IWM","SPY","QQQ"]:
+            option_chain = get_option_chain(row['symbol'], row['expiry_1d'], row['Call/Put'])
+        else:
+            option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
+        contracts_1wk = strategy_helper.build_spread(option_chain, 22, row['Call/Put'], underlying_price)
+        contracts_1wk = smart_spreads_filter(contracts_1wk,underlying_price)
+        trade_details_1wk = helper.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
+    except Exception as e:
+        print("FAIL")
+        logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
+        print(f"Could not build spread for {row['symbol']}: {e} 1WK")
+        return pd.DataFrame(), "FALSE"
     return trade_details_1wk
 
 def build_trade_structure_2wk(row):

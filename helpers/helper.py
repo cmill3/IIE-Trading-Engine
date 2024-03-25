@@ -325,10 +325,7 @@ def size_spread_quantities(contracts_details, target_cost):
     adjusted_contracts = contracts_details[spread_adjustment:]
     total_cost = 0
     quantities = []
-    print("ADJ")
-    print()
     first_contract_cost = calculate_spread_cost(adjusted_contracts[0])
-    print(f"FIRST: {first_contract_cost}")
 
     quantity = 0
 
@@ -344,7 +341,6 @@ def size_spread_quantities(contracts_details, target_cost):
         total_cost = quantities[0]['quantity'] * first_contract_cost
 
         next_contract_cost = calculate_spread_cost(adjusted_contracts[1])
-        print(f"NEXT: {next_contract_cost}")
         quantity = 0
         while total_cost < target_cost:
             total_cost += next_contract_cost    
@@ -359,7 +355,6 @@ def size_spread_quantities(contracts_details, target_cost):
         adjustment = spread_adjustment + 1
         adjusted_contracts = contracts_details[adjustment:]
         for contract in adjusted_contracts:
-                print("2")
                 contract_cost = calculate_spread_cost(contract)
                 if (total_cost + contract_cost) < target_cost:
                     quantities.append({"ticker": contract['contract_ticker'], "quantity": 1})
@@ -368,17 +363,11 @@ def size_spread_quantities(contracts_details, target_cost):
                 if len(quantities) == spread_length or (total_cost > target_cost):
                     break
 
-    print()
-    print(quantities)
     details_df = pd.DataFrame(contracts_details)
-    print(details_df)
     for quantity in quantities:
         details_df.loc[details_df['contract_ticker'] == quantity['ticker'], 'quantity'] = quantity['quantity']
 
-    print(quantities)
-    print(details_df)
     details_dict = details_df.to_dict(orient='records')
-    print(f"TOTAL COST: {total_cost} vs. TARGET: {target_cost}")
     return details_dict
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):
