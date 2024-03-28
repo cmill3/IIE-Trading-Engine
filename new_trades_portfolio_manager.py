@@ -53,7 +53,8 @@ def pull_new_trades_inv(year, month, day, hour):
         try:
             if env == "DEV":
                 dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/PROD_VAL/{stratgey}/{year}/{month}/{day}/{hour}.csv")
-            dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{stratgey}/{year}/{month}/{day}/{hour}.csv")
+            else:
+                dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             df = pd.read_csv(dataset.get("Body"))
             df.dropna(subset=["trade_details2wk"],inplace=True)
             df.dropna(subset=["trade_details1wk"],inplace=True)
