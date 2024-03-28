@@ -115,7 +115,7 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         )   
     return response, order_item
 
-def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase_price,row, env, table):
+def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase_price,row, env, table,detail):
     table = ddb.Table(table)    
     # details = ast.literal_eval(position['trade_details'])[0]
     order_item ={
@@ -138,6 +138,7 @@ def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase
         'order_status': order_info_obj['status'],
         'env': env,
         'return_vol_10D': str(row['return_vol_10D']),
+        'spread_position': str(detail['spread_position']),
     }
 
     response = table.put_item(
@@ -229,7 +230,8 @@ def create_new_dynamo_record_closed_order_logmessage(close_order_info_obj, origi
         'last_fill_price_close': str(close_order_info_obj['last_fill_price']),
         'qty_executed_close': str(close_order_info_obj['exec_quantity']),
         'env': env,
-        "close_reason": reason
+        "close_reason": reason,
+        "spread_position": str(row['spread_position']),
     }
 
     response = table.put_item(

@@ -73,8 +73,8 @@ def execute_new_trades(data,table, lambda_signifier):
                     if status_code == 200:
                         trading_balance, underlying_purchase_price = process_open_order(row,open_order_id,position_id,json_response,status_code,lambda_signifier,detail,option_side)
                         orders_list.append(open_order_id)
-                        accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D']})
-                        positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D']})        
+                        accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D'],"spread_position":detail['spread_position']})
+                        positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D'],"spread_position":detail['spread_position']})        
                     else:
                         trade_data = row.to_dict()
                         trade_data['response'] = status_code
@@ -113,10 +113,10 @@ def process_open_order(row,open_order_id,position_id,json_response, status_code,
         row['underlying_purchase_price'] = underlying_purchase_price
         row['quantity'] = order_info_obj['exec_quantity']
 
-        log_message_open(row, open_order_id, status_code, json_response,detail['contract_ticker'], option_side,lambda_signifier)
+        log_message_open(row, open_order_id, status_code, json_response,detail['contract_ticker'], option_side,lambda_signifier,detail)
         capital_spent = (float(order_info_obj['exec_quantity']) * float(order_info_obj['average_fill_price'])) * 100
         logger.info(f'Capital spent: {capital_spent}')
-        db.create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase_price,row, env, orders_table)
+        db.create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase_price,row, env, orders_table,detail)
         new_balance = db.update_trading_balance(capital_spent,portfolio_strategy,env,action_type="open")
     except Exception as e:
         logger.info(f'Place Order Failed: {e}')
