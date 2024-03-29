@@ -46,19 +46,7 @@ def calculate_dt_features(transaction_date, sell_by):
     day_diff = transaction_dt - now
     day_diff = abs(day_diff.days)
     return day_diff
-    
 
-def polygon_call(contract, from_stamp, to_stamp, multiplier, timespan):
-    payload={}
-    headers = {}
-    url = f"https://api.polygon.io/v2/aggs/ticker/O:{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-    print(response.text)
-    res_df = pd.DataFrame(json.loads(response.text)['results'])
-    res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
-    res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
-    return res_df
 
 def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
     try:

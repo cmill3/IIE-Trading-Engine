@@ -171,13 +171,13 @@ def date_performance_check(row, env, lambda_signifier):
 def evaluate_performance_inv(current_price, derivative_price, row):
     if row['trading_strategy'] in CDVOL_STRATEGIES:
         if row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
-            sell_code, reason = tda_CALL_3D_CDVOLAGG(row, current_price,vol=.5)
+            sell_code, reason = tda_CALL_3D_CDVOLAGG(row, current_price,vol=.4)
         elif row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
-            sell_code, reason = tda_PUT_3D_CDVOLAGG(row, current_price,vol=.5)
+            sell_code, reason = tda_PUT_3D_CDVOLAGG(row, current_price,vol=.4)
         elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
-            sell_code, reason = tda_CALL_1D_CDVOLAGG(row, current_price,vol=.5)
+            sell_code, reason = tda_CALL_1D_CDVOLAGG(row, current_price,vol=.4)
         elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
-            sell_code, reason = tda_PUT_1D_CDVOLAGG(row, current_price,vol=.5)
+            sell_code, reason = tda_PUT_1D_CDVOLAGG(row, current_price,vol=.4)
     else:
         sell_code, reason = 1, "untracked"
     return sell_code, reason

@@ -50,17 +50,6 @@ def calculate_dt_features(transaction_date, sell_by):
     return day_diff
     
 
-def polygon_call(contract, from_stamp, to_stamp, multiplier, timespan):
-    payload={}
-    headers = {}
-    url = f"https://api.polygon.io/v2/aggs/ticker/O:{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-    res_df = pd.DataFrame(json.loads(response.text)['results'])
-    res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
-    res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
-    return res_df
-
 def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
     try:
         payload={}
@@ -215,26 +204,10 @@ def bet_sizer(contracts, date, spread_length, call_put,strategy):
             continue
         contract['avg_volume'], contract['avg_transactions'] = build_volume_features(polygon_result)
         volumes.append(contract['avg_volume'])
-        # transactions.append(contract['avg_transactions'])
 
-    total_vol = sum(volumes)/len(contracts)
-    if total_vol < 40:
-        vol_check = "False"
-    else:
-        vol_check = "True"
-    # spread_cost = calculate_spread_cost(contracts)
+
     contracts = size_spread_quantities(contracts, target_cost)
-    # for index, contract in enumerate(contracts):
-    #     if index < 3:
-    #         try:
-    #             contract['quantity'] = quantities[index]
-    #             print(contract['quantity'])
-    #         except Exception as e:
-    #             logger.info(f"ERROR of {e} for {contract['contract_ticker']}")
-    #             print(contracts)
-    #             print(quantities)
-    #     else:
-    #         contract['quantity'] = 0
+
     return contracts
 
 def pull_trading_balance():
@@ -318,41 +291,17 @@ def finalize_trade(contracts_details, spread_cost, target_cost):
         return "NO TRADES"
     
 def size_spread_quantities(contracts_details, target_cost):
-    adjusted_target_cost = target_cost
-    adjusted_contracts = contracts_details[1:4]
+    adjusted_target_cost = target_cost/100
+    adjusted_contracts = contracts_details[1:3]
     spread_length = 2
 
-    quantities = []
-    contract_quantity = 0
-    # print("SPREAD CANDIDATES")
-    # print(spread_candidates)
-    spread_candidates, spread_cost = configure_contracts_for_trade(adjusted_contracts, adjusted_target_cost, spread_length)
-    total_cost = 0
+    spread_candidates = configure_contracts_for_trade_pct_based(adjusted_contracts, adjusted_target_cost, spread_length)
 
     if len(spread_candidates) == 0:
         return []
-    else:
-        while total_cost < adjusted_target_cost:
-            if (spread_cost + total_cost) < adjusted_target_cost:
-                total_cost += spread_cost
-                contract_quantity += 1
-            else:
-                break
-                        
-    formatted_spread_cost = 0
-    for candidate in spread_candidates:
-            quantities.append({"contract_ticker": candidate['contract_ticker'], "quantity": contract_quantity,"contract_cost": candidate['contract_cost']})
-            formatted_spread_cost += (candidate['contract_cost'] * contract_quantity)
 
-    cost_remaining = adjusted_target_cost - formatted_spread_cost
-    # adjusted_quantities = []
-    if cost_remaining > 0:
-        for quantity in quantities:
-            if quantity["contract_cost"] < cost_remaining:
-                cost_remaining -= quantity['contract_cost']
-                quantity['quantity'] += 1
 
-    details_df = pd.DataFrame(quantities)
+    details_df = pd.DataFrame(spread_candidates)
     details_df = details_df.loc[details_df['quantity'] > 0]
     details_df.reset_index(drop=True, inplace=True)
     details_df['spread_position'] = details_df.index
@@ -372,6 +321,23 @@ def configure_contracts_for_trade(contracts_details, target_cost, spread_length)
         if len(spread_candidates) == spread_length:
             return spread_candidates, total_cost
     return spread_candidates, total_cost
+
+def configure_contracts_for_trade_pct_based(contracts_details, target_cost, spread_length):
+    spread_candidates = []
+    split_cost = target_cost / spread_length
+    for contract in contracts_details:
+        cost = float(contract['last_price'])
+        contract_quantity = 0
+        split_cost_remaining = split_cost
+        while split_cost_remaining > 0:
+            if (split_cost_remaining - cost) > 0:
+                split_cost_remaining = split_cost_remaining - cost
+                contract_quantity += 1
+            else:
+                break
+
+        spread_candidates.append({"contract_ticker": contract['contract_ticker'], "quantity": contract_quantity,"last_price": contract['last_price']})
+    return spread_candidates
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):
     add_one = False
@@ -404,8 +370,9 @@ def convert_timestamp_est(timestamp):
     return dt_est
 
 def convert_datestring_to_timestamp_UTC(date_string):
+    ## takes in date string and converts to timestamp in GMT time
+    ## used to filter polygon results
     date_obj = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
-    date_obj = date_obj.replace(tzinfo=timezone.utc)
     timestamp = date_obj.timestamp()
     return timestamp
 
@@ -490,12 +457,7 @@ def pull_balance_df():
     return df
 
 if __name__ == "__main__":
-    print('2024-02-05T17:18:25.415Z')
-    # date_obj = datetime.strptime('2024-02-05T17:18:25.415Z', "%Y-%m-%dT%H:%M:%S.%fZ")
-    # date_obj = date_obj.replace(tzinfo=timezone.utc)
-    # timestamp = date_obj.timestamp()
-    # print(timestamp)
-    # print(time_stamp)
-    # x = calculate_floor_pct({'order_transaction_date': '2023-05-30T18:03:06.294Z', 'underlying_symbol': 'AR', 'trading_strategy': 'day_losers'})
-    # print(x)
-    # print(type(x))
+    x = convert_datestring_to_timestamp_UTC("2024-03-28T15:09:38.959Z")
+    # x = convert_timestamp_est((1711652978959/1000))
+    print(x)
+    

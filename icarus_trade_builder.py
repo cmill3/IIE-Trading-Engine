@@ -217,11 +217,6 @@ def advance_weekday(days):
 
 
 def get_option_chain(symbol, expiry, call_put):
-    if symbol == "IWM"  and expiry == "2024-03-29":
-        expiry = "2024-03-28"
-    elif expiry == "2024-03-29":
-        expiry = "2024-03-28"
-
     url = f"https://api.polygon.io/v3/snapshot/options/{symbol}?expiration_date={expiry}&contract_type={call_put}&limit=250&apiKey=A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp"
     headers = {}
     payload = {}
