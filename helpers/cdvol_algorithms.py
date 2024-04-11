@@ -34,7 +34,7 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(min_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    Floor_pct = (vol)* float(row['return_vol_10D'])
+    Floor_pct = (-vol)* target_pct
     spread_position = int(row['spread_position']) + 1  
     vc_config = {
         1: 100,
@@ -93,7 +93,7 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(max_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    Floor_pct = (-vol) * float(row['return_vol_10D'])
+    Floor_pct = (-vol)* target_pct
     spread_position = int(row['spread_position']) + 1  
     vc_config = {
         1: 100,
@@ -152,7 +152,7 @@ def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(min_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    Floor_pct = (vol)* float(row['return_vol_10D'])
+    Floor_pct = (-vol)* target_pct
     spread_position = int(row['spread_position']) + 1  
     vc_config = {
         1: 100,
@@ -210,7 +210,7 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(max_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    Floor_pct = (-vol)* float(row['return_vol_10D'])
+    Floor_pct = (-vol)* target_pct
     spread_position = int(row['spread_position']) + 1  
     vc_config = {
         1: 100,
