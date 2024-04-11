@@ -61,6 +61,7 @@ def process_data(df):
     df['expiry_2wk'] = date_2wk()
     df['expiry_1d'] = df['symbol'].apply(lambda x: date_1d(x))
     df['expiry_3d'] = df['symbol'].apply(lambda x: date_3d(x))
+    underlying_price = tradier.call_polygon_last_price(df['symbol'][0])
     df['trade_details1wk'] = df.apply(lambda row: build_trade_structure_1wk(row), axis=1)
     df['trade_details2wk'] = df.apply(lambda row: build_trade_structure_2wk(row), axis=1)
     df['sector'] = df['symbol'].apply(lambda Sym: strategy_helper.match_sector(Sym))
@@ -139,7 +140,7 @@ def build_trade_structure_1wk(row):
         logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
         print(f"Could not build spread for {row['symbol']}: {e} 1WK")
         return [], "FALSE"
-    print(trade_details_1wk)
+    
     return trade_details_1wk
 
 def build_trade_structure_2wk(row):
@@ -231,15 +232,22 @@ def get_option_chain(symbol, expiry, call_put):
     details = [entry['details'] for entry in results]
     days = [entry['day'] for entry in results]
 
+    parsed_details = []
+
     for index, value in enumerate(details):
         try:
             value['volume'] = days[index]['volume']
             value['last_price'] = days[index]['close']
+            parsed_details.append(value)
         except:
-            value['volume'] = 0
-            value['last_price'] = 0
+            logger.info(f"Could not find volume or last price for {value['ticker']}")
+            continue
+            # value['volume'] = 0
+            # value['last_price'] = 0
 
-    df = pd.DataFrame(details)
+    df = pd.DataFrame(parsed_details)
+    print(df)
+    print()
     return df
 
 def smart_spreads_filter(contracts,underlying_price):
@@ -248,9 +256,6 @@ def smart_spreads_filter(contracts,underlying_price):
         contract['pct_to_money'] = abs(underlying_price - contract['strike'])/underlying_price
         if contract['pct_to_money'] < .075:
             new_contracts.append(contract)
-    print("NEW CONTRACTS")
-    print(new_contracts)
-    print()
     return new_contracts
 
 def format_dates(now):

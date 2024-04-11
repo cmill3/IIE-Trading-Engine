@@ -348,14 +348,12 @@ def delete_order_record(order_id, table):
 
 def get_trading_balance(trading_strategy, env):
     strat_env = f"{trading_strategy}-{env}"
-    print(strat_env)
     trading_balance_table = ddb.Table('icarus-trading-balances')
     response = trading_balance_table.get_item(
         Key={
             'strategy_name': strat_env  
         }
     )
-    print(response) 
     trading_balance = float(response['Item']['trading_balance'])
     return trading_balance
 

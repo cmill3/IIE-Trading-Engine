@@ -192,18 +192,18 @@ def convert_timestamp_est(timestamp):
 
 def bet_sizer(contracts, date, spread_length, call_put,strategy):
     target_cost = (.004* pull_trading_balance())
-    to_stamp = (date - timedelta(days=1)).strftime("%Y-%m-%d")
-    from_stamp = (date - timedelta(days=5)).strftime("%Y-%m-%d")
-    volumes = []
+    # to_stamp = (date - timedelta(days=1)).strftime("%Y-%m-%d")
+    # from_stamp = (date - timedelta(days=5)).strftime("%Y-%m-%d")
+    # volumes = []
     # transactions = []
     # contracts_details = []
-    for contract in contracts:
-        polygon_result = polygon_call_stocks(contract['contract_ticker'],from_stamp, to_stamp,multiplier=1,timespan="day")
-        if len(polygon_result) == 0:
-            volumes.append(0)
-            continue
-        contract['avg_volume'], contract['avg_transactions'] = build_volume_features(polygon_result)
-        volumes.append(contract['avg_volume'])
+    # for contract in contracts:
+    #     polygon_result = polygon_call_stocks(contract['contract_ticker'],from_stamp, to_stamp,multiplier=1,timespan="day")
+    #     if len(polygon_result) == 0:
+    #         volumes.append(0)
+    #         continue
+    #     contract['avg_volume'], contract['avg_transactions'] = build_volume_features(polygon_result)
+    #     volumes.append(contract['avg_volume'])
 
 
     contracts = size_spread_quantities(contracts, target_cost)
@@ -223,72 +223,72 @@ def build_volume_features(df):
     avg_transactions = df['n'].mean()
     return avg_volume, avg_transactions
 
-def finalize_trade(contracts_details, spread_cost, target_cost):
-    if len(contracts_details) == 1:
-        spread_multiplier = math.floor(target_cost/spread_cost)
-        return [spread_multiplier]
-    elif len(contracts_details) == 2:
-        if (1*target_cost) >= spread_cost >= (.9*target_cost):
-            return [1,1]
-        elif spread_cost > (1*target_cost):
-            spread2_cost = calculate_spread_cost(contracts_details[1:])
-            if spread2_cost < (1*target_cost):
-                return [0,1]
-            else:
-                contract = contracts_details[0]
-                single_contract_cost = 100 * contract['last_price']
-                if single_contract_cost > (1*target_cost):
-                    contract = contracts_details[1]
-                    single_contract_cost = 100 * contract['last_price']
-                    if single_contract_cost > (1*target_cost):
-                        return [0,0]
-                else:
-                    return [1,0]
-        elif spread_cost < (.9*target_cost):
-            spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
-            if add_one:  
-                return [(spread_multiplier+1),spread_multiplier]
-            else:
-                return [spread_multiplier,spread_multiplier]
-        else:
-            print("ERROR")
-            return [0,0]
-    elif len(contracts_details) >= 3:
-        contracts_details = contracts_details[0:3]
-        if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
-            return [1,1,1]
-        elif spread_cost > (1*target_cost):
-            spread2_cost = calculate_spread_cost(contracts_details[1:])
-            if spread2_cost < (1*target_cost):
-                return [0,1,1]
-            else:
-                contract = contracts_details[0]
-                single_contract_cost = 100 * contract['last_price']
-                if single_contract_cost > (1*target_cost):
-                    contract = contracts_details[1]
-                    single_contract_cost = 100 * contract['last_price']
-                    if single_contract_cost > (1*target_cost):
-                        contract = contracts_details[2]
-                        single_contract_cost = 100 * contract['last_price']
-                        if single_contract_cost > (1*target_cost):
-                            return [0,0,0]
-                        else:
-                            return [0,0,1]
-                    else:
-                        return [0,1,0]
-                else:
-                    return [1,0,0] 
-        elif spread_cost < (.9*target_cost):
-            spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
-            if add_one:  
-                return [(spread_multiplier+1),spread_multiplier,spread_multiplier]
-            else:
-                return [spread_multiplier,spread_multiplier,spread_multiplier]
-        else:
-            print("ERROR")
-            return [0,0,0]
-    else:
-        return "NO TRADES"
+# def finalize_trade(contracts_details, spread_cost, target_cost):
+#     if len(contracts_details) == 1:
+#         spread_multiplier = math.floor(target_cost/spread_cost)
+#         return [spread_multiplier]
+#     elif len(contracts_details) == 2:
+#         if (1*target_cost) >= spread_cost >= (.9*target_cost):
+#             return [1,1]
+#         elif spread_cost > (1*target_cost):
+#             spread2_cost = calculate_spread_cost(contracts_details[1:])
+#             if spread2_cost < (1*target_cost):
+#                 return [0,1]
+#             else:
+#                 contract = contracts_details[0]
+#                 single_contract_cost = 100 * contract['last_price']
+#                 if single_contract_cost > (1*target_cost):
+#                     contract = contracts_details[1]
+#                     single_contract_cost = 100 * contract['last_price']
+#                     if single_contract_cost > (1*target_cost):
+#                         return [0,0]
+#                 else:
+#                     return [1,0]
+#         elif spread_cost < (.9*target_cost):
+#             spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
+#             if add_one:  
+#                 return [(spread_multiplier+1),spread_multiplier]
+#             else:
+#                 return [spread_multiplier,spread_multiplier]
+#         else:
+#             print("ERROR")
+#             return [0,0]
+#     elif len(contracts_details) >= 3:
+#         contracts_details = contracts_details[0:3]
+#         if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
+#             return [1,1,1]
+#         elif spread_cost > (1*target_cost):
+#             spread2_cost = calculate_spread_cost(contracts_details[1:])
+#             if spread2_cost < (1*target_cost):
+#                 return [0,1,1]
+#             else:
+#                 contract = contracts_details[0]
+#                 single_contract_cost = 100 * contract['last_price']
+#                 if single_contract_cost > (1*target_cost):
+#                     contract = contracts_details[1]
+#                     single_contract_cost = 100 * contract['last_price']
+#                     if single_contract_cost > (1*target_cost):
+#                         contract = contracts_details[2]
+#                         single_contract_cost = 100 * contract['last_price']
+#                         if single_contract_cost > (1*target_cost):
+#                             return [0,0,0]
+#                         else:
+#                             return [0,0,1]
+#                     else:
+#                         return [0,1,0]
+#                 else:
+#                     return [1,0,0] 
+#         elif spread_cost < (.9*target_cost):
+#             spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
+#             if add_one:  
+#                 return [(spread_multiplier+1),spread_multiplier,spread_multiplier]
+#             else:
+#                 return [spread_multiplier,spread_multiplier,spread_multiplier]
+#         else:
+#             print("ERROR")
+#             return [0,0,0]
+#     else:
+#         return "NO TRADES"
     
 def size_spread_quantities(contracts_details, target_cost):
     adjusted_target_cost = target_cost/100
@@ -336,7 +336,7 @@ def configure_contracts_for_trade_pct_based(contracts_details, target_cost, spre
             else:
                 break
 
-        spread_candidates.append({"contract_ticker": contract['contract_ticker'], "quantity": contract_quantity,"last_price": contract['last_price']})
+        spread_candidates.append({"contract_ticker": contract['contract_ticker'], "quantity": contract_quantity,"last_price": contract['last_price'],"volume": contract['volume']})
     return spread_candidates
             
 def add_spread_cost(spread_cost, target_cost, contracts_details):

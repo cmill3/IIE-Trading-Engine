@@ -87,7 +87,7 @@ def check_time():
     minute = current_time.minute
     
     if hour <= 9:
-        if hour == 9 and minute > 45:
+        if hour == 9 and minute >= 45:
             return "The time is within the allowed window."
         else:
             raise ValueError("The current time is outside the allowed window!")
