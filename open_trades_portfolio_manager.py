@@ -43,6 +43,8 @@ def manage_portfolio_inv(event, context):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     open_trades_df = db.get_all_orders_from_dynamo(table)
     open_trades_df = open_trades_df.loc[open_trades_df['trading_strategy'] == strategy]
+    open_trades_df['qty_executed_open'] = open_trades_df['qty_executed_open'].astype(float)
+    open_trades_df = open_trades_df.loc[open_trades_df['qty_executed_open'] > 0]
 
     capital_return = 0
     if len(open_trades_df) == 0:
