@@ -81,10 +81,9 @@ def get_business_days(transaction_date):
 def calculate_floor_pct(row):
     trading_hours = [9,10,11,12,13,14,15]
     from_stamp = row['order_transaction_date'].split('T')[0]
-    time_stamp = convert_datestring_to_timestamp_UTC(row['order_transaction_date'])
-    prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "10", "minute")
+    time_stamp = datetime_to_timestamp_UTC(row['order_transaction_date'])
+    prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "15", "minute")
     trimmed_df = prices.loc[prices['t'] > time_stamp]
-    trimmed_df['t'] = trimmed_df['t'].apply(lambda x: int(x/1000))
     trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
     trimmed_df['time'] = trimmed_df['date'].apply(lambda x: x.time())
     trimmed_df['hour'] = trimmed_df['date'].apply(lambda x: x.hour)
@@ -106,10 +105,9 @@ def calculate_floor_pct(row):
 def get_derivative_max_value(row):
     trading_hours = [9,10,11,12,13,14,15]
     from_stamp = row['order_transaction_date'].split('T')[0]
-    time_stamp = convert_datestring_to_timestamp_UTC(row['order_transaction_date'])
-    prices = polygon_call_stocks(f"O:{row['option_symbol']}", from_stamp, current_date, "10", "minute")
+    time_stamp = datetime_to_timestamp_UTC(row['order_transaction_date'])
+    prices = polygon_call_stocks(f"O:{row['option_symbol']}", from_stamp, current_date, "15", "minute")
     trimmed_df = prices.loc[prices['t'] > time_stamp]
-    trimmed_df['t'] = trimmed_df['t'].apply(lambda x: int(x/1000))
     trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
     trimmed_df['time'] = trimmed_df['date'].apply(lambda x: x.time())
     trimmed_df['hour'] = trimmed_df['date'].apply(lambda x: x.hour)
@@ -181,17 +179,20 @@ def build_date():
     return f"{temp_year}/{month}/{day}/{date.hour}"
 
 def convert_timestamp_est(timestamp):
-    # Create a naive datetime object from the UNIX timestamp
-    dt_naive = datetime.utcfromtimestamp(timestamp)
-    # Convert the naive datetime object to a timezone-aware one (UTC)
-    dt_utc = pytz.utc.localize(dt_naive)
-    # Convert the UTC datetime to EST
-    dt_est = dt_utc.astimezone(pytz.timezone('US/Eastern'))
-    
-    return dt_est
 
+    # Create a UTC datetime object from the timestamp
+    utc_datetime = datetime.utcfromtimestamp(timestamp).replace(tzinfo=pytz.utc)
+    
+    # Define the EST timezone
+    est_timezone = pytz.timezone('America/New_York')
+    
+    # Convert the UTC datetime to EST
+    est_datetime = utc_datetime.astimezone(est_timezone)
+    print(est_datetime)
+    return est_datetime
+    
 def bet_sizer(contracts, date, spread_length, call_put,strategy):
-    target_cost = (.004* pull_trading_balance())
+    target_cost = (.00825* pull_trading_balance())
     # to_stamp = (date - timedelta(days=1)).strftime("%Y-%m-%d")
     # from_stamp = (date - timedelta(days=5)).strftime("%Y-%m-%d")
     # volumes = []
@@ -359,21 +360,13 @@ def add_spread_cost(spread_cost, target_cost, contracts_details):
 
     return spread_multiplier, add_one
 
-def convert_timestamp_est(timestamp):
-    # Create a naive datetime object from the UNIX timestamp
-    dt_naive = datetime.utcfromtimestamp(timestamp)
-    # Convert the naive datetime object to a timezone-aware one (UTC)
-    dt_utc = pytz.utc.localize(dt_naive)
-    # Convert the UTC datetime to EST
-    dt_est = dt_utc.astimezone(pytz.timezone('US/Eastern'))
-    
-    return dt_est
 
-def convert_datestring_to_timestamp_UTC(date_string):
-    ## takes in date string and converts to timestamp in GMT time
-    ## used to filter polygon results
-    date_obj = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
-    timestamp = date_obj.timestamp()
+def datetime_to_timestamp_UTC(datetime_str):
+    # Parse the datetime string to a datetime object with UTC timezone
+    dt = datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+    # Convert the datetime object to a timestamp (seconds since the Unix epoch)
+    timestamp = dt.timestamp()
+    
     return timestamp
 
 def log_message_close(row, id, status_code, reason, error,lambda_signifier):

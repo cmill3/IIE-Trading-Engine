@@ -47,8 +47,9 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
         sell_code = "VCSell"
         return sell_code, "VCSell"
     
+    # print(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
-    logger.info(f"Floor_pct: {Floor_pct} max_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_3D_CDVOLAGG")
+    logger.info(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_3D_CDVOLAGG")
 
 
     sell_code = 0
@@ -165,8 +166,9 @@ def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
         sell_code = "VCSell"
         return sell_code, "VCSell"
     
+    # print(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
-    logger.info(f"Floor_pct: {Floor_pct} max_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_1D_CDVOLAGG")
+    logger.info(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_1D_CDVOLAGG")
 
     sell_code = 0
     reason = ""
@@ -223,6 +225,7 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
         sell_code = "VCSell"
         return sell_code, "VCSell"
     
+    # print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
     logger.info(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in CALL_1D_CDVOLAGG")
 

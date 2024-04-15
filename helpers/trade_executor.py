@@ -167,7 +167,7 @@ def date_performance_check(row, env, lambda_signifier):
         return closing_order_id, capital_return
     else:
         return None, None
-
+    
 def evaluate_performance_inv(current_price, derivative_price, row):
     if row['trading_strategy'] in CDVOL_STRATEGIES:
         if row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:

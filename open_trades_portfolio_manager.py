@@ -95,4 +95,4 @@ def check_time():
         raise ValueError("The current time is outside the allowed window!")
     
 if __name__ == "__main__":
-   store_signifier("TEST+000")
+   manage_portfolio_inv(None, None)
