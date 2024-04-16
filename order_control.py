@@ -67,13 +67,13 @@ def exposure_totalling():
 
     # total open trades & values in df
     df = pd.DataFrame.from_dict(position_list)
-    df['underlying_symbol'] = df['symbol'].apply(lambda symbol: helper.pull_symbol(symbol))
+    df['underlying_symbol'] = df['symbol'].apply(lambda symbol: symbol[:-15])
     agg_functions = {'cost_basis': ['sum', 'mean'], 'quantity': 'sum'}
     df_new = df.groupby(df['underlying_symbol']).aggregate(agg_functions)
 
     # export df as csv --> AWS S3
-    year, month, day, hour, minute = helper.date_and_time()
-    s3.put_object(Bucket='inv-alerts-trading-data', Key=f'positions_exposure/{env}/{year}/{month}/{day}/{hour}/{minute}.csv', Body=df_new.to_csv(index=False))
+    date = datetime.now()
+    s3.put_object(Bucket='inv-alerts-trading-data', Key=f'positions_exposure/{env}/{date.year}/{date.month}/{date.day}/{date.hour}/{date.minute}.csv', Body=df_new.to_csv(index=False))
     return "Exposure Analysis Complete"
 
 if __name__ == "__main__":

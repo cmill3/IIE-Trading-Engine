@@ -125,9 +125,9 @@ def process_open_order(row,open_order_id,position_id,json_response, status_code,
 
     return new_balance, underlying_purchase_price
 
-def process_dynamo_orders(formatted_df, base_url, account_id, access_token, table):
-    processed_df = db.process_opened_ordersv2(formatted_df, base_url, account_id, access_token, env, table)
-    return processed_df
+# def process_dynamo_orders(formatted_df, base_url, account_id, access_token, table):
+#     processed_df = db.process_opened_ordersv2(formatted_df, base_url, account_id, access_token, env, table)
+#     return processed_df
 
 def close_order(row, env, lambda_signifier, reason):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)

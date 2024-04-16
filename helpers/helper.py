@@ -36,12 +36,6 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
         trading_days_to_add -= 1
     return current_date
 
-def pull_symbol(symbol):
-    return symbol[:-15]
-    
-def date_and_time():
-    return date.year, date.month, date.day, date.hour, date.minute
-    
 def calculate_dt_features(transaction_date, sell_by):
     transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
     sell_by_dt = datetime(int(sell_by[0:4]), int(sell_by[5:7]), int(sell_by[8:10]),20)
@@ -49,7 +43,6 @@ def calculate_dt_features(transaction_date, sell_by):
     day_diff = abs(day_diff.days)
     return day_diff
     
-
 def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
     try:
         payload={}
@@ -179,117 +172,29 @@ def build_date():
     return f"{temp_year}/{month}/{day}/{date.hour}"
 
 def convert_timestamp_est(timestamp):
-
     # Create a UTC datetime object from the timestamp
     utc_datetime = datetime.utcfromtimestamp(timestamp).replace(tzinfo=pytz.utc)
-    
     # Define the EST timezone
     est_timezone = pytz.timezone('America/New_York')
-    
     # Convert the UTC datetime to EST
     est_datetime = utc_datetime.astimezone(est_timezone)
-    print(est_datetime)
     return est_datetime
     
 def bet_sizer(contracts, date, spread_length, call_put,strategy):
-    target_cost = (.00825* pull_trading_balance())
-    # to_stamp = (date - timedelta(days=1)).strftime("%Y-%m-%d")
-    # from_stamp = (date - timedelta(days=5)).strftime("%Y-%m-%d")
-    # volumes = []
-    # transactions = []
-    # contracts_details = []
-    # for contract in contracts:
-    #     polygon_result = polygon_call_stocks(contract['contract_ticker'],from_stamp, to_stamp,multiplier=1,timespan="day")
-    #     if len(polygon_result) == 0:
-    #         volumes.append(0)
-    #         continue
-    #     contract['avg_volume'], contract['avg_transactions'] = build_volume_features(polygon_result)
-    #     volumes.append(contract['avg_volume'])
-
-
+    target_cost = (.00825* db.get_trading_balance(portfolio_strategy, env))
     contracts = size_spread_quantities(contracts, target_cost)
 
     return contracts
 
-def pull_trading_balance():
-    return db.get_trading_balance(portfolio_strategy, env)
 
 def calculate_spread_cost(contract):
     cost = (100*float(contract['last_price']))
-    print(cost)
     return cost
 
 def build_volume_features(df):
     avg_volume = df['v'].mean()
     avg_transactions = df['n'].mean()
     return avg_volume, avg_transactions
-
-# def finalize_trade(contracts_details, spread_cost, target_cost):
-#     if len(contracts_details) == 1:
-#         spread_multiplier = math.floor(target_cost/spread_cost)
-#         return [spread_multiplier]
-#     elif len(contracts_details) == 2:
-#         if (1*target_cost) >= spread_cost >= (.9*target_cost):
-#             return [1,1]
-#         elif spread_cost > (1*target_cost):
-#             spread2_cost = calculate_spread_cost(contracts_details[1:])
-#             if spread2_cost < (1*target_cost):
-#                 return [0,1]
-#             else:
-#                 contract = contracts_details[0]
-#                 single_contract_cost = 100 * contract['last_price']
-#                 if single_contract_cost > (1*target_cost):
-#                     contract = contracts_details[1]
-#                     single_contract_cost = 100 * contract['last_price']
-#                     if single_contract_cost > (1*target_cost):
-#                         return [0,0]
-#                 else:
-#                     return [1,0]
-#         elif spread_cost < (.9*target_cost):
-#             spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
-#             if add_one:  
-#                 return [(spread_multiplier+1),spread_multiplier]
-#             else:
-#                 return [spread_multiplier,spread_multiplier]
-#         else:
-#             print("ERROR")
-#             return [0,0]
-#     elif len(contracts_details) >= 3:
-#         contracts_details = contracts_details[0:3]
-#         if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
-#             return [1,1,1]
-#         elif spread_cost > (1*target_cost):
-#             spread2_cost = calculate_spread_cost(contracts_details[1:])
-#             if spread2_cost < (1*target_cost):
-#                 return [0,1,1]
-#             else:
-#                 contract = contracts_details[0]
-#                 single_contract_cost = 100 * contract['last_price']
-#                 if single_contract_cost > (1*target_cost):
-#                     contract = contracts_details[1]
-#                     single_contract_cost = 100 * contract['last_price']
-#                     if single_contract_cost > (1*target_cost):
-#                         contract = contracts_details[2]
-#                         single_contract_cost = 100 * contract['last_price']
-#                         if single_contract_cost > (1*target_cost):
-#                             return [0,0,0]
-#                         else:
-#                             return [0,0,1]
-#                     else:
-#                         return [0,1,0]
-#                 else:
-#                     return [1,0,0] 
-#         elif spread_cost < (.9*target_cost):
-#             spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
-#             if add_one:  
-#                 return [(spread_multiplier+1),spread_multiplier,spread_multiplier]
-#             else:
-#                 return [spread_multiplier,spread_multiplier,spread_multiplier]
-#         else:
-#             print("ERROR")
-#             return [0,0,0]
-#     else:
-#         return "NO TRADES"
     
 def size_spread_quantities(contracts_details, target_cost):
     adjusted_target_cost = target_cost/100
@@ -436,21 +341,9 @@ def pull_model_config(trading_strategy):
     model_config = model_config.loc[model_config['strategy'] == trading_strategy]
     return {"target_value": model_config['target_value'].values[0], "strategy": model_config['strategy'].values[0]}
 
-def pull_balance_df():
-    s3 = boto3.client('s3')
-    objects = s3.list_objects_v2(Bucket='inv-alerts-trading-data',Prefix=f'trading_balance/{env}')['Contents']
-    
-    # Sort the objects by last modified date and get the most recent one
-    latest_file = sorted(objects, key=lambda x: x['LastModified'], reverse=True)[0]
-    
-    # Download the most recent file and load it into a pandas DataFrame
-    csv_obj = s3.get_object(Bucket='inv-alerts-trading-data', Key=latest_file['Key'])
-    df = pd.read_csv(csv_obj.get("Body"))
-
-    return df
 
 if __name__ == "__main__":
-    x = convert_datestring_to_timestamp_UTC("2024-03-28T15:09:38.959Z")
-    # x = convert_timestamp_est((1711652978959/1000))
+    # x = convert_datestring_to_timestamp_UTC("2024-03-28T15:09:38.959Z")
+    x = convert_timestamp_est((1711652978959))
     print(x)
     
