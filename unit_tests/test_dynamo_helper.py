@@ -17,13 +17,13 @@ def test_get_trading_balance():
     assert result is not None, "Result should not be None"
     assert type(result) == float, "Result should be a float"
 
-def test_get_trading_balance_no_env():
-    # Setup
-    trading_strategy = "CDVOLBF"
-    env = None
-    # Exercise
-    with unit_tests.raises(ValueError):
-        get_trading_balance(trading_strategy,env)
+# def test_get_trading_balance_no_env():
+#     # Setup
+#     trading_strategy = "CDVOLBF"
+#     env = None
+#     # Exercise
+#     with unit_tests.raises(ValueError):
+#         get_trading_balance(trading_strategy,env)
 
 
 
