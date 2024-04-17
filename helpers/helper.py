@@ -51,9 +51,6 @@ def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
         response = requests.request("GET", url, headers=headers, data=payload)
         res_df = pd.DataFrame(json.loads(response.text)['results'])
         res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
-        res_df['date'] = res_df['t'].apply(lambda x:convert_timestamp_est(x))
-        res_df['hour'] = res_df['date'].apply(lambda x: x.hour)
-        res_df['minute'] = res_df['date'].apply(lambda x: x.minute)
         return res_df
     except Exception as e:  
         logger.info(e)
@@ -80,9 +77,11 @@ def calculate_floor_pct(row):
     trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
     trimmed_df['time'] = trimmed_df['date'].apply(lambda x: x.time())
     trimmed_df['hour'] = trimmed_df['date'].apply(lambda x: x.hour)
+    trimmed_df['minute'] = trimmed_df['date'].apply(lambda x: x.minute)
     trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
     trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
     trimmed_df = trimmed_df.iloc[1:]
+    print(trimmed_df)
     high_price = trimmed_df['h'].max()
     low_price = trimmed_df['l'].min()
     if len(trimmed_df) == 0:
@@ -97,17 +96,22 @@ def calculate_floor_pct(row):
 
 def get_derivative_max_value(row):
     trading_hours = [9,10,11,12,13,14,15]
-    from_stamp = row['order_transaction_date'].split('T')[0]
-    time_stamp = datetime_to_timestamp_UTC(row['order_transaction_date'])
-    prices = polygon_call_stocks(f"O:{row['option_symbol']}", from_stamp, current_date, "15", "minute")
-    trimmed_df = prices.loc[prices['t'] > time_stamp]
-    trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
-    trimmed_df['time'] = trimmed_df['date'].apply(lambda x: x.time())
-    trimmed_df['hour'] = trimmed_df['date'].apply(lambda x: x.hour)
-    trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
-    trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
-    trimmed_df = trimmed_df.iloc[1:]
-    high_price = trimmed_df['h'].max()
+    try:
+        from_stamp = row['order_transaction_date'].split('T')[0]
+        time_stamp = datetime_to_timestamp_UTC(row['order_transaction_date'])
+        prices = polygon_call_stocks(f"O:{row['option_symbol']}", from_stamp, current_date, "15", "minute")
+        trimmed_df = prices.loc[prices['t'] > time_stamp]
+        trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
+        trimmed_df['time'] = trimmed_df['date'].apply(lambda x: x.time())
+        trimmed_df['hour'] = trimmed_df['date'].apply(lambda x: x.hour)
+        trimmed_df['minute'] = trimmed_df['date'].apply(lambda x: x.minute)
+        trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
+        trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
+        trimmed_df = trimmed_df.iloc[1:]
+        high_price = trimmed_df['h'].max()
+    except Exception as e:
+        logger.info(e)
+        return "ERROR"
     return high_price
 
 
@@ -183,7 +187,6 @@ def convert_timestamp_est(timestamp):
 def bet_sizer(contracts, date, spread_length, call_put,strategy):
     target_cost = (.00825* db.get_trading_balance(portfolio_strategy, env))
     contracts = size_spread_quantities(contracts, target_cost)
-
     return contracts
 
 
