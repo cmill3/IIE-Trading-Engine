@@ -1,376 +1,126 @@
-from datetime import datetime, timedelta
-from helpers.constants import CALL_STRATEGIES, PUT_STRATEGIES
-import requests
-import pandas as pd
-import json
-import pytz
-import boto3
-import math
-import logging
+from helpers.helper import convert_timestamp_est, datetime_to_timestamp_UTC
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
-now = datetime.now()
-dt = now.strftime("%Y-%m-%d_%H:%M:%S")
-current_date = now.strftime("%Y-%m-%d")
 
-limit = 50000
-key = "A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp"
+
+
+# def get_order_info(base_url: str, account_id: str, access_token:str, order_id: str):
+    
+#     response = requests.post(f'{base_url}accounts/{account_id}/orders/{order_id}', 
+#         params={"account_id": account_id, "id": order_id, "includeTags": True}, 
+#         headers={'Authorization': f'Bearer {access_token}', 'Accept': 'application/json'})
+#     print(response.status_code)
+
+#     if response.status_code == 200:
+#         response_json = response.json()
+#         exec_quantity = response_json['order']['exec_quantity']
+#         average_fill_price = response_json['order']['avg_fill_price']
+#         last_fill_price = response_json['order']['last_fill_price']
+#         transaction_dt = response_json['order']['transaction_date']
+#         created_dt = response_json['order']['create_date']
+#         return {"average_fill_price": average_fill_price, "last_fill_price": last_fill_price, "exec_quantity": exec_quantity, "transaction_date": transaction_dt, "created_date": created_dt, "status": "Success"}
+#     else:
+#         print(f"Order information for order_id: {order_id} has failed. Review option contract availability and code.")
+#         return {"status": "Does not exist."}
     
 
-def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days later for the data set built to include just trading days, but doesnt filter holiday
-    while trading_days_to_add > 0:
-        current_date += timedelta(days=1)
-        weekday = current_date.weekday()
-        if weekday >= 5: # sunday = 6
-            continue
-        trading_days_to_add -= 1
-    return current_date
+# def get_open_trades_by_orderid(order_id_list):
+#     response = client.batch_get_item(
+#         RequestItems={
+#             'icarus-orders-table': {
+#                 'Keys': [{'order_id': {'S': id}} for id in order_id_list]
+#             }
+#         }
+#     )
+#     items = response['Responses']['icarus-orders-table']
+#     print(items)
+#     result_df = pd.DataFrame(items)
 
-def pull_symbol(symbol):
-    sym = " ".join(re.findall("[a-zA-Z]+", symbol))
-    underlying_symbol = sym[:-1]
-    return underlying_symbol
-    
-def date_and_time():
-    year = date.today().year
-    month = date.today().month
-    day = date.today().day
-    hour = datetime.datetime.now().hour
-    return year, month, day, hour
-    
-def calculate_dt_features(transaction_date, sell_by):
-    transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
-    sell_by_dt = datetime(int(sell_by[0:4]), int(sell_by[5:7]), int(sell_by[8:10]),20)
-    day_diff = transaction_dt - now
-    day_diff = abs(day_diff.days)
-    return day_diff
-    
-
-def polygon_call(contract, from_stamp, to_stamp, multiplier, timespan):
-    payload={}
-    headers = {}
-    url = f"https://api.polygon.io/v2/aggs/ticker/O:{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-    print(response.text)
-    res_df = pd.DataFrame(json.loads(response.text)['results'])
-    res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
-    res_df['date'] = res_df['t'].apply(lambda x: datetime.fromtimestamp(x))
-    return res_df
-
-def polygon_call_stocks(contract, from_stamp, to_stamp, multiplier, timespan):
-    try:
-        payload={}
-        headers = {}
-        url = f"https://api.polygon.io/v2/aggs/ticker/{contract}/range/{multiplier}/{timespan}/{from_stamp}/{to_stamp}?adjusted=true&sort=asc&limit={limit}&apiKey={key}"
-        response = requests.request("GET", url, headers=headers, data=payload)
-        res_df = pd.DataFrame(json.loads(response.text)['results'])
-        res_df['t'] = res_df['t'].apply(lambda x: int(x/1000))
-        res_df['date'] = res_df['t'].apply(lambda x:convert_timestamp_est(x))
-        res_df['hour'] = res_df['date'].apply(lambda x: x.hour)
-        res_df['minute'] = res_df['date'].apply(lambda x: x.minute)
-        return res_df
-    except Exception as e:  
-        print(e)
-        return pd.DataFrame()
-
-def get_business_days(transaction_date):
-    """
-    Returns the number of business days (excluding weekends) between two dates. For now we
-    aren't considering market holidays because that is how the training data was generated.
-    """
-    
-    transaction_dt = datetime.strptime(transaction_date, "%Y-%m-%dT%H:%M:%S.%fZ")
-    # We aren't inclusive of the transaction date
-    days = (now - transaction_dt).days 
-
-    complete_weeks = days // 7
-    remaining_days = days % 7
-
-    # Calculate the number of weekend days in the complete weeks
-    weekends = complete_weeks * 2
-
-    # Adjust for the remaining days
-    if remaining_days:
-        start_weekday = transaction_dt.weekday()
-        end_weekday = now.weekday()
-
-        if start_weekday <= end_weekday:
-            if start_weekday <= 5 and end_weekday >= 5:
-                weekends += 2  # Include both Saturdays and Sundays
-            elif start_weekday <= 4 and end_weekday >= 4:
-                weekends += 1  # Include only Saturdays
-        else:
-            if start_weekday <= 5:
-                weekends += 1  # Include Saturday of the first week
-
-    business_days = days - weekends
-    return business_days 
-
-def calculate_floor_pct(row):
-    trading_hours = [9,10,11,12,13,14,15]
-    from_stamp = row["order_transaction_date"].split('T')[0]
-    time_str = row["order_transaction_date"].split('.')[0]
-    original_datetime = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
-    est_stamp = convert_datetime_est(original_datetime)
-    prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "10", "minute")
-    trimmed_df = prices.loc[prices['t'] > est_stamp]
-    trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
-    trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
-    trimmed_df = trimmed_df.iloc[1:]
-    high_price = trimmed_df['h'].max()
-    low_price = trimmed_df['l'].min()
-    if len(trimmed_df) == 0:
-        return float(row['underlying_purchase_price'])
-    if row['trading_strategy'] in PUT_STRATEGIES:
-        return low_price
-    elif row['trading_strategy'] in CALL_STRATEGIES:
-        return high_price
-    else:
-        return 0
-   
-
-def get_derivative_max_value(row):
-    trading_hours = [9,10,11,12,13,14,15]
-    from_stamp = row["order_transaction_date"].split('T')[0]
-    time_str = row["order_transaction_date"].split('.')[0]
-    original_datetime = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
-    est_stamp = convert_datetime_est(original_datetime)
-    prices = polygon_call_stocks(f"O:row['underlying_symbol']", from_stamp, current_date, "10", "minute")
-    trimmed_df = prices.loc[prices['t'] > est_stamp]
-    trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
-    trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
-    trimmed_df = trimmed_df.iloc[1:]
-    high_price = trimmed_df['h'].max()
-    return high_price
-
-
-def pull_opened_data_s3(path, bucket,date_prefix):
-    dfs = []
-    keys = s3.list_objects(Bucket=bucket,Prefix=f"{path}/{date_prefix}")["Contents"]
-    for object in keys:
-        key = object['Key']
-        dataset = s3.get_object(Bucket=bucket,Key=f"{key}")
-        df = pd.read_csv(dataset.get("Body"))
-        df = format_pending_df(df)
-        if len(df) > 0:
-            dfs.append(df)
-    full_df = pd.concat(dfs)
-    full_df.reset_index(drop=True)
-    return full_df
-
-def pull_data_s3(path, bucket,date_prefix):
-    dfs = []
-    keys = s3.list_objects(Bucket=bucket,Prefix=f"{path}/{date_prefix}")["Contents"]
-    for object in keys:
-        key = object['Key']
-        dataset = s3.get_object(Bucket=bucket,Key=f"{key}")
-        df = pd.read_csv(dataset.get("Body"))
-        if len(df) > 0:
-            dfs.append(df)
-    full_df = pd.concat(dfs)
-    full_df.reset_index(drop=True)
-    return full_df
-
-def calculate_date_prefix():
-    now = datetime.now()
-    date_prefix = now.strftime("%Y/%m/%d")
-    return date_prefix
-
-def format_pending_df(df):
-    columns = df['Unnamed: 0'].values
-    indexes = df.columns.values[1:]
-
-    unpacked_data = []
-    for index in indexes:
-        data = df[index].values
-        unpacked_data.append(data)
-    
-    formatted_df = pd.DataFrame(unpacked_data,indexes,columns)
-    return formatted_df
-
-def build_date():
-    date = datetime.now()
-    
-    if date.day < 10:
-        day = "0" + str(date.day)
-    else:
-        day = str(date.day)
-        
-    if date.month < 10:
-        month = "0" + str(date.month)
-    else:
-        month = str(date.month)
-
-    temp_year = date.year
-    
-    # date_dict ={
-    #     'month': month,
-    #     'day': day,
-    #     'year': str(temp_year)
-    #     }
-    
-    return f"{temp_year}/{month}/{day}/{date.hour}"
-
-def convert_timestamp_est(timestamp):
-    # Create a naive datetime object from the UNIX timestamp
-    dt_naive = datetime.utcfromtimestamp(timestamp)
-    # Convert the naive datetime object to a timezone-aware one (UTC)
-    dt_utc = pytz.utc.localize(dt_naive)
-    # Convert the UTC datetime to EST
-    dt_est = dt_utc.astimezone(pytz.timezone('US/Eastern'))
-    return dt_est
-
-def convert_datetime_est(dt_naive):
-    dt_utc = pytz.utc.localize(dt_naive)
-    timestamp_est = dt_utc.astimezone(pytz.timezone('US/Eastern')).timestamp()
-    return timestamp_est
-
-def bet_sizer(contracts, date, spread_length, call_put):
-    if call_put == "call":
-        target_cost = .0007* pull_trading_balance()
-    elif call_put == "put":
-        target_cost = .0007* pull_trading_balance()
-
-    to_stamp = (date - timedelta(days=1)).strftime("%Y-%m-%d")
-    from_stamp = (date - timedelta(days=5)).strftime("%Y-%m-%d")
-    volumes = []
-    # transactions = []
-    # contracts_details = []
-    for contract in contracts:
-        polygon_result = polygon_call_stocks(contract['contract_ticker'],from_stamp, to_stamp,multiplier=1,timespan="day")
-        if len(polygon_result) == 0:
-            volumes.append(0)
-            continue
-        contract['avg_volume'], contract['avg_transactions'] = build_volume_features(polygon_result)
-        volumes.append(contract['avg_volume'])
-        # transactions.append(contract['avg_transactions'])
-
-    total_vol = sum(volumes)/len(contracts)
-    if total_vol < 40:
-        vol_check = "False"
-    else:
-        vol_check = "True"
-    spread_cost = calculate_spread_cost(contracts)
-    quantities = finalize_trade(contracts, spread_cost, target_cost)
-    print(quantities)
-    for index, contract in enumerate(contracts):
-        if index < 3:
-            try:
-                contract['quantity'] = quantities[index]
-                print(contract['quantity'])
-            except:
-                print("ERROR")
-                print(contracts)
-                print(quantities)
-        else:
-            contract['quantity'] = 0
-    return contracts, vol_check
-
-def pull_trading_balance():
-    ### This is hardcoded for now, but will be replaced with a call to the tradier API
-    return 100000
-
-def calculate_spread_cost(contracts_details):
-    cost = 0
-    for contract in contracts_details:
-        cost += (100*contract['last_price'])
-    return cost
-
-def build_volume_features(df):
-    avg_volume = df['v'].mean()
-    avg_transactions = df['n'].mean()
-    return avg_volume, avg_transactions
-
-def finalize_trade(contracts_details, spread_cost, target_cost):
-    if len(contracts_details) == 1:
-        spread_multiplier = math.floor(target_cost/spread_cost)
-        return [spread_multiplier]
-    elif len(contracts_details) == 2:
-        if (1*target_cost) >= spread_cost >= (.9*target_cost):
-            return [1,1]
-        elif spread_cost > (1*target_cost):
-            spread2_cost = calculate_spread_cost(contracts_details[1:])
-            if spread2_cost < (1*target_cost):
-                return [0,1]
-            else:
-                contract = contracts_details[0]
-                single_contract_cost = 100 * contract['last_price']
-                if single_contract_cost > (1*target_cost):
-                    contract = contracts_details[1]
-                    single_contract_cost = 100 * contract['last_price']
-                    if single_contract_cost > (1*target_cost):
-                        return [0,0]
-                else:
-                    return [1,0]
-        elif spread_cost < (.9*target_cost):
-            spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
-            if add_one:  
-                return [(spread_multiplier+1),spread_multiplier]
-            else:
-                return [spread_multiplier,spread_multiplier]
-        else:
-            print("ERROR")
-            return [0,0]
-    elif len(contracts_details) >= 3:
-        contracts_details = contracts_details[0:3]
-        if (1.1*target_cost) >= spread_cost >= (.9*target_cost):
-            return [1,1,1]
-        elif spread_cost > (1*target_cost):
-            spread2_cost = calculate_spread_cost(contracts_details[1:])
-            if spread2_cost < (1*target_cost):
-                return [0,1,1]
-            else:
-                contract = contracts_details[0]
-                single_contract_cost = 100 * contract['last_price']
-                if single_contract_cost > (1*target_cost):
-                    contract = contracts_details[1]
-                    single_contract_cost = 100 * contract['last_price']
-                    if single_contract_cost > (1*target_cost):
-                        contract = contracts_details[2]
-                        single_contract_cost = 100 * contract['last_price']
-                        if single_contract_cost > (1*target_cost):
-                            return [0,0,0]
-                        else:
-                            return [0,0,1]
-                    else:
-                        return [0,1,0]
-                else:
-                    return [1,0,0] 
-        elif spread_cost < (.9*target_cost):
-            spread_multiplier, add_one = add_spread_cost(spread_cost, target_cost, contracts_details)
-            if add_one:  
-                return [(spread_multiplier+1),spread_multiplier,spread_multiplier]
-            else:
-                return [spread_multiplier,spread_multiplier,spread_multiplier]
-        else:
-            print("ERROR")
-            return [0,0,0]
-    else:
-        return "NO TRADES"
-            
-def add_spread_cost(spread_cost, target_cost, contracts_details):
-    add_one = False
-    spread_multiplier = 1
-    total_cost = spread_cost
-    if spread_cost == 0:
-        return 0, False
-    else:
-        while total_cost <= (1*target_cost):
-            spread_multiplier += 1
-            total_cost = spread_cost * spread_multiplier
-        
-        if total_cost > (1*target_cost):
-            spread_multiplier -= 1
-            total_cost -= spread_cost
-
-        if total_cost < (.67*target_cost):
-            add_one = True
-
-    return spread_multiplier, add_one
+#     result_df = result_df.applymap(extract_values_from_dict)
+#     return result_df
 
 if __name__ == "__main__":
-    hi = get_derivative_max_value("MRNA240119C00101000","2024-01-18T16:43:45.161Z")
-    print(hi)
+    # x = convert_datestring_to_timestamp_UTC("2024-03-28T15:09:38.959Z")
+    x = convert_timestamp_est((1713283505))
+    print(x)
+    print(type(x))
+
+# # Define a function to extract values from dict objects
+# def extract_values_from_dict(d):
+#     return list(d.values())[0] if isinstance(d, dict) else d
+
+# full_transaction_data = {
+# 1234: {"x":"val","orders":[{11:[112]},{12:[113]}]},
+# 112345: {"x":"val","orders":[{11:[112]}]}
+# }
+# # for position in dictt:
+# #     orders = dictt[position]
+# #     print(orders)
+# #     for order in orders:
+# #         print(order,"order")
+# #         # transactions = order[order]
+# #         for transaction in order:
+# #             print("Key:", tra)
+# #             print(transaction)
+
+# for position_id in full_transaction_data:
+#     position = full_transaction_data[position_id]
+#     print(position)
+#     for order in position['orders']:
+#         for order_id in order:
+#             print(order_id)
+#             transactions = order[order_id]
+#             for transaction in transactions:
+#                 print(transaction)
+
+# def break_array_into_partitions(arr):
+#     """
+#     Breaks an array into equal partitions of less than 100 items each.
+
+#     Args:
+#         arr (list): The input array.
+
+#     Returns:
+#         list: A list of partitions, where each partition is a list of items.
+#     """
+#     if len(arr) <= 100:
+#         # If the array has 100 or fewer items, return it as-is
+#         return [arr]
+#     else:
+#         # Calculate the number of partitions needed
+#         num_partitions = (len(arr) + 99) // 100  # Round up to the nearest integer
+
+#         # Calculate the size of each partition
+#         partition_size = len(arr) // num_partitions
+
+#         # Initialize the starting index and ending index for each partition
+#         start = 0
+#         end = partition_size
+
+#         # Create the partitions
+#         partitions = []
+#         for i in range(num_partitions):
+#             # If it's the last partition, include any remaining items
+#             if i == num_partitions - 1:
+#                 partitions.append(arr[start:])
+#             else:
+#                 partitions.append(arr[start:end])
+
+#             # Update the starting and ending index for the next partition
+#             start = end
+#             end += partition_size
+
+#         return partitions
+
+    
+
+# if __name__ == "__main__":
+#     # Example input array with 150 items
+#     my_array = list(range(1, 151))
+
+#     # Call the function to break the array into partitions
+#     partitions = break_array_into_partitions(my_array)
+
+#     # Print the partitions
+#     for i, partition in enumerate(partitions):
+#         print(f"Partition {i + 1}: {partition}")

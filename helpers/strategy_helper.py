@@ -18,7 +18,7 @@ def build_spread(chain_df, spread_length, cp, current_price):
             "strike": row['strike_price'],
             "volume": row['volume'],
             "last_price": row['last_price'],
-            "quantity": 1
+            "quantity": 0
         }
         contract_list.append(temp_object)
     return contract_list

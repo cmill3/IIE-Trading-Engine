@@ -9,6 +9,7 @@ import helpers.tradier as trade
 import helpers.dynamo_helper as db
 import pytz
 import warnings
+import pandas as pd
 warnings.filterwarnings('ignore')
 
 s3 = boto3.client('s3')
@@ -42,6 +43,8 @@ def manage_portfolio_inv(event, context):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
     open_trades_df = db.get_all_orders_from_dynamo(table)
     open_trades_df = open_trades_df.loc[open_trades_df['trading_strategy'] == strategy]
+    open_trades_df['qty_executed_open'] = open_trades_df['qty_executed_open'].astype(float)
+    open_trades_df = open_trades_df.loc[open_trades_df['qty_executed_open'] > 0]
 
     capital_return = 0
     if len(open_trades_df) == 0:
@@ -64,9 +67,17 @@ def evaluate_open_trades(orders_df):
         if closing_order_id is not None:
             total_capital_return += capital_return
             logger.info(f'Total Capital Return: {capital_return}')
-            orders_to_close.append({"open_order_id":row['order_id'],"closing_order_id": closing_order_id})
+            orders_to_close.append({
+                "open_order_id":row['order_id'],
+                "closing_order_id": closing_order_id,
+                "option_symbol": row['option_symbol'], 
+                "position_id": row['position_id'],
+                })
     # positions_to_close = list(set(positions_to_close))
     logger.info(f'closing order ids: {orders_to_close}')
+    closed_df = pd.DataFrame.from_dict(orders_to_close)   
+    date_str = datetime.now().strftime("%Y/%m/%d/%H/%M")
+    s3.put_object(Bucket=trading_data_bucket, Key=f"closed_orders/{env}/{strategy}/{date_str}.csv", Body=closed_df.to_csv())
     return total_capital_return
 
 
@@ -76,7 +87,7 @@ def check_time():
     minute = current_time.minute
     
     if hour <= 9:
-        if hour == 9 and minute > 45:
+        if hour == 9 and minute >= 45:
             return "The time is within the allowed window."
         else:
             raise ValueError("The current time is outside the allowed window!")
@@ -84,4 +95,4 @@ def check_time():
         raise ValueError("The current time is outside the allowed window!")
     
 if __name__ == "__main__":
-   store_signifier("TEST+000")
+   manage_portfolio_inv(None, None)

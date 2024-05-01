@@ -8,10 +8,6 @@ import logging
 client = boto3.client('dynamodb')
 ddb = boto3.resource('dynamodb','us-east-1')
 transactions_table = ddb.Table('icarus-transactions-table')
-# orders_table = ddb.Table('icarus-orders-table')
-# closed_orders_table = ddb.Table('icarus-closed-orders-table')
-# orders_table_inv = ddb.Table('icarus-orders-table')
-# closed_orders_table_inv = ddb.Table('icarus-closed-orders-table')
 positions_table = ddb.Table('icarus-posititons-table')
 logger = logging.getLogger()
 env = os.getenv("ENV")
@@ -115,7 +111,7 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         )   
     return response, order_item
 
-def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase_price,row, env, table):
+def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase_price,row, env, table,detail):
     table = ddb.Table(table)    
     # details = ast.literal_eval(position['trade_details'])[0]
     order_item ={
@@ -138,6 +134,7 @@ def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase
         'order_status': order_info_obj['status'],
         'env': env,
         'return_vol_10D': str(row['return_vol_10D']),
+        'spread_position': str(detail['spread_position']),
     }
 
     response = table.put_item(
@@ -229,7 +226,8 @@ def create_new_dynamo_record_closed_order_logmessage(close_order_info_obj, origi
         'last_fill_price_close': str(close_order_info_obj['last_fill_price']),
         'qty_executed_close': str(close_order_info_obj['exec_quantity']),
         'env': env,
-        "close_reason": reason
+        "close_reason": reason,
+        "spread_position": str(row['spread_position']),
     }
 
     response = table.put_item(
@@ -346,21 +344,21 @@ def delete_order_record(order_id, table):
 
 def get_trading_balance(trading_strategy, env):
     strat_env = f"{trading_strategy}-{env}"
-    print(strat_env)
     trading_balance_table = ddb.Table('icarus-trading-balances')
-    response = trading_balance_table.get_item(
-        Key={
-            'strategy_name': strat_env  
-        }
-    )
-    print(response) 
-    trading_balance = float(response['Item']['trading_balance'])
+    try:
+        response = trading_balance_table.get_item(
+            Key={
+                'strategy_name': strat_env  
+            }
+        )
+        trading_balance = float(response['Item']['trading_balance'])
+    except Exception as e:
+        raise ValueError(f"No trading balance found for {strat_env}")
     return trading_balance
 
 def update_trading_balance(capital_spent, trading_strategy, env, action_type):
     strat_env = f"{trading_strategy}-{env}"
     trading_balance_table = ddb.Table('icarus-trading-balances')
-    print(strat_env)
     response = trading_balance_table.get_item(
         Key={
             'strategy_name': strat_env
@@ -382,72 +380,62 @@ def update_trading_balance(capital_spent, trading_strategy, env, action_type):
             Item=order_item 
         )   
 
-    # response = trading_balance_table.update_item(
-    #     Key={
-    #         'trading_strategy': trading_strategy
-    #     },
-    #     UpdateExpression="set trading_balance = :tb",
-    #     ExpressionAttributeValues={
-    #         ':tb': str(new_balance)
-    #     },
-    #     ReturnValues="UPDATED_NEW"
-    # )
     return new_balance
 
 
-def process_opened_orders(data, position_id, base_url, account_id, access_token, env, table):
-    position_transactions_list = []
-    order_id_list = []
-    unfulfilled_orders = []
-    fulfilled_orders = []
-    data['orders'] = ast.literal_eval(data['orders'])
-    underlying_purchase_price = data['purchase_price']
-    # positions_list = trade.get_account_positions(base_url, account_id, access_token)
-    # positions_df = pd.DataFrame(positions_list)
+# def process_opened_orders(data, position_id, base_url, account_id, access_token, env, table):
+#     position_transactions_list = []
+#     order_id_list = []
+#     unfulfilled_orders = []
+#     fulfilled_orders = []
+#     data['orders'] = ast.literal_eval(data['orders'])
+#     underlying_purchase_price = data['purchase_price']
+#     # positions_list = trade.get_account_positions(base_url, account_id, access_token)
+#     # positions_df = pd.DataFrame(positions_list)
 
-    for order_id in data['orders']:
-        try:
-            order_info_obj = trade.get_order_info(base_url, account_id, access_token, order_id)
-            if order_info_obj == "Order not filled":
-                unfulfilled_orders.append(order_id)
-                continue
-            # order_info_obj['order_status'] = "open"
-            order_info_obj['trade_result'] = "success"
-            create_new_dynamo_record_order(order_info_obj, data, position_id, order_id, underlying_purchase_price, env, table)
-            position_transactions_list.append(order_id)
-            fulfilled_orders.append(order_info_obj)
-        except Exception as e:
-            logger.info(f"Error getting order info {order_id}: {e}")
-            unfulfilled_orders.append(order_id)
-    if len(unfulfilled_orders) == 0:
-        create_new_dynamo_record_position(position_id, data, order_id_list, position_transactions_list, env)
-    return fulfilled_orders, unfulfilled_orders
+#     for order_id in data['orders']:
+#         try:
+#             order_info_obj = trade.get_order_info(base_url, account_id, access_token, order_id)
+#             if order_info_obj == "Order not filled":
+#                 unfulfilled_orders.append(order_id)
+#                 continue
+#             # order_info_obj['order_status'] = "open"
+#             order_info_obj['trade_result'] = "success"
+#             create_new_dynamo_record_order(order_info_obj, data, position_id, order_id, underlying_purchase_price, env, table)
+#             position_transactions_list.append(order_id)
+#             fulfilled_orders.append(order_info_obj)
+#         except Exception as e:
+#             logger.info(f"Error getting order info {order_id}: {e}")
+#             unfulfilled_orders.append(order_id)
+#     if len(unfulfilled_orders) == 0:
+#         create_new_dynamo_record_position(position_id, data, order_id_list, position_transactions_list, env)
+#     return fulfilled_orders, unfulfilled_orders
 
-def process_opened_ordersv2(orders_data, base_url, account_id, access_token, env, table):
-    process_orders = []
-    for index, row  in orders_data.iterrows():
-        order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['order_id'])
-        create_new_dynamo_record_order(order_info_obj, row, row['position_id'], row['order_id'], row['underlying_purchase_price'], env, table)
-        row['avg_fill_price_open'] = order_info_obj['average_fill_price']
-        row['last_fill_price_open'] = order_info_obj['last_fill_price']
-        row['qty_executed_open'] = order_info_obj['exec_quantity']
-        row['order_creation_date'] = order_info_obj['created_date']
-        row['order_transaction_date'] = order_info_obj['transaction_date']
-        process_orders.append(row.to_dict())
-    processed_df = pd.DataFrame.from_dict(process_orders)
-    return processed_df
+# def process_opened_ordersv2(orders_data, base_url, account_id, access_token, env, table):
+#     process_orders = []
+#     for index, row  in orders_data.iterrows():
+#         order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['order_id'])
+#         create_new_dynamo_record_order(order_info_obj, row, row['position_id'], row['order_id'], row['underlying_purchase_price'], env, table)
+#         row['avg_fill_price_open'] = order_info_obj['average_fill_price']
+#         row['last_fill_price_open'] = order_info_obj['last_fill_price']
+#         row['qty_executed_open'] = order_info_obj['exec_quantity']
+#         row['order_creation_date'] = order_info_obj['created_date']
+#         row['order_transaction_date'] = order_info_obj['transaction_date']
+#         process_orders.append(row.to_dict())
+#     processed_df = pd.DataFrame.from_dict(process_orders)
+#     return processed_df
 
-def process_closed_orders(full_transactions_data, base_url, account_id, access_token, position_ids, env, table, close_table):
-    closed_orders = []
-    for index, row  in full_transactions_data.iterrows():
-        order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['closing_order_id'])
-        del_response = delete_order_record(row['order_id'], table)
-        create_response, full_order_record = create_new_dynamo_record_closed_order(order_info_obj, row, env, close_table)
-        closed_orders.append(full_order_record)
-    final_positions_dict = create_positions_list(full_transactions_data)
-    # for position_id, transaction_list in final_positions_dict.items():
-    #     close_dynamo_record_position(position_id, transaction_list)
-    return closed_orders
+# def process_closed_orders(full_transactions_data, base_url, account_id, access_token, position_ids, env, table, close_table):
+#     closed_orders = []
+#     for index, row  in full_transactions_data.iterrows():
+#         order_info_obj = trade.get_order_info(base_url, account_id, access_token, row['closing_order_id'])
+#         del_response = delete_order_record(row['order_id'], table)
+#         create_response, full_order_record = create_new_dynamo_record_closed_order(order_info_obj, row, env, close_table)
+#         closed_orders.append(full_order_record)
+#     final_positions_dict = create_positions_list(full_transactions_data)
+#     # for position_id, transaction_list in final_positions_dict.items():
+#     #     close_dynamo_record_position(position_id, transaction_list)
+#     return closed_orders
     
 
 def create_positions_list(total_transactions):

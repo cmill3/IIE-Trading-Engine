@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import logging
-from helpers.helper import get_business_days, polygon_call_stocks, calculate_floor_pct, get_derivative_max_value, pull_model_config
+from helpers.helper import get_business_days, calculate_floor_pct, get_derivative_max_value, pull_model_config
 import pytz
 import warnings
 warnings.filterwarnings('ignore')
@@ -34,14 +34,22 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(min_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    Floor_pct = (vol)* float(row['return_vol_10D'])
+    Floor_pct = (-vol)* target_pct
+    spread_position = int(row['spread_position']) + 1  
+    vc_config = {
+        1: 100,
+        2: 300,
+        3: 500,
+        4: 500
+    }
 
-    if deriv_pct_change > 350:
+    if deriv_pct_change > vc_config[spread_position]:
         sell_code = "VCSell"
         return sell_code, "VCSell"
     
+    # print(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
-    logger.info(f"Floor_pct: {Floor_pct} max_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_3D_CDVOLAGG")
+    logger.info(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_3D_CDVOLAGG")
 
 
     sell_code = 0
@@ -86,9 +94,16 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(max_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    Floor_pct = (-vol) * float(row['return_vol_10D'])
+    Floor_pct = (-vol)* target_pct
+    spread_position = int(row['spread_position']) + 1  
+    vc_config = {
+        1: 100,
+        2: 300,
+        3: 500,
+        4: 500
+    }
 
-    if deriv_pct_change > 350:
+    if deriv_pct_change > vc_config[spread_position]:
         sell_code = "VCSell"
         return sell_code, "VCSell"
     
@@ -138,14 +153,22 @@ def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(min_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    Floor_pct = (vol)* float(row['return_vol_10D'])
+    Floor_pct = (-vol)* target_pct
+    spread_position = int(row['spread_position']) + 1  
+    vc_config = {
+        1: 100,
+        2: 300,
+        3: 500,
+        4: 500
+    }
 
-    if deriv_pct_change > 350:
+    if deriv_pct_change > vc_config[spread_position]:
         sell_code = "VCSell"
         return sell_code, "VCSell"
     
+    # print(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
-    logger.info(f"Floor_pct: {Floor_pct} max_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_1D_CDVOLAGG")
+    logger.info(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_1D_CDVOLAGG")
 
     sell_code = 0
     reason = ""
@@ -189,12 +212,20 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
     underlying_gain = ((float(max_value) - float(open_price))/float(open_price))
     pct_change = (current_price - float(open_price))/float(open_price)
-    Floor_pct = (-vol)* float(row['return_vol_10D'])
+    Floor_pct = (-vol)* target_pct
+    spread_position = int(row['spread_position']) + 1  
+    vc_config = {
+        1: 100,
+        2: 300,
+        3: 500,
+        4: 500
+    }
 
-    if deriv_pct_change > 350:
+    if deriv_pct_change > vc_config[spread_position]:
         sell_code = "VCSell"
         return sell_code, "VCSell"
     
+    # print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
     logger.info(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in CALL_1D_CDVOLAGG")
 

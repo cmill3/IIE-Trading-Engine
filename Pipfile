@@ -9,6 +9,8 @@ boto3 = "*"
 requests = "*"
 urllib3 = "*"
 req = "*"
+pytest = "*"
+qgrid = "*"
 
 [dev-packages]
 ipykernel = "*"

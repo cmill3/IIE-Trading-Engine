@@ -23,14 +23,13 @@ def run_order_control(event, context):
     dynamo_orders_df = db.get_all_orders_from_dynamo(orders_table)
     tradier_orders = te.get_account_positions(base_url, account_id, access_token)
 
-    ddb_symbol_count = dynamo_orders_df.groupby('option_symbol').size().reset_index(name='count')
+    dynamo_orders_df['qty_executed_open'] = dynamo_orders_df['qty_executed_open'].astype(float)
+    ddb_symbol_count = dynamo_orders_df.groupby('option_symbol')['qty_executed_open'].sum().reset_index()    
+
     tradier_df = pd.DataFrame.from_dict(tradier_orders)
-    print(tradier_df)
-    print(ddb_symbol_count)
     tradier_df = tradier_df[['symbol','quantity']]
     tradier_df.rename(columns={'symbol':'option_symbol'}, inplace=True)
     tradier_df['quantity'] = tradier_df['quantity'].astype(int)
-    ddb_symbol_count['count'] = ddb_symbol_count['count'].astype(int)
     
     mismatched_symbols = compare_dataframes(tradier_df, ddb_symbol_count)
     if len(mismatched_symbols) > 0:
@@ -49,13 +48,17 @@ def compare_dataframes(tradier_df, ddb_symbol_count):
         quantity_tradier = row['quantity']
         
         if symbol in ddb_symbol_count['option_symbol'].values:
-            quantity_ddb = ddb_symbol_count.loc[ddb_symbol_count['option_symbol'] == symbol, 'count'].values[0]
+            quantity_ddb = ddb_symbol_count.loc[ddb_symbol_count['option_symbol'] == symbol, 'qty_executed_open'].values[0]
             
             if quantity_tradier != quantity_ddb:
                 mismatched_symbols[symbol] = quantity_tradier - quantity_ddb
         else:
             mismatched_symbols[symbol] = quantity_tradier
     
+    for symbol in mismatched_symbols:
+        logger.info(f"Symbol: {symbol}, Quantity Difference: {mismatched_symbols[symbol]}")
+        logger.info(f"Tradier Quantity: {tradier_df.loc[tradier_df['option_symbol'] == symbol, 'quantity'].values[0]}")
+        logger.info(f"DynamoDB Quantity: {ddb_symbol_count.loc[ddb_symbol_count['option_symbol'] == symbol, 'qty_executed_open'].values[0]}")
     return mismatched_symbols
 
 def exposure_totalling():
@@ -64,15 +67,13 @@ def exposure_totalling():
 
     # total open trades & values in df
     df = pd.DataFrame.from_dict(position_list)
-    df['underlying_symbol'] = df['symbol'].apply(lambda symbol: helper.pull_symbol(symbol))
+    df['underlying_symbol'] = df['symbol'].apply(lambda symbol: symbol[:-15])
     agg_functions = {'cost_basis': ['sum', 'mean'], 'quantity': 'sum'}
     df_new = df.groupby(df['underlying_symbol']).aggregate(agg_functions)
 
     # export df as csv --> AWS S3
-    year, month, day, hour, minute = helper.date_and_time()
-    df_csv = df_new.to_csv()
-    s3_resource = boto3.resource('s3')
-    s3_resource.Object("inv-alerts-trading-data", f'positions_exposure/{env}/{year}/{month}/{day}/{hour}/{minute}.csv').put(Body=df_csv.getvalue())
+    date = datetime.now()
+    s3.put_object(Bucket='inv-alerts-trading-data', Key=f'positions_exposure/{env}/{date.year}/{date.month}/{date.day}/{date.hour}/{date.minute}.csv', Body=df_new.to_csv(index=False))
     return "Exposure Analysis Complete"
 
 if __name__ == "__main__":
