@@ -13,8 +13,8 @@ from helpers.constants import PREFIXES, CALL_STRATEGIES, PUT_STRATEGIES, ACTIVE_
 s3 = boto3.client('s3')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-env = os.getenv("ENV")
 
+env = os.getenv("ENV")
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 
 
@@ -36,7 +36,7 @@ def build_trade_inv(event, context):
     results_df = process_data(df)
     csv = results_df.to_csv()
 
-    response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
+    # response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     return {
         'statusCode': 200
     }
@@ -48,6 +48,7 @@ def pull_data_inv(trading_strategy,year, month, day, hour):
     if env == "DEV":
         dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     else:
+        print(f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
         dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
@@ -256,6 +257,8 @@ def smart_spreads_filter(contracts,underlying_price):
         contract['pct_to_money'] = abs(underlying_price - contract['strike'])/underlying_price
         if contract['pct_to_money'] < .075:
             new_contracts.append(contract)
+    print("NEW CONTRACTS")
+    print(new_contracts)
     return new_contracts
 
 def format_dates(now):

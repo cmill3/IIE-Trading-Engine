@@ -200,8 +200,9 @@ def build_volume_features(df):
     return avg_volume, avg_transactions
     
 def size_spread_quantities(contracts_details, target_cost):
+    model_config = ALGORITHM_CONFIG[trading_strategy]
     adjusted_target_cost = target_cost/100
-    adjusted_contracts = contracts_details[1:3]
+    adjusted_contracts = contracts_details[0:2]
     spread_length = 2
 
     spread_candidates = configure_contracts_for_trade_pct_based(adjusted_contracts, adjusted_target_cost, spread_length)
