@@ -51,7 +51,10 @@ def execute_new_trades(data,table, lambda_signifier):
 
         if is_valid:
             try: 
-                row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
+                if now.date().weekday() < 2:
+                    row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
+                else:
+                    row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
             except:
                 continue
             all_trades = row['trade_details']

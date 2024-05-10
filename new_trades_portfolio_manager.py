@@ -86,20 +86,6 @@ def get_open_trades():
     open_trades_df = db.get_open_trades_by_orderid(order_id_list)
     return open_trades_df, order_id_list
 
-
-def evaluate_open_trades(orders_df,base_url, access_token):
-    df_unique = orders_df.drop_duplicates(subset='order_id', keep='first')
-    positions_to_close = []
-    for index, row in df_unique.iterrows():
-        sell_code, reason = te.date_performance_check(row)
-        if sell_code == 2:
-            logger.info(f'Closing order {row["option_symbol"]}: {reason}')
-            positions_to_close.append(row['position_id'])
-
-    orders_to_close = orders_df.loc[orders_df['position_id'].isin(positions_to_close)]
-    return orders_to_close
-
-
 def check_time():
     current_time = datetime.now().astimezone(pytz.timezone('US/Eastern'))
     hour = current_time.hour

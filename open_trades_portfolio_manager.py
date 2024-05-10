@@ -62,22 +62,30 @@ def store_signifier(signifier):
 def evaluate_open_trades(orders_df):
     total_capital_return = 0
     orders_to_close = []
+    error_occurred = False
     for _, row in orders_df.iterrows():
-        closing_order_id, capital_return = te.date_performance_check(row,env,lambda_signifier)
-        if closing_order_id is not None:
-            total_capital_return += capital_return
-            logger.info(f'Total Capital Return: {capital_return}')
-            orders_to_close.append({
-                "open_order_id":row['order_id'],
-                "closing_order_id": closing_order_id,
-                "option_symbol": row['option_symbol'], 
-                "position_id": row['position_id'],
-                })
+        try:
+            closing_order_id, capital_return = te.date_performance_check(row,env,lambda_signifier)
+            if closing_order_id is not None:
+                total_capital_return += capital_return
+                logger.info(f'Total Capital Return: {capital_return}')
+                orders_to_close.append({
+                    "open_order_id":row['order_id'],
+                    "closing_order_id": closing_order_id,
+                    "option_symbol": row['option_symbol'], 
+                    "position_id": row['position_id'],
+                    })
+        except Exception as e:
+            logger.error(f'Error closing order: {row["order_id"]}')
+            logger.error(e)
+            error_occurred = True
     # positions_to_close = list(set(positions_to_close))
     logger.info(f'closing order ids: {orders_to_close}')
     closed_df = pd.DataFrame.from_dict(orders_to_close)   
     date_str = datetime.now().strftime("%Y/%m/%d/%H/%M")
     s3.put_object(Bucket=trading_data_bucket, Key=f"closed_orders/{env}/{strategy}/{date_str}.csv", Body=closed_df.to_csv())
+    if error_occurred:
+        raise ValueError("Error occurred while closing orders!")
     return total_capital_return
 
 

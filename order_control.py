@@ -54,7 +54,6 @@ def compare_dataframes(tradier_df, ddb_symbol_count):
                 mismatched_symbols[symbol] = quantity_tradier - quantity_ddb
         else:
             mismatched_symbols[symbol] = quantity_tradier
-    
     for symbol in mismatched_symbols:
         logger.info(f"Symbol: {symbol}, Quantity Difference: {mismatched_symbols[symbol]}")
         logger.info(f"Tradier Quantity: {tradier_df.loc[tradier_df['option_symbol'] == symbol, 'quantity'].values[0]}")
