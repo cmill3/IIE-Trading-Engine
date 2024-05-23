@@ -11,6 +11,7 @@ urllib3 = "*"
 req = "*"
 pytest = "*"
 qgrid = "*"
+ipykernel = "*"
 
 [dev-packages]
 ipykernel = "*"
