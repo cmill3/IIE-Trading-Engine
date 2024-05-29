@@ -29,8 +29,7 @@ TRADING_STRATEGIES = ["IDXC","IDXP","IDXC_1D","IDXP_1D","MA","MAP","MA_1D","MAP_
                       "LOSERSC","LOSERSC_1D","CDBFC","CDBFP","CDBFC_1D","CDBFP_1D","VDIFFC","VDIFFC_1D","VDIFFP","VDIFFP_1D"]
 
 ACTIVE_STRATEGIES = [
-    # "GAIN_1D","GAINP_1D","GAIN","GAINP","LOSERS","LOSERS_1D","LOSERSC","LOSERSC_1D",
-    "CDBFC","CDBFP","CDBFC_1D","CDBFP_1D"
+    "CDBFC_1D","CDBFP_1D"
     ]
 
 CALL_STRATEGIES = ["IDXC","IDXC_1D","MA","MA_1D","GAIN_1D","GAIN","LOSERSC","LOSERSC_1D","VDIFFC","VDIFFC_1D","CDBFC","CDBFC_1D"]
@@ -69,78 +68,44 @@ ENDPOINT_NAMES = {
 }
 
 ALGORITHM_CONFIG = {
-    "GAIN_1D": {
-        "target_label": "one_max",
-        "target_value": .016,
-    },
-    "GAIN": {
-        "target_label": "three_max",
-        "target_value": .026,
-    },
-    "GAINP_1D": {
-        "target_label": "one_min",
-        "target_value": -.017,
-    },
-    "GAINP": {
-        "target_label": "three_min",
-        "target_value": -.026,
-    },
-     "LOSERSC_1D": {
-        "target_label": "one_max",
-        "target_value": .02,
-    },
-    "LOSERSC": {
-        "target_label": "three_max",
-        "target_value": .032,
-    },
-    "LOSERS_1D": {
-        "target_label": "one_min",
-        "target_value": -.02,
-    },
-    "LOSERS": {
-        "target_label": "three_min",
-        "target_value": -.032,
-    },
-     "MA_1D": {
-        "target_label": "one_max",
-        "target_value": .017,
-    },
-    "MA": {
-        "target_label": "three_max",
-        "target_value": .026,
-    },
-    "MAP_1D": {
-        "target_label": "one_min",
-        "target_value": -.017,
-    },
-    "MAP": {
-        "target_label": "three_min",
-        "target_value": -.026,
-    },
-    "CDBFC": {
-        "target_label": "three_max_vol",
-        "target_value": 1.731,
-        "spread_adjustment": 1,
-        "spread_length": 2,
-    },
-    "CDBFP": {
-        "target_label": "three_min_vol",
-        "target_value": -1.546,
-        "spread_adjustment": 1,
-        "spread_length": 2,
-        
-    },
+    # "CDBFC": {
+    #     "target_label": "three_max_vol",
+    #     "target_value": 1.731,
+    #     "spread_start": 0,
+    #     "spread_end": 2,
+    #     "spread_length": 2,
+    #     "risk_unit": 0.055,
+    #     "vol_tolerance": 0.4,
+    # },
+    # "CDBFP": {
+    #     "target_label": "three_min_vol",
+    #     "target_value": -1.546,
+    #     "spread_start": 0,
+    #     "spread_end": 2,
+    #     "spread_length": 2,
+    #     "risk_unit": 0.055,
+    #     "vol_tolerance": 0.4,
+    # },
     "CDBFC_1D": {
         "target_label": "one_max_vol",
         "target_value": 1.096,
-        "spread_adjustment": 1,
-        "spread_length": 2,
+        "spread_start": 1,
+        "spread_end": 4,
+        "spread_length": 3,
+        "risk_unit": 0.03,
+        "vol_tolerance": 0.4,
+        "capital_distributions": [.33,.33,.33],
     },
     "CDBFP_1D": {
         "target_label": "one_min_vol",
         "target_value": -1.007,
-        "spread_adjustment": 1,
-        "spread_length": 2,
+        "spread_start": 1,
+        "spread_end": 4,
+        "spread_length": 3,
+        "risk_unit": 0.03,
+        "vol_tolerance": 0.4,
+        "capital_distributions": [.33,.33,.33]
+
     },
 }
 

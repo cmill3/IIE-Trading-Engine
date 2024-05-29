@@ -5,14 +5,20 @@ from datetime import datetime
 def build_spread(chain_df, spread_length, cp, current_price):
     contract_list = []
     if cp == "call":
+        df_in = chain_df.loc[chain_df['strike_price'] < current_price]
+        last_in = df_in.tail(1)
         chain_df = chain_df.loc[chain_df['strike_price'] > current_price]
-        chain_df.sort_values('strike_price',ascending=True,inplace=True)
-        chain_df = chain_df.iloc[:spread_length]
+        full_df = pd.concat([last_in, chain_df])
+        full_df.sort_values('strike_price',ascending=True,inplace=True)
+        full_df = full_df.iloc[:spread_length]
     if cp == "put":
+        df_in = chain_df.loc[chain_df['strike_price'] > current_price]
         chain_df = chain_df.loc[chain_df['strike_price'] < current_price]
-        chain_df.sort_values('strike_price',ascending=False,inplace=True)
-        chain_df = chain_df.iloc[:spread_length]
-    for _, row in chain_df.iterrows():
+        last_in = df_in.head(1)
+        full_df = pd.concat([last_in, chain_df])
+        full_df.sort_values('strike_price',ascending=False,inplace=True)
+        full_df = full_df.iloc[:spread_length]
+    for _, row in full_df.iterrows():
         temp_object = {
             "contract_ticker": row['ticker'],
             "strike": row['strike_price'],
