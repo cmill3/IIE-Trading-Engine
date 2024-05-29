@@ -103,7 +103,7 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         'order_status': order_info_obj['status'],
         'sellby_date': position['sellby_date'],
         'env': env,
-        'return_vol_10D': str(position['return_vol_10D']),
+        'return_vol_5D': str(position['return_vol_5D']),
     }
 
     response = table.put_item(
@@ -133,7 +133,7 @@ def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase
         'order_transaction_date': str(order_info_obj['transaction_date']),
         'order_status': order_info_obj['status'],
         'env': env,
-        'return_vol_10D': str(row['return_vol_10D']),
+        'return_vol_5D': str(row['return_vol_5D']),
         'spread_position': str(detail['spread_position']),
     }
 

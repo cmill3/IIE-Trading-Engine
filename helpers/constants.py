@@ -68,32 +68,33 @@ ENDPOINT_NAMES = {
 }
 
 ALGORITHM_CONFIG = {
-    "CDBFC": {
-        "target_label": "three_max_vol",
-        "target_value": 1.731,
-        "spread_start": 0,
-        "spread_end": 2,
-        "spread_length": 2,
-        "risk_unit": 0.055,
-        "vol_tolerance": 0.4,
-    },
-    "CDBFP": {
-        "target_label": "three_min_vol",
-        "target_value": -1.546,
-        "spread_start": 0,
-        "spread_end": 2,
-        "spread_length": 2,
-        "risk_unit": 0.055,
-        "vol_tolerance": 0.4,
-    },
+    # "CDBFC": {
+    #     "target_label": "three_max_vol",
+    #     "target_value": 1.731,
+    #     "spread_start": 0,
+    #     "spread_end": 2,
+    #     "spread_length": 2,
+    #     "risk_unit": 0.055,
+    #     "vol_tolerance": 0.4,
+    # },
+    # "CDBFP": {
+    #     "target_label": "three_min_vol",
+    #     "target_value": -1.546,
+    #     "spread_start": 0,
+    #     "spread_end": 2,
+    #     "spread_length": 2,
+    #     "risk_unit": 0.055,
+    #     "vol_tolerance": 0.4,
+    # },
     "CDBFC_1D": {
         "target_label": "one_max_vol",
         "target_value": 1.096,
         "spread_start": 1,
         "spread_end": 4,
         "spread_length": 3,
-        "risk_unit": 0.055,
+        "risk_unit": 0.03,
         "vol_tolerance": 0.4,
+        "capital_distributions": [.33,.33,.33],
     },
     "CDBFP_1D": {
         "target_label": "one_min_vol",
@@ -101,8 +102,10 @@ ALGORITHM_CONFIG = {
         "spread_start": 1,
         "spread_end": 4,
         "spread_length": 3,
-        "risk_unit": 0.055,
+        "risk_unit": 0.03,
         "vol_tolerance": 0.4,
+        "capital_distributions": [.33,.33,.33]
+
     },
 }
 

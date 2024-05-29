@@ -57,7 +57,11 @@ def compare_dataframes(tradier_df, ddb_symbol_count):
     for symbol in mismatched_symbols:
         logger.info(f"Symbol: {symbol}, Quantity Difference: {mismatched_symbols[symbol]}")
         logger.info(f"Tradier Quantity: {tradier_df.loc[tradier_df['option_symbol'] == symbol, 'quantity'].values[0]}")
-        logger.info(f"DynamoDB Quantity: {ddb_symbol_count.loc[ddb_symbol_count['option_symbol'] == symbol, 'qty_executed_open'].values[0]}")
+        try:
+            logger.info(f"DynamoDB Quantity: {ddb_symbol_count.loc[ddb_symbol_count['option_symbol'] == symbol, 'qty_executed_open'].values[0]}")
+        except:
+            logger.info(f"DynamoDB Quantity: 0")
+            continue
     return mismatched_symbols
 
 def exposure_totalling():

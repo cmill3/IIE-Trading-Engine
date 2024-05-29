@@ -217,7 +217,7 @@ def size_spread_quantities(contracts_details, target_cost):
     #     adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
 
 
-    spread_candidates = configure_contracts_for_trade_pct_based(adjusted_contracts, adjusted_target_cost, spread_length=model_config['spread_length'])
+    spread_candidates = configure_contracts_for_trade_capital_distributions(adjusted_contracts, adjusted_target_cost)
 
     if len(spread_candidates) == 0:
         return []
@@ -282,6 +282,26 @@ def add_spread_cost(spread_cost, target_cost, contracts_details):
     return spread_multiplier, add_one
 
 
+def configure_contracts_for_trade_capital_distributions(contracts_details, capital):
+    sized_contracts = []
+    capital_distributions = ALGORITHM_CONFIG[trading_strategy]['capital_distributions']
+    total_capital = capital
+    free_capital = 0
+    for index, contract in enumerate(contracts_details):
+        contract_capital = (capital_distributions[index]*total_capital) + free_capital
+        quantities = determine_shares(contract['last_price'], contract_capital)
+        if quantities > 0:
+            sized_contracts.append({"contract_ticker": contract['contract_ticker'], "quantity": quantities,"last_price": contract['last_price'],"volume": contract['volume']})
+            free_capital = contract_capital - (quantities * contract['last_price'])
+        else:
+            free_capital += contract_capital
+    return sized_contracts
+
+def determine_shares(contract_cost, target_cost):
+    shares = math.floor(target_cost / contract_cost)
+    return shares
+
+
 def datetime_to_timestamp_UTC(datetime_str):
     # Parse the datetime string to a datetime object with UTC timezone
     dt = datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
@@ -330,7 +350,7 @@ def log_message_open(row, id, status_code, error, contract_ticker, option_side,l
         "target_value": model_config['target_value'],
         'underlying_symbol': row['symbol'],
         'option_side': option_side,
-        'return_vol_10D': row['return_vol_10D'],
+        'return_vol_5D': row['return_vol_5D'],
         "spread_position": detail['spread_position'],
     })
     logger.info(log_entry)

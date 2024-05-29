@@ -76,8 +76,8 @@ def execute_new_trades(data,table, lambda_signifier):
                     if status_code == 200:
                         trading_balance, underlying_purchase_price = process_open_order(row,open_order_id,position_id,json_response,status_code,lambda_signifier,detail,option_side)
                         orders_list.append(open_order_id)
-                        accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D'],"spread_position":detail['spread_position']})
-                        positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price,'return_vol_10D':row['return_vol_10D'],"spread_position":detail['spread_position']})        
+                        accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price,'return_vol_5D':row['return_vol_5D'],"spread_position":detail['spread_position']})
+                        positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price,'return_vol_5D':row['return_vol_5D'],"spread_position":detail['spread_position']})        
                     else:
                         trade_data = row.to_dict()
                         trade_data['response'] = status_code
