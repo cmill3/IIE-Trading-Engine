@@ -185,7 +185,8 @@ def convert_timestamp_est(timestamp):
     return est_datetime
     
 def bet_sizer(contracts, date, spread_length, call_put,strategy):
-    target_cost = (.00825* db.get_trading_balance(portfolio_strategy, env))
+    model_config = ALGORITHM_CONFIG[trading_strategy]
+    target_cost = (model_config['risk_unit']* db.get_trading_balance(portfolio_strategy, env))
     contracts = size_spread_quantities(contracts, target_cost)
     return contracts
 
@@ -200,11 +201,23 @@ def build_volume_features(df):
     return avg_volume, avg_transactions
     
 def size_spread_quantities(contracts_details, target_cost):
+    day_of_week = date.weekday()
+    model_config = ALGORITHM_CONFIG[trading_strategy]
     adjusted_target_cost = target_cost/100
-    adjusted_contracts = contracts_details[1:3]
-    spread_length = 2
+    adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
 
-    spread_candidates = configure_contracts_for_trade_pct_based(adjusted_contracts, adjusted_target_cost, spread_length)
+    # if day_of_week >= 3:
+    #     spread_length = 2
+    #     adjusted_contracts = contracts_details[model_config['spread_start']:(model_config['spread_end']-2)]
+    # elif day_of_week == 2:
+    #     spread_length = 3
+    #     adjusted_contracts = contracts_details[model_config['spread_start']:(model_config['spread_end']-1)]
+    # elif day_of_week < 2:
+    #     spread_length = 4
+    #     adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
+
+
+    spread_candidates = configure_contracts_for_trade_capital_distributions(adjusted_contracts, adjusted_target_cost)
 
     if len(spread_candidates) == 0:
         return []
@@ -267,6 +280,26 @@ def add_spread_cost(spread_cost, target_cost, contracts_details):
             add_one = True
 
     return spread_multiplier, add_one
+
+
+def configure_contracts_for_trade_capital_distributions(contracts_details, capital):
+    sized_contracts = []
+    capital_distributions = ALGORITHM_CONFIG[trading_strategy]['capital_distributions']
+    total_capital = capital
+    free_capital = 0
+    for index, contract in enumerate(contracts_details):
+        contract_capital = (capital_distributions[index]*total_capital) + free_capital
+        quantities = determine_shares(contract['last_price'], contract_capital)
+        if quantities > 0:
+            sized_contracts.append({"contract_ticker": contract['contract_ticker'], "quantity": quantities,"last_price": contract['last_price'],"volume": contract['volume']})
+            free_capital = contract_capital - (quantities * contract['last_price'])
+        else:
+            free_capital += contract_capital
+    return sized_contracts
+
+def determine_shares(contract_cost, target_cost):
+    shares = math.floor(target_cost / contract_cost)
+    return shares
 
 
 def datetime_to_timestamp_UTC(datetime_str):

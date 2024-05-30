@@ -38,8 +38,8 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
     spread_position = int(row['spread_position']) + 1  
     vc_config = {
         1: 100,
-        2: 300,
-        3: 500,
+        2: 200,
+        3: 300,
         4: 500
     }
 
@@ -98,10 +98,11 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     spread_position = int(row['spread_position']) + 1  
     vc_config = {
         1: 100,
-        2: 300,
-        3: 500,
+        2: 200,
+        3: 300,
         4: 500
     }
+
 
     if deriv_pct_change > vc_config[spread_position]:
         sell_code = "VCSell"
@@ -157,10 +158,11 @@ def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     spread_position = int(row['spread_position']) + 1  
     vc_config = {
         1: 100,
-        2: 300,
-        3: 500,
+        2: 200,
+        3: 300,
         4: 500
     }
+
 
     if deriv_pct_change > vc_config[spread_position]:
         sell_code = "VCSell"
@@ -216,10 +218,11 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     spread_position = int(row['spread_position']) + 1  
     vc_config = {
         1: 100,
-        2: 300,
-        3: 500,
+        2: 200,
+        3: 300,
         4: 500
     }
+
 
     if deriv_pct_change > vc_config[spread_position]:
         sell_code = "VCSell"

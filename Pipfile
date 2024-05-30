@@ -12,6 +12,7 @@ req = "*"
 pytest = "*"
 qgrid = "*"
 ipykernel = "*"
+plotly = "*"
 
 [dev-packages]
 ipykernel = "*"

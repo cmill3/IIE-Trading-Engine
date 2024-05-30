@@ -19,7 +19,7 @@ provider:
 
 custom:
   # defaultStage: ${self:custom.throwError('Stage is required. Please provide a stage using --stage.')}
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage,'dev'}
   stages:
     - dev
     - prod-val
@@ -40,6 +40,8 @@ custom:
     tableList15min: "['icarus-closed-orders-table-inv', 'icarus-orders-table-inv']"
     tableListdaily: "['icarus-model-results-table']"
     closedTablelist: "['icarus-closed-orders-table-inv']"
+  # prod:
+  #   env: PROD
 
   
   # prod:

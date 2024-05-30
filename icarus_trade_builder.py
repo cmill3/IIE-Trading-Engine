@@ -13,8 +13,8 @@ from helpers.constants import PREFIXES, CALL_STRATEGIES, PUT_STRATEGIES, ACTIVE_
 s3 = boto3.client('s3')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-env = os.getenv("ENV")
 
+env = os.getenv("ENV")
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 
 
@@ -69,19 +69,6 @@ def process_data(df):
     logger.info(f"Data processed successfully: {d}")
     return df
 
-# def process_data_index(df):
-#     df['Call/Put'] = df['strategy'].apply(lambda strategy: infer_CP(strategy))
-#     df['expiry_1d'] = df['symbol'].apply(lambda x: date_1d(x))
-#     df['expiry_3d'] = df['symbol'].apply(lambda x: date_3d(x))
-#     df['trade_details1d'] = df.apply(lambda row: build_trade_structure_1d(row), axis=1,result_type='expand')
-#     df['trade_details3d'] = df.apply(lambda row: build_trade_structure_3d(row), axis=1,result_type='expand')
-#     # df['trade_details1d'] = pd.DataFrame(result_df1, index=df.index)
-#     # df['trade_details3d'] = pd.DataFrame(result_df2, index=df.index)
-#     df['sector'] = df['symbol'].apply(lambda Sym: strategy_helper.match_sector(Sym))
-#     df['sellby_date'] = calculate_sellby_date(d, 3)
-#     logger.info(f"Data processed successfully: {d}")
-#     return df
-
 def infer_CP(strategy):
     if strategy in CALL_STRATEGIES:   
         return "call"
@@ -98,33 +85,6 @@ def calculate_sellby_date(current_date, trading_days_to_add): #End date, n days 
         trading_days_to_add -= 1
     return current_date
 
-# def build_trade_structure_1d(row):
-#     underlying_price = tradier.call_polygon_last_price(row['symbol'])
-#     try:
-#         option_chain = get_option_chain(row['symbol'], row['expiry_1d'], row['Call/Put'])
-#         contracts_1d = strategy_helper.build_spread(option_chain, 8, row['Call/Put'], underlying_price)
-#         contracts_1d = smart_spreads_filter(contracts_1d,underlying_price)
-#         trade_details_1d = helper.bet_sizer(contracts_1d, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
-#     except Exception as e:
-#         print("FAIL")
-#         logger.info(f"Could not build spread for {row['symbol']}: {e}")
-#         print(f"Could not build spread for {row['symbol']}: {e}")
-#         return pd.DataFrame(), "FALSE"
-#     return trade_details_1d
-
-# def build_trade_structure_3d(row):
-#     underlying_price = tradier.call_polygon_last_price(row['symbol'])
-#     # try:
-#     option_chain = get_option_chain(row['symbol'], row['expiry_3d'], row['Call/Put'])
-#     contracts_3d = strategy_helper.build_spread(option_chain, 8, row['Call/Put'], underlying_price)
-#     contracts_3d = smart_spreads_filter(contracts_3d,underlying_price)
-#     trade_details_3d = helper.bet_sizer(contracts_3d, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
-#     # except Exception as e:
-#     #     logger.info(f"Could not build spread for {row['symbol']}: {e}")
-#     #     print(f"Could not build spread for {row['symbol']}: {e}")
-#     #     return pd.DataFrame(), "FALSE"
-#     return trade_details_3d
-
 def build_trade_structure_1wk(row):
     underlying_price = tradier.call_polygon_last_price(row['symbol'])
     try:
@@ -134,7 +94,7 @@ def build_trade_structure_1wk(row):
             option_chain = get_option_chain(row['symbol'], row['expiry_1wk'], row['Call/Put'])
         contracts_1wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_1wk = smart_spreads_filter(contracts_1wk,underlying_price)
-        trade_details_1wk = helper.bet_sizer(contracts_1wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
+        trade_details_1wk = helper.bet_sizer(contracts_1wk, now, spread_length=4, call_put=row['Call/Put'],strategy=row['strategy'])
     except Exception as e:
         print("FAIL")
         logger.info(f"Could not build spread for {row['symbol']}: {e} 1WK")
@@ -152,7 +112,7 @@ def build_trade_structure_2wk(row):
             option_chain = get_option_chain(row['symbol'], row['expiry_2wk'], row['Call/Put'])
         contracts_2wk = strategy_helper.build_spread(option_chain, 6, row['Call/Put'], underlying_price)
         contracts_2wk = smart_spreads_filter(contracts_2wk,underlying_price)
-        trade_details_2wk = helper.bet_sizer(contracts_2wk, now, spread_length=3, call_put=row['Call/Put'],strategy=row['strategy'])
+        trade_details_2wk = helper.bet_sizer(contracts_2wk, now, spread_length=4, call_put=row['Call/Put'],strategy=row['strategy'])
     except Exception as e:
         trade_details = None
         logger.info(f"Could not build spread for {row['symbol']}: {e} 2WK")
@@ -181,25 +141,11 @@ def date_2wk():
     return Expiry_Date 
 
 def date_1d(symbol):
-    if symbol == "IWM":
-        date = advance_weekday(3)
-        if date.weekday() == 1 or date.weekday() == 3:
-            date += timedelta(days=1)
-    elif symbol in ["SPY","QQQ"]:
-        date = advance_weekday(3)
-    else:
-        return "NA"
+    date = advance_weekday(2)
     return date.strftime('%Y-%m-%d')
 
 def date_3d(symbol):
-    if symbol == "IWM":
-        date = advance_weekday(5)
-        if date.weekday() == 1 or date.weekday() == 3:
-            date += timedelta(days=1)
-    elif symbol in ["SPY","QQQ"]:
-        date = advance_weekday(5)
-    else:
-        return "NA"
+    date = advance_weekday(4)
     return date.strftime('%Y-%m-%d')
 
 
@@ -246,8 +192,6 @@ def get_option_chain(symbol, expiry, call_put):
             # value['last_price'] = 0
 
     df = pd.DataFrame(parsed_details)
-    print(df)
-    print()
     return df
 
 def smart_spreads_filter(contracts,underlying_price):

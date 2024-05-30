@@ -52,9 +52,9 @@ def execute_new_trades(data,table, lambda_signifier):
         if is_valid:
             try: 
                 row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
+                all_trades = row['trade_details']
             except:
                 continue
-            all_trades = row['trade_details']
             trades = pd.DataFrame.from_dict(all_trades)
             if len(trades) == 0:
                 continue
