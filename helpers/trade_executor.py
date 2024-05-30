@@ -50,14 +50,7 @@ def execute_new_trades(data,table, lambda_signifier):
             is_valid = True
 
         if is_valid:
-            try: 
-                if now.date().weekday() < 2:
-                    row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
-                else:
-                    row['trade_details'] = ast.literal_eval(row['trade_details2wk'])
-            except:
-                continue
-            all_trades = row['trade_details']
+            all_trades = row['trade_details1wk']
             trades = pd.DataFrame.from_dict(all_trades)
             if len(trades) == 0:
                 continue
