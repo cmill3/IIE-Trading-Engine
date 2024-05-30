@@ -28,7 +28,7 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
     model_config = pull_model_config(row['trading_strategy'])
     min_value = calculate_floor_pct(row)
     open_price = row['underlying_purchase_price']
-    target_pct = (model_config['target_value'] * float(row['return_vol_10D']))
+    target_pct = (model_config['target_value'] * float(row['return_vol_5D']))
     max_deriv_value = pc_max_value(row)
 
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
@@ -88,7 +88,7 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     model_config = pull_model_config(row['trading_strategy'])
     max_value = calculate_floor_pct(row)
     open_price = row['underlying_purchase_price']
-    target_pct = (model_config['target_value'] * float(row['return_vol_10D']))
+    target_pct = (model_config['target_value'] * float(row['return_vol_5D']))
     max_deriv_value = pc_max_value(row)
 
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
@@ -147,7 +147,7 @@ def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     model_config = pull_model_config(row['trading_strategy'])
     min_value = calculate_floor_pct(row)
     open_price = row['underlying_purchase_price']
-    target_pct = (model_config['target_value'] * float(row['return_vol_10D']))
+    target_pct = (model_config['target_value'] * float(row['return_vol_5D']))
     max_deriv_value = pc_max_value(row)
 
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100
@@ -206,7 +206,7 @@ def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     model_config = pull_model_config(row['trading_strategy'])
     max_value = calculate_floor_pct(row)
     open_price = row['underlying_purchase_price']
-    target_pct = (model_config['target_value'] * float(row['return_vol_10D']))
+    target_pct = (model_config['target_value'] * float(row['return_vol_5D']))
     max_deriv_value = pc_max_value(row)
 
     deriv_pct_change = ((max_deriv_value - float(row['avg_fill_price_open']))/float(row['avg_fill_price_open']))*100

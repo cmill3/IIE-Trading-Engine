@@ -317,7 +317,7 @@ def log_message_open(row, id, status_code, error, contract_ticker, option_side,l
         "target_value": model_config['target_value'],
         'underlying_symbol': row['symbol'],
         'option_side': option_side,
-        'return_vol_10D': row['return_vol_10D'],
+        'return_vol_5D': row['return_vol_5D'],
         "spread_position": detail['spread_position'],
     })
     logger.info(log_entry)

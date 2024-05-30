@@ -6,26 +6,29 @@ import ast
 import time
 from datetime import datetime
 import pytz
+import logging
 
 s3 = boto3.client('s3')
 ddb = boto3.client('dynamodb')
-env = os.environ.get('ENV')
-prefix = f'closed_orders/{env}/'
-ddb_table = 'icarus-closed-orders-table-inv'
 
-# def run_process(event, context):  To be uncommented when live
-def run_process():
-    # date = datetime.now() #To be uncommented when live
-    date_str = '2024-05-21 14:15:00'
-    date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+env = os.environ.get('ENV')
+bucket = os.environ.get('TRADING_BUCKET')
+strategies = os.environ.get('ACTIVE_STRATEGIES').split(',')
+ddb_table = os.environ.get('CLOSED_ORDERS_TABLE')
+
+prefix = f'closed_orders/{env}/'
+logger = logging.getLogger()
+
+def run_process(event, context):
+    date = datetime.now() #To be uncommented when live
+    logger.info(f"Running trade validation process for {date}")
+    # # date_str = '2024-05-21 14:15:00'
+    # date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
     date_hour_prefix = str(date.strftime('%Y/%m/%d/%H'))
-    strategy_list = ['CDBFC_1D','CDBFP_1D']  #, 'CDBFC', 'CDBFP']
-    bucket = 'inv-alerts-trading-data'
     dfs = []
-    for x in strategy_list:
-        # path = prefix + str(x) #To be uncommented when live
-        path = f'closed_orders/PROD_VAL/{str(x)}'
-        df = pull_opened_data_s3(path, bucket, date_hour_prefix)
+    for strategy in strategies:
+        path = f'{prefix}{strategy}/{date_hour_prefix}' 
+        df = pull_closed_trades_s3(path, bucket)
         dfs.append(df)
     full_df = pd.concat(dfs)
     real_dfs = []
@@ -49,17 +52,17 @@ def run_process():
     # print(sim_df, sim_df.columns)
     print(truevalues_df, truevalues_df.columns)
     real_values_df = clean_real_data(truevalues_df)
-
-    result = prod_sim_match(sim_df, real_values_df)
-
-    result.to_csv(f'/Users/diz/Documents/Projects/icarus-trading-engine/trade-validator/test-runs/trade_validator_{date_str}.csv')
- 
+    raw_df, viz_df = prod_sim_match(sim_df, real_values_df)
+    s3.put_object(Bucket=bucket, Key=f'trade_validations/{date_hour_prefix}/raw.csv', Body=raw_df.to_csv(index=False)) 
+    s3.put_object(Bucket=bucket, Key=f'trade_validations/{date_hour_prefix}/viz.csv', Body=viz_df.to_csv(index=False))
+    logger.info(f"Trade validation process complete for {date}")
+    return "Process Complete"
     
 
 
-def pull_opened_data_s3(path, bucket,date_prefix):
+def pull_closed_trades_s3(prefix, bucket):
     dfs = []
-    keys = s3.list_objects(Bucket=bucket, Prefix=f"{path}/{date_prefix}")['Contents']
+    keys = s3.list_objects(Bucket=bucket, Prefix=prefix)['Contents']
     for object in keys:
         key = object['Key']
         dataset = s3.get_object(Bucket=bucket,Key=key)
@@ -92,7 +95,6 @@ def pull_potential_trades(position_id):
         new_strategy = strategy[:5]+ '_' + strategy[-2:]
     else:
         new_strategy = strategy
-    bucket = 'inv-alerts-trading-data'
     key = f'invalerts_potential_trades/PROD_VAL/{new_strategy}/{year}/{month}/{day}/{hour}.csv'
 
     try:
@@ -145,7 +147,7 @@ def create_real_dataset(row, strategy, symbol):
     avg_open_price = item['average_fill_price_open']['S']
     avg_close_price = item['average_fill_price_close']['S']
     qty = item['qty_executed_open']['S']
-    prod_net = (float(avg_close_price) - float(avg_open_price)) * int(qty[:-2])
+    prod_net = ((float(avg_close_price) - float(avg_open_price)) * float(qty)) * 100
     data = {
         'symbol': symbol,
         'option_symbol': row['option_symbol'],
@@ -181,9 +183,10 @@ def clean_real_data(real_df):
     return real_df
 
 def prod_sim_match(simulated_df, real_df):
-    final_df = pd.merge(simulated_df, real_df, on=['option_symbol'], how='inner')
-    print(final_df)
-    return final_df
+    raw_df = pd.merge(simulated_df, real_df, on=['option_symbol'], how='inner')
+    raw_df['profit_diff_pct'] = (raw_df['prod_net'] - raw_df['sim_total_gain'])/raw_df['prod_net']
+    viz_df = raw_df[['option_symbol', 'prod_net', 'sim_total_gain', 'profit_diff_pct','sim_open_trade_dt','open_dt','sim_close_trade_dt','close_dt','position_id_x']]
+    return raw_df, viz_df
 
 
 
@@ -198,26 +201,26 @@ if __name__ == "__main__":
 
     config = {
     "put_pct": 1, 
-    "spread_search": "0:4",
+    "spread_search": "1:4",
     "aa": 0,
     "risk_unit": .05,
     "model": "CDVOLVARVC",
-    "vc_level":"50+100+250+500",
-    "capital_distributions": ".25,.25,.25,.25",
+    "vc_level":"100+300+500+500",
+    "capital_distributions": ".33,.33,33",
     "portfolio_cash": 20000,
     "scaling": "dynamicscale",
     "volatility_threshold": 0.4,
     "model_type": "cls",
     "user": "cm3",
-    "threeD_vol": "return_vol_10D",
+    "threeD_vol": "return_vol_5D",
     "oneD_vol": "return_vol_5D",
     "dataset": "CDVOLBF3-6PE",
-    "spread_length": 4,
+    "spread_length": 3,
     "reserve_cash": 5000
         }
     
 
-    run_process()
+    run_process(None, None)
 
 
 
