@@ -45,7 +45,7 @@ def pull_data_invalerts(bucket_name, object_key, file_name, prefixes, time_span)
 
 def create_simulation_data_inv(row,config):
     date_str = row['date'].split(" ")[0]
-    start_date = datetime(int(date_str.split("-")[0]),int(date_str.split("-")[1]),int(date_str.split("-")[2]),int(row['hour']),0,0)
+    start_date = datetime(int(date_str.split("-")[0]),int(date_str.split("-")[1]),int(date_str.split("-")[2]),int(row['hour_est']),0,0)
     if row['strategy'] in ONED_STRATEGIES:
         days_back = 1
     elif row['strategy'] in THREED_STRATEGIES:
@@ -119,55 +119,38 @@ def buy_iterate_sellV2_invalerts(symbol, option_symbol, open_prices, strategy, p
     return results_dict
     # return buy_dict, sell_dict, results_dict, transaction_dict, open_datetime
 
-def simulate_trades_invalerts(data,config):
+def simulate_trades_invalerts(row,config):
     positions_list = []
-    for i, row in data.iterrows():
-        order_num = 1
-        ## These variables are crucial for controlling the buy/sell flow of the simulation.
-        alert_hour = row['hour']
-        trading_date = row['date']
-        # trading_date = trading_date.split(" ")[0]
-        start_date, end_date, symbol, mkt_price, strategy, option_symbols, enriched_options_aggregates = create_simulation_data_inv(row,config)
-        order_dt = start_date.strftime("%m+%d")
-        pos_dt = start_date.strftime("%Y-%m-%d-%H")
-        position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{pos_dt}"
+    order_num = row['spread_position']
+    alert_hour = row['hour_est']
+    trading_date = row['date']
+    start_date, end_date, symbol, mkt_price, strategy, option_symbols, enriched_options_aggregates = create_simulation_data_inv(row,config)
+    order_dt = start_date.strftime("%m+%d")
+    pos_dt = start_date.strftime("%Y-%m-%d")
+    position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{pos_dt}-{row['hour_utc']}"
 
-        results = []
+    results = []
 
-        for df in enriched_options_aggregates:
-            try:
-                open_prices = df['o'].values
-                ticker = df.iloc[0]['ticker']
-                order_id = f"{order_num}_{order_dt}"
-                results_dict = buy_iterate_sellV2_invalerts(symbol, ticker, open_prices, strategy, df, position_id, trading_date, alert_hour, order_id,config,row,order_num)
-                results_dict['order_num'] = order_num
-                print(f"results_dict for {symbol} and {ticker}")
-                print(results_dict)
-                print()
-                if len(results_dict) == 0:
-                    print(f"Error in simulate_trades_invalerts for {symbol} and {ticker}")
-                    print(f"{order_id}_{order_dt}")
-                    continue
-
-                results.append(results_dict)
-                order_num += 1
-            except Exception as e:
-                print(f"error: {e} in buy_iterate_sellV2_invalerts")
-                print(df)
-                continue
-        
+    for df in enriched_options_aggregates:
         try:
-            position_trades = {"position_id": position_id, "transactions": results, "open_datetime": results_dict['open_trade_dt']}
-            # print("TEST")
-            # print(position_trades)
+            open_prices = df['o'].values
+            ticker = df.iloc[0]['ticker']
+            order_id = f"{order_num}_{order_dt}"
+            results_dict = buy_iterate_sellV2_invalerts(symbol, ticker, open_prices, strategy, df, position_id, trading_date, alert_hour, order_id,config,row,order_num)
+            results_dict['order_num'] = order_num
+            if len(results_dict) == 0:
+                print(f"Error in simulate_trades_invalerts for {symbol} and {ticker}")
+                print(f"{order_id}_{order_dt}")
+                continue
+
+            results.append(results_dict)
         except Exception as e:
-            print(f"Error in position_trades for {position_id} {e}")
-            print(results)
-            print()
+            print(f"error: {e} in buy_iterate_sellV2_invalerts")
+            print(df)
             continue
-        positions_list.append(position_trades)
     
-    return positions_list
+    return {"position_id": f"{position_id}", "transactions": results, "open_datetime": results_dict['open_trade_dt']}
+    
 
 
 #########
@@ -223,27 +206,6 @@ def create_results_dict(buy_dict, sell_dict,order_id):
 def create_options_aggs_inv(row,start_date,end_date,spread_length,config):
     options = []
     enriched_options_aggregates = []
-    # expiries = ast.literal_eval(row['expiries'])
-
-    # ASSIGNMENT ADJUSTMENT
-    # threeD_cutoff, oneD_cutoff = map_assignment_adjustment(config['aa'])
-    # if row['strategy'] in THREED_STRATEGIES:
-    #         if start_date.weekday() > 2:
-    #             expiry = expiries[1]
-    #         else:
-    #             expiry = expiries[0]
-    # elif row['strategy'] in ONED_STRATEGIES:
-    #     if start_date.weekday() > 4:
-    #             expiry = expiries[0]
-    #     else:
-    #         expiry = expiries[1]
-    # # if row['strategy'] in ["IDXC_1D","IDXP","IDXC","IDXP_1D"]:
-    # #     expiry = expiries[config['aa']]
-    # # else:
-    # #     expiry = expiries[0]
-
-    # expiry = expiries[0]
-
     strike = row['contract_ticker']
     try:
         underlying_agg_data = polygon_stockdata_inv(row['symbol'],start_date,end_date)
@@ -260,47 +222,15 @@ def create_options_aggs_inv(row,start_date,end_date,spread_length,config):
                 return [], []
             
     underlying_agg_data.rename(columns={'o':'underlying_price'}, inplace=True)
-    # try:
-    #     contracts = ast.literal_eval(row['contracts'])
-    # except Exception as e:
-    #     print(f"Error: {e} in evaluating contracts for {row['symbol']} of {row['strategy']}")
-    #     return [], []
-    # filtered_contracts = [k for k in contracts if strike in k]
-    # if len(filtered_contracts) == 0:
-    #     print(f"No contracts for {row['symbol']} of {row['strategy']}")
-    #     try:
-    #         strike2 = row['symbol'] + contracts[0][-15:-9]
-    #         filtered_contracts = [k for k in contracts if strike2 in k]
-    #         if len(filtered_contracts) == 0:
-    #             print(f"No contracts 2nd try for {row['symbol']} of {row['strategy']}")
-    #             print(contracts)
-    #             print(strike)
-    #             print(start_date)
-    #             return [], []
-    #     except Exception as e:
-    #         print(f"Error: {e} in 2nd try for {row['symbol']} of {row['strategy']}")
-    #         print(contracts)
-    #         print(strike)
-    #         print(start_date)
-    #         return [], []
-    # options_df = build_options_df(filtered_contracts, row)
-    ## SPREAD ADJUSTMENT
-    # options_df = options_df.iloc[config['spread_adjustment']:]
-    # options_df = options_df.iloc[:4]
-    # for index,contract in options_df.iterrows():
     try:
         options_agg_data = polygon_optiondata(row['contract_ticker'], start_date, end_date)
         enriched_df = pd.merge(options_agg_data, underlying_agg_data[['date', 'underlying_price']], on='date', how='left')
         enriched_df.dropna(inplace=True)
         enriched_options_aggregates.append(enriched_df)
         options.append(strike)
-        # if len(options) >= (spread_length+1):
-        #     break
     except Exception as e:
         print(f"Error: {e} in options agg for {row['symbol']} of {row['strategy']}")
         print(strike)
-        # continue
-    # print(enriched_options_aggregates, options)
     return enriched_options_aggregates, options
 
 def create_datetime_index(start_date, end_date):
@@ -652,6 +582,7 @@ def tda_CALL_1D_CDVOLAGG(polygon_df, simulation_date, quantity, config, target_p
     return sell_dict
 
 def tda_PUT_1D_CDVOLVARVC(polygon_df, simulation_date, quantity, config, target_pct, vol, order_num):
+    order_num = order_num + 1
     open_price = polygon_df.iloc[0]['underlying_price']
     derivative_open_price = polygon_df.iloc[0]['o']
     isVC = False
@@ -725,6 +656,7 @@ def tda_PUT_1D_CDVOLVARVC(polygon_df, simulation_date, quantity, config, target_
     return sell_dict
 
 def tda_CALL_1D_CDVOLVARVC(polygon_df, simulation_date, quantity, config, target_pct, vol, order_num):
+    order_num = order_num + 1
     open_price = polygon_df.iloc[0]['underlying_price']
     derivative_open_price = polygon_df.iloc[0]['o']
     isVC = False

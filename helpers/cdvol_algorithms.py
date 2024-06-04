@@ -24,7 +24,7 @@ def pc_max_value(row):
             max_deriv_value = float(row['avg_fill_price_open'])
     return max_deriv_value
 
-def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
+def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     model_config = pull_model_config(row['trading_strategy'])
     min_value = calculate_floor_pct(row)
     open_price = row['underlying_purchase_price']
@@ -43,30 +43,30 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
         4: 500
     }
 
+
     if deriv_pct_change > vc_config[spread_position]:
         sell_code = "VCSell"
         return sell_code, "VCSell"
     
     # print(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
-    logger.info(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_3D_CDVOLAGG")
-
+    logger.info(f"Floor_pct: {Floor_pct} min_value: {min_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in PUT_1D_CDVOLAGG")
 
     sell_code = 0
     reason = ""
-    if day_diff < 3:
+    if day_diff < 1:
         if current_weekday == 4 and hour > 12: 
             sell_code = 2
             reason = f"Friday sell. {pct_change} {Floor_pct}"
         elif pct_change >= Floor_pct:
             sell_code = 2
             reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
-    elif day_diff > 3:
+    elif day_diff > 1:
         sell_code = 3
         reason = "Held through confidence."
         # sell_dict = build_trade_analytics(row,polygon_df,derivative_open_price,len(polygon_df)-1,quantity,reason)  
         return sell_code, reason
-    elif day_diff == 3:
+    elif day_diff == 1:
         if hour == 15 or (current_weekday == 4 and hour >= 12):
             sell_code = 7
             reason = "End of day, sell."
@@ -84,7 +84,7 @@ def tda_PUT_3D_CDVOLAGG(row, current_price,vol):
 
     return sell_code, reason
 
-def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
+def tda_CALL_1D_CDVOLAGG(row, current_price,vol):
     model_config = pull_model_config(row['trading_strategy'])
     max_value = calculate_floor_pct(row)
     open_price = row['underlying_purchase_price']
@@ -110,23 +110,23 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
     
     # print(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']}")
     day_diff = get_business_days(row['order_transaction_date'])
-    logger.info(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff {day_diff} in CALL_3D_CDVOLAGG")
+    logger.info(f"Floor_pct: {Floor_pct} max_value: {max_value} pct_change: {pct_change} current_price: {current_price} purchase_price: {open_price} for {row['option_symbol']} day_diff: {day_diff} in CALL_1D_CDVOLAGG")
 
     sell_code = 0
     reason = ""
-    if day_diff < 3:
+    if day_diff < 1:
         if current_weekday == 4 and hour > 12: 
             sell_code = 2
             reason = f"Friday sell. {pct_change} {Floor_pct}"
         elif pct_change <= Floor_pct:
             sell_code = 2
             reason = f"Breached floor pct, sell. {pct_change} {Floor_pct}"
-    elif day_diff > 3:
+    elif day_diff > 1:
         sell_code = 3
         reason = "Held through confidence."
         # sell_dict = build_trade_analytics(row,polygon_df,derivative_open_price,len(polygon_df)-1,quantity,reason)  
         return sell_code, reason
-    elif day_diff == 3:
+    elif day_diff == 1 :
         if hour == 15 or (current_weekday == 4 and hour >= 12):
             sell_code = 7
             reason = "End of day, sell."
@@ -143,6 +143,7 @@ def tda_CALL_3D_CDVOLAGG(row, current_price,vol):
             reason = "Failed momentum gate, sell."
 
     return sell_code, reason
+
 
 def tda_PUT_1D_CDVOLAGG(row, current_price,vol):
     model_config = pull_model_config(row['trading_strategy'])

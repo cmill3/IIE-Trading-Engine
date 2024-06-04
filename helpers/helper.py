@@ -186,7 +186,8 @@ def convert_timestamp_est(timestamp):
     
 def bet_sizer(contracts, date, spread_length, call_put,strategy):
     model_config = ALGORITHM_CONFIG[trading_strategy]
-    target_cost = (model_config['risk_unit']* db.get_trading_balance(portfolio_strategy, env))
+    trading_capital = model_config['portfolio_cash']*model_config['portfolio_pct']
+    target_cost = trading_capital/model_config['risk_unit']
     contracts = size_spread_quantities(contracts, target_cost)
     return contracts
 
@@ -206,15 +207,12 @@ def size_spread_quantities(contracts_details, target_cost):
     adjusted_target_cost = target_cost/100
     adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
 
-    # if day_of_week >= 3:
-    #     spread_length = 2
-    #     adjusted_contracts = contracts_details[model_config['spread_start']:(model_config['spread_end']-2)]
-    # elif day_of_week == 2:
-    #     spread_length = 3
-    #     adjusted_contracts = contracts_details[model_config['spread_start']:(model_config['spread_end']-1)]
-    # elif day_of_week < 2:
-    #     spread_length = 4
-    #     adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
+    if day_of_week >= 2:
+        spread_length = 3
+        adjusted_contracts = contracts_details[model_config['spread_start']-1:(model_config['spread_end']-1)]
+    elif day_of_week < 2:
+        spread_length = 3
+        adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
 
 
     spread_candidates = configure_contracts_for_trade_capital_distributions(adjusted_contracts, adjusted_target_cost)

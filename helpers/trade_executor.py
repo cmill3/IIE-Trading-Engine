@@ -46,7 +46,7 @@ def execute_new_trades(data,table, lambda_signifier):
         is_valid = False
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
                                     
-        if (row['strategy'] in THREED_STRATEGIES and now.date().weekday() <= 2) or (row['strategy'] in ONED_STRATEGIES and now.date().weekday() <= 3):
+        if row['strategy'] in ONED_STRATEGIES and now.date().weekday() in [2,3]:
             is_valid = True
 
         if is_valid:
