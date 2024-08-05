@@ -37,7 +37,7 @@ duration = "GTC"
     
 def execute_new_trades(data,table, lambda_signifier):
     base_url, account_id, access_token = trade.get_tradier_credentials(env)
-    trading_balance = db.get_trading_balance(portfolio_strategy,env)
+    # trading_balance = db.get_trading_balance(portfolio_strategy,env)
     positions_data = []
     failed_transactions = []
     orders_list = []
@@ -46,15 +46,20 @@ def execute_new_trades(data,table, lambda_signifier):
         is_valid = False
         position_id = f"{row['symbol']}-{(row['strategy'].replace('_',''))}-{dt_posId}"
                                     
-        if row['strategy'] in ONED_STRATEGIES and now.date().weekday() in [2,3]:
+        if row['strategy'] in ONED_STRATEGIES and now.date().weekday() in [0,1,2,3]:
             is_valid = True
 
         if is_valid:
             try: 
-                row['trade_details'] = ast.literal_eval(row['trade_details1wk'])
+                row['trade_details1'] = ast.literal_eval(row['trade_details1wk'])
+                row['trade_details2'] = ast.literal_eval(row['trade_details2wk'])
             except:
                 continue
-            trades = pd.DataFrame.from_dict(all_trades)
+            all_trades1 = row['trade_details1']
+            all_trades2 = row['trade_details2']
+            trades1 = pd.DataFrame.from_dict(all_trades1)
+            trades2 = pd.DataFrame.from_dict(all_trades2)
+            trades = pd.concat([trades1,trades2])
             if len(trades) == 0:
                 continue
             trades = trades.loc[trades['quantity'] != 0]
@@ -70,10 +75,10 @@ def execute_new_trades(data,table, lambda_signifier):
                                                                             order_type, duration, position_id)
                     
                     if status_code == 200:
-                        trading_balance, underlying_purchase_price = process_open_order(row,open_order_id,position_id,json_response,status_code,lambda_signifier,detail,option_side)
+                        underlying_purchase_price = process_open_order(row,open_order_id,position_id,json_response,status_code,lambda_signifier,detail,option_side)
                         orders_list.append(open_order_id)
                         accepted_orders.append({"order_id": open_order_id, "position_id": position_id, "symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"Call/Put":row['Call/Put'],"underlying_purchase_price": underlying_purchase_price,'return_vol_5D':row['return_vol_5D'],"spread_position":detail['spread_position']})
-                        positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":all_trades,"underlying_purchase_price": underlying_purchase_price,'return_vol_5D':row['return_vol_5D'],"spread_position":detail['spread_position']})        
+                        positions_data.append({"position_id": position_id, "underlying_symbol": row['symbol'], "strategy": row['strategy'], "sellby_date":row['sellby_date'],"all_contracts":trades,"underlying_purchase_price": underlying_purchase_price,'return_vol_5D':row['return_vol_5D'],"spread_position":detail['spread_position']})        
                     else:
                         trade_data = row.to_dict()
                         trade_data['response'] = status_code
@@ -88,14 +93,14 @@ def execute_new_trades(data,table, lambda_signifier):
                     failed_transactions.append(trade_data)
                     continue
             
-    logger.info(f'Final Balance: {trading_balance}')
+    # logger.info(f'Final Balance: {trading_balance}')
     positions_df = pd.DataFrame.from_dict(positions_data)
     accepted_df = pd.DataFrame.from_dict(accepted_orders)
     failed_df = pd.DataFrame(failed_transactions)
 
-    balance_dict = {"strategy_name": f"{portfolio_strategy}-DEV", "balance": trading_balance, "date": datetime.now().strftime("%Y/%m/%d/%H/%M")}
-    df = pd.DataFrame([balance_dict])
-    s3.put_object(Bucket='inv-alerts-trading-data', Key=f'trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}', Body=df.to_csv(index=False))
+    # balance_dict = {"strategy_name": f"{portfolio_strategy}-DEV", "balance": trading_balance, "date": datetime.now().strftime("%Y/%m/%d/%H/%M")}
+    # df = pd.DataFrame([balance_dict])
+    # s3.put_object(Bucket='inv-alerts-trading-data', Key=f'trading_balance/{env}/{datetime.now().strftime("%Y/%m/%d/%H/%M")}', Body=df.to_csv(index=False))
     s3.put_object(Bucket=trading_data_bucket, Key=f"orders_data/{env}/{date}.csv", Body=positions_df.to_csv())
     s3.put_object(Bucket=trading_data_bucket, Key=f"accepted_orders_data/{env}/{date}.csv", Body=accepted_df.to_csv())
     s3.put_object(Bucket=trading_data_bucket, Key=f"failed_orders/{env}/{date}.csv", Body=failed_df.to_csv())
@@ -111,18 +116,19 @@ def process_open_order(row,open_order_id,position_id,json_response, status_code,
         row['position_id'] = position_id
         row['underlying_purchase_price'] = underlying_purchase_price
         row['quantity'] = order_info_obj['exec_quantity']
+        order_info_obj['position_id'] = position_id
 
         log_message_open(row, open_order_id, status_code, json_response,detail['contract_ticker'], option_side,lambda_signifier,detail)
         capital_spent = (float(order_info_obj['exec_quantity']) * float(order_info_obj['average_fill_price'])) * 100
         logger.info(f'Capital spent: {capital_spent}')
         db.create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase_price,row, env, orders_table,detail)
-        new_balance = db.update_trading_balance(capital_spent,portfolio_strategy,env,action_type="open")
+        # new_balance = db.update_trading_balance(capital_spent,portfolio_strategy,env,action_type="open")
     except Exception as e:
         logger.info(f'Place Order Failed: {e}')
         logger.info(row)
         return 0, 0
 
-    return new_balance, underlying_purchase_price
+    return underlying_purchase_price
 
 # def process_dynamo_orders(formatted_df, base_url, account_id, access_token, table):
 #     processed_df = db.process_opened_ordersv2(formatted_df, base_url, account_id, access_token, env, table)
@@ -156,6 +162,8 @@ def close_order(row, env, lambda_signifier, reason):
     return closing_id, capital_return
 
 def date_performance_check(row, env, lambda_signifier):
+    # closing_order_id, capital_return = close_order(row, env, lambda_signifier, "MASS POSITION KILL")
+    # return closing_order_id, capital_return
     last_price = trade.call_polygon_last_price(row['underlying_symbol'])
     derivative_price = trade.call_polygon_last_price(f"O:row['option_symbol']")
     if derivative_price is None:
@@ -168,15 +176,11 @@ def date_performance_check(row, env, lambda_signifier):
         return None, None
     
 def evaluate_performance_inv(current_price, derivative_price, row):
-    if row['trading_strategy'] in CDVOL_STRATEGIES:
-        if row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
-            sell_code, reason = tda_CALL_3D_CDVOLAGG(row, current_price,vol=.4)
-        elif row['trading_strategy'] in THREED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
-            sell_code, reason = tda_PUT_3D_CDVOLAGG(row, current_price,vol=.4)
-        elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in CALL_STRATEGIES:
-            sell_code, reason = tda_CALL_1D_CDVOLAGG(row, current_price,vol=.4)
-        elif row['trading_strategy'] in ONED_STRATEGIES and row['trading_strategy'] in PUT_STRATEGIES:
-            sell_code, reason = tda_PUT_1D_CDVOLAGG(row, current_price,vol=.4)
+    algorithm_config = ALGORITHM_CONFIG[row['trading_strategy']]
+    if row['trading_strategy'] in CALL_STRATEGIES:
+        sell_code, reason = TDA_CALL_1D_CDVOL(row, current_price,vol=algorithm_config['vol_tolerance'])
+    elif row['trading_strategy'] in PUT_STRATEGIES:
+        sell_code, reason = TDA_PUT_1D_CDVOL(row, current_price,vol=algorithm_config['vol_tolerance'])
     else:
         sell_code, reason = 1, "untracked"
     return sell_code, reason

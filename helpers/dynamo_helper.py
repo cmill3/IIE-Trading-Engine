@@ -104,6 +104,7 @@ def create_new_dynamo_record_order(order_info_obj, position, position_id, transa
         'sellby_date': position['sellby_date'],
         'env': env,
         'return_vol_5D': str(position['return_vol_5D']),
+        'return_vol_10D': str(position['return_vol_10D']),
     }
 
     response = table.put_item(
@@ -134,6 +135,7 @@ def create_new_dynamo_record_order_logmessage(order_info_obj,underlying_purchase
         'order_status': order_info_obj['status'],
         'env': env,
         'return_vol_5D': str(row['return_vol_5D']),
+        'return_vol_10D': str(row['return_vol_10D']),
         'spread_position': str(detail['spread_position']),
     }
 
@@ -212,7 +214,7 @@ def create_new_dynamo_record_closed_order_logmessage(close_order_info_obj, origi
         'env': env,
         'execution_strategy': str(execution_strategy),
         'underlying_symbol': row['underlying_symbol'],
-        'position_id': original_order_info_obj['position_id'],
+        'position_id': row['position_id'],
         # 'trading_strategy': original_order_info_obj['trading_strategy'],
         'option_symbol': close_order_info_obj['option_symbol'],
         'average_fill_price_open': str(original_order_info_obj['average_fill_price']),

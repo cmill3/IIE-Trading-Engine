@@ -23,11 +23,13 @@ custom:
   stages:
     - dev
     - prod-val
-    # - prod
+    - prod
   dev:
     tradingDataBucketINV: inv-alerts-trading-data-dev
     ordersTableINV: icarus-orders-table-inv-dev
     closedOrdersTableINV: icarus-closed-orders-table-inv-dev
+    ordersTableTrendINV: icarus-orders-table-trend-inv-dev
+    closedOrdersTableTrendINV: icarus-closed-orders-table-trend-inv-dev
     env: DEV
     tableList15min: "['icarus-closed-orders-table-inv-dev', 'icarus-orders-table-inv-dev']"
     tableListdaily: "['icarus-model-results-table-dev']"
@@ -36,16 +38,20 @@ custom:
     tradingDataBucketINV: inv-alerts-trading-data
     ordersTableINV: icarus-orders-table-inv
     closedOrdersTableINV: icarus-closed-orders-table-inv
+    ordersTableTrendINV: icarus-orders-table-trend-inv
+    closedOrdersTableTrendINV: icarus-closed-orders-table-trend-inv
     env: PROD_VAL
     tableList15min: "['icarus-closed-orders-table-inv', 'icarus-orders-table-inv']"
     tableListdaily: "['icarus-model-results-table']"
     closedTablelist: "['icarus-closed-orders-table-inv']"
-  # prod:
-  #   env: PROD
-
-  
-  # prod:
-  #   tableName: prodTable
+  prod:
+    env: PROD
+    tradingDataBucketINV: inv-alerts-trading-data-prod
+    ordersTableINV: icarus-orders-table-inv-prod
+    closedOrdersTableINV: icarus-closed-orders-table-inv-prod
+    tableList15min: "['icarus-closed-orders-table-inv-prod', 'icarus-orders-table-inv-prod']"
+    tableListdaily: "['icarus-model-results-table']"
+    closedTablelist: "['icarus-closed-orders-table-inv-prod']"
 
 plugins:
   - serverless-step-functions
@@ -64,6 +70,18 @@ functions:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: new-trades-portfolio-manager-${self:provider.stage}
+  new-trades-portfolio-manager-trend:
+    handler: new_trades_portfolio_manager.manage_portfolio_inv
+    environment:
+      ENV: ${self:custom.${self:provider.stage}.env}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableTrendINV}
+      PORTFOLIO_STRATEGY: "CDVOL_TREND"
+    layers:
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: new-trades-portfolio-manager-trend-${self:provider.stage}
   open-trades-portfolio-manage-paperCDBFP1D:
     handler: open_trades_portfolio_manager.manage_portfolio_inv
     environment:
@@ -72,6 +90,7 @@ functions:
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       STRATEGY: "CDBFP_1D"
+      PORTFOLIO_STRATEGY: "CDVOLBF"
     layers:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -85,11 +104,40 @@ functions:
       TABLE: ${self:custom.${self:provider.stage}.ordersTableINV}
       CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       STRATEGY: "CDBFC_1D"
+      PORTFOLIO_STRATEGY: "CDVOLBF"
     layers:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: open-trades-portfolio-manager-CDBFC1D-${self:provider.stage}
+  open-trades-portfolio-manage-paperCDGAIN1D:
+    handler: open_trades_portfolio_manager.manage_portfolio_inv
+    environment:
+      ENV: ${self:custom.${self:provider.stage}.env}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableTrendINV}
+      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableTrendINV}
+      STRATEGY: "CDGAIN"
+      PORTFOLIO_STRATEGY: "CDVOL_TREND"
+    layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: open-trades-portfolio-manager-CDGAIN1D-${self:provider.stage}
+  open-trades-portfolio-manage-paperCDLOSE1D:
+    handler: open_trades_portfolio_manager.manage_portfolio_inv
+    environment:
+      ENV: ${self:custom.${self:provider.stage}.env}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TABLE: ${self:custom.${self:provider.stage}.ordersTableTrendINV}
+      CLOSE_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableTrendINV}
+      STRATEGY: "CDLOSE"
+      PORTFOLIO_STRATEGY: "CDVOL_TREND"
+    layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: open-trades-portfolio-manager-CDLOSE1D-${self:provider.stage}
   icarus-trade-builder-CDVOLBFC1D:
     handler: icarus_trade_builder.build_trade_inv
     environment:
@@ -116,6 +164,32 @@ functions:
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
     role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
     name: icarus-trade-builder-CDVOLBFP1D-${self:provider.stage}
+  icarus-trade-builder-CDVOLGAIN1D:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TRADING_STRATEGY: "CDGAINC_1D,CDGAINP_1D"
+      PORTFOLIO_STRATEGY: "CDVOL_GAIN"
+      ENV: ${self:custom.${self:provider.stage}.env}
+    layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-CDVOLGAIN1D-${self:provider.stage}
+  icarus-trade-builder-CDVOLLOSE1D:
+    handler: icarus_trade_builder.build_trade_inv
+    environment:
+      MODEL_RESULTS_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
+      TRADING_STRATEGY: "CDLOSEC_1D,CDLOSEP_1D"
+      PORTFOLIO_STRATEGY: "CDVOL_LOSE"
+      ENV: ${self:custom.${self:provider.stage}.env}
+    layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
+      - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
+    role: arn:aws:iam::456201388658:role/batch-scout-lambdaRole
+    name: icarus-trade-builder-CDVOLLOSE1D-${self:provider.stage}
   closed-orders-data-processor:
     handler: order_data_processor.run_closed_trades_data_process
     environment:
@@ -204,6 +278,7 @@ functions:
       TRADING_DATA_BUCKET: ${self:custom.${self:provider.stage}.tradingDataBucketINV}
       CLOSED_ORDERS_TABLE: ${self:custom.${self:provider.stage}.closedOrdersTableINV}
       ACTIVE_STRATEGIES: "CDBFC_1D,CDBFP_1D"
+      API_KEY: 'A_vXSwpuQ4hyNRj_8Rlw1WwVDWGgHbjp'
     layers:
       - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39:16
       - arn:aws:lambda:us-east-1:456201388658:layer:pytz:1
@@ -325,6 +400,163 @@ stepFunctions:
                     Type: Task
                     Resource: 
                       Fn::GetAtt: [open-trades-portfolio-manage-paperCDBFP1D, Arn]
+                    Parameters:
+                      Payload.$: $
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 1
+                      BackoffRate: 2
+                    # Catch:
+                    # - ErrorEquals: ["States.ALL"]
+                    End: True
+            Next: ClosedOrdersProcessor
+          ClosedOrdersProcessor:
+            Type: Task
+            Resource: 
+              Fn::GetAtt: [closed-orders-data-processor, Arn]
+            Parameters:
+              Payload.$: "$"
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              IntervalSeconds: 5
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: OrderControl
+          OrderControl:
+            Type: Task
+            Resource: 
+              Fn::GetAtt: [order-controls, Arn]
+            Parameters:
+              Payload.$: "$"
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              IntervalSeconds: 5
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: End
+          End:
+            Type: Succeed
+    icarus-new-trades-trend:
+      name: icarus-new-trades-trend-${self:provider.stage}
+      role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
+      alarms:
+        topics:
+          alarm: arn:aws:sns:us-east-1:456201388658:yqalerts-production-modeling
+        metrics:
+          - executionsTimedOut
+          - executionsFailed
+          - executionsAborted
+          - executionThrottled
+        treatMissingData: missing
+      definition:
+        Comment: "This state machine constructs and executes trades based on results of the modeling engine"
+        StartAt: ParallelProcessorINV
+        States:
+          ParallelProcessorINV:
+            Type: Parallel
+            Branches:
+              - StartAt: BuildTradeCDVOLLOSE1D
+                States:
+                  BuildTradeCDVOLLOSE1D:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [icarus-trade-builder-CDVOLLOSE1D, Arn]
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+              - StartAt: BuildTradeCDVOLGAIN1D
+                States:
+                  BuildTradeCDVOLGAIN1D:
+                    Type: Task
+                    Resource:
+                      Fn::GetAtt: [icarus-trade-builder-CDVOLGAIN1D, Arn]
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 3
+                      BackoffRate: 2
+                    End: True
+            Next: PortfolioManagerINV
+          PortfolioManagerINV:
+            Type: Task
+            Resource: 
+              Fn::GetAtt: [new-trades-portfolio-manager-trend, Arn]
+            Parameters:
+              Payload.$: $
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              IntervalSeconds: 5
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: End
+          End:
+            Type: Succeed
+    icarus-open-trades-trend:
+      name: icarus-open-trades-trend-${self:provider.stage}
+      role: arn:aws:iam::456201388658:role/service-role/StepFunctions-Gainers-Production-Modeling-role-72889a0b
+      alarms:
+        topics:
+          alarm: arn:aws:sns:us-east-1:456201388658:yqalerts-production-modeling
+        metrics:
+          - executionsTimedOut
+          - executionsFailed
+          - executionsAborted
+          - executionThrottled
+        treatMissingData: missing
+      definition:
+        Comment: "This state machine constructs and executes trades based on results of the modeling engine"
+        StartAt: PortfolioManager
+        States:
+          PortfolioManager:
+            Type: Parallel
+            Branches:
+              - StartAt: TradeManagerCDGAIN1D
+                States:
+                  TradeManagerCDGAIN1D:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [open-trades-portfolio-manage-paperCDGAIN1D, Arn]
+                    Parameters:
+                      Payload.$: $
+                    Retry:
+                    - ErrorEquals:
+                      - Lambda.ServiceException
+                      - Lambda.AWSLambdaException
+                      - Lambda.SdkClientException
+                      IntervalSeconds: 5
+                      MaxAttempts: 1
+                      BackoffRate: 2
+                    # Catch:
+                    # - ErrorEquals: ["States.ALL"]
+                    End: True
+              - StartAt: TradeManagerCDLOSE1D
+                States:
+                  TradeManagerCDLOSE1D:
+                    Type: Task
+                    Resource: 
+                      Fn::GetAtt: [open-trades-portfolio-manage-paperCDLOSE1D, Arn]
                     Parameters:
                       Payload.$: $
                     Retry:

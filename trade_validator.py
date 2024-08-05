@@ -12,15 +12,37 @@ s3 = boto3.client('s3')
 ddb = boto3.client('dynamodb')
 
 env = os.environ.get('ENV')
-bucket = os.environ.get('TRADING_BUCKET')
+bucket = os.environ.get('TRADING_DATA_BUCKET')
 strategies = os.environ.get('ACTIVE_STRATEGIES').split(',')
 ddb_table = os.environ.get('CLOSED_ORDERS_TABLE')
 
 prefix = f'closed_orders/{env}/'
 logger = logging.getLogger()
 
+config = {
+    "put_pct": 1, 
+    "spread_search": "1:4",
+    "aa": 0,
+    "risk_unit": .03,
+    "model": "CDVOLVARVC",
+    "vc_level":"100+120+140+500",
+    "capital_distributions": ".33,.33,33",
+    "portfolio_cash": 60000,
+    "scaling": "dynamicscale",
+    "volatility_threshold": 1,
+    "model_type": "cls",
+    "user": "cm3",
+    "threeD_vol": "return_vol_5D",
+    "oneD_vol": "return_vol_5D",
+    "dataset": "CDVOLBF3-6PE",
+    "spread_length": 3,
+    "reserve_cash": 5000,
+    "days": 23,
+    }
+
 def run_process(event, context):
-    date = datetime.now() #To be uncommented when live
+    # date = datetime.now() #To be uncommented when live
+    date = datetime.strptime('2024-06-14 15:00:00', '%Y-%m-%d %H:%M:%S') #To be commented when live
     date = date - timedelta(hours=1)
     logger.info(f"Running trade validation process for {date}")
     date_hour_prefix = str(date.strftime('%Y/%m/%d/%H'))
@@ -35,31 +57,32 @@ def run_process(event, context):
     errors = 0
     for i, row in full_df.iterrows():
         print(f"Processing row {i}")
-        print(row)
-        df, strategy, symbol, date, index, sim_df = pull_potential_trades(row['position_id'],row['option_symbol'])
-        if sim_df == None:
-            print(f"Error processing row {i}")
-            errors += 1
+        try:
+            df, strategy, symbol, date, index, sim_info = pull_potential_trades(row['position_id'],row['option_symbol'])
+            if sim_info == None:
+                print(f"Error processing row {i}")
+                errors += 1
+                continue
+            item, data = create_real_dataset(row, strategy, symbol)
+            simulation_results = simulate_trades_invalerts(sim_info, config)
+            data_df = pd.DataFrame(data, index = [0])
+            real_dfs.append(data_df)
+            simulated_dfs.append(simulation_results)
+        except Exception as e:
+            print(e)
+            logger.info(f"Error processing row {row['position_id']}")
             continue
-        item, data = create_real_dataset(row, strategy, symbol)
-        print(data)
-        simulation_results = simulate_trades_invalerts(sim_df, config)
-        print(simulation_results)
-        data_df = pd.DataFrame(data, index = [0])
-        real_dfs.append(data_df)
-        simulated_dfs.append(simulation_results)
 
     truevalues_df = pd.concat(real_dfs)
     simulated_df = pd.DataFrame.from_dict(simulated_dfs)
     sim_df = explode_sim_data(simulated_df)
-    sim_df.to_csv('sim_df.csv')
+    # sim_df.to_csv('sim_df.csv')
     production_results_df = clean_real_data(truevalues_df)
-    production_results_df.to_csv('production_results_df.csv')
+    # production_results_df.to_csv('production_results_df.csv')
     raw_df, viz_df = prod_sim_match(sim_df, production_results_df)
-    print(date_hour_prefix)
+    s3.put_object(Bucket=bucket, Key=f'trade_validations/{date_hour_prefix}/raw_local.csv', Body=raw_df.to_csv(index=False)) 
+    s3.put_object(Bucket=bucket, Key=f'trade_validations/{date_hour_prefix}/viz_local.csv', Body=viz_df.to_csv(index=False))
     viz_df = check_for_discrepancies(viz_df)
-    s3.put_object(Bucket=bucket, Key=f'trade_validations/{date_hour_prefix}/raw.csv', Body=raw_df.to_csv(index=False)) 
-    s3.put_object(Bucket=bucket, Key=f'trade_validations/{date_hour_prefix}/viz.csv', Body=viz_df.to_csv(index=False))
     logger.info(f"Trade validation process complete for {date}")
     return "Process Complete"
     
@@ -142,7 +165,9 @@ def pull_potential_trades(position_id,contract):
                 'spread_position': contract_info['spread_position'],
                 'side': side,
                 'target_pct': row['target_pct'],
-                'classifier_prediction': row['classifier_prediction']
+                'return_vol_5D': row['return_vol_5D'],
+                'return_vol_10D': row['return_vol_10D'],
+                'classifier_prediction': row['classifier_prediction'],
             }  
     
     return df, new_strategy, symbol, trading_date, index, sim_dict
@@ -200,11 +225,13 @@ def create_real_dataset(row, strategy, symbol):
         'avg_open_price': avg_open_price,
         'avg_close_price': avg_close_price,
         'quantity': qty,
+        'close_quantity': item['qty_executed_close']['S'],
         'prod_net': prod_net,
         'closing_order_id': row['closing_order_id'],
         'position_id': row['position_id'],
         'strategy': strategy,
-        'trading_date': trading_date
+        'trading_date': trading_date,
+        'close_reason': item['close_reason']['S'],
     }
 
     return item, data
@@ -228,7 +255,8 @@ def prod_sim_match(simulated_df, real_df):
     raw_df['profit_diff_pct'] = (raw_df['prod_net'] - raw_df['sim_total_gain'])/raw_df['prod_net']
     viz_df = raw_df[
         ['option_symbol', 'prod_net', 'sim_total_gain', 'profit_diff_pct','sim_open_trade_dt','open_dt','sim_close_trade_dt',
-        'close_dt','position_id','sim_buy_info.open_price','avg_open_price','sim_sell_info.close_price','avg_close_price']
+        'close_dt','position_id','sim_buy_info.open_price','avg_open_price','sim_sell_info.close_price','avg_close_price',
+        "sim_sell_info.sell_code","close_reason"]
         ]
     return raw_df, viz_df
 
@@ -242,26 +270,6 @@ if __name__ == "__main__":
     #     'option_symbol': 'NKE240503C00094000',
     #     'position_id': 'NKE-CDBFC1D-2024-04-30T19-02'
     # }
-
-    config = {
-    "put_pct": 1, 
-    "spread_search": "1:4",
-    "aa": 0,
-    "risk_unit": .03,
-    "model": "CDVOLVARVC",
-    "vc_level":"100+200+300+500",
-    "capital_distributions": ".33,.33,33",
-    "portfolio_cash": 20000,
-    "scaling": "dynamicscale",
-    "volatility_threshold": 0.4,
-    "model_type": "cls",
-    "user": "cm3",
-    "threeD_vol": "return_vol_5D",
-    "oneD_vol": "return_vol_5D",
-    "dataset": "CDVOLBF3-6PE",
-    "spread_length": 3,
-    "reserve_cash": 5000
-        }
     
 
     run_process(None, None)

@@ -10,12 +10,13 @@ import boto3
 import os
 import logging
 import pytz
-from helpers.constants import ACTIVE_STRATEGIES
+from helpers.constants import TREND_STRATEGIES, CDVOL_STRATEGIES
 import warnings
 warnings.filterwarnings('ignore')
 
 s3 = boto3.client('s3')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+portfolio_strategy = os.getenv("PORTFOLIO_STRATEGY")
 urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -49,10 +50,14 @@ def store_signifier(signifier):
 
 def pull_new_trades_inv(year, month, day, hour):
     trade_dfs = []
-    for stratgey in ACTIVE_STRATEGIES:
+    if portfolio_strategy == "CDVOL_TREND":
+        strategies = TREND_STRATEGIES
+    elif portfolio_strategy == "CDVOLBF":
+        strategies = CDVOL_STRATEGIES
+    for stratgey in strategies:
         try:
             if env == "DEV":
-                dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"invalerts_potential_trades/PROD_VAL/{stratgey}/{year}/{month}/{day}/{hour}.csv")
+                dataset = s3.get_object(Bucket="inv-alerts-trading-data-dev", Key=f"invalerts_potential_trades/DEV/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             else:
                 dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{stratgey}/{year}/{month}/{day}/{hour}.csv")
             df = pd.read_csv(dataset.get("Body"))

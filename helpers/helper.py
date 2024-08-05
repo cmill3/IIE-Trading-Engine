@@ -72,6 +72,7 @@ def calculate_floor_pct(row):
     trading_hours = [9,10,11,12,13,14,15]
     from_stamp = row['order_transaction_date'].split('T')[0]
     time_stamp = datetime_to_timestamp_UTC(row['order_transaction_date'])
+    logger.info(f"FLOOR PCT TIMESTAMP {time_stamp} {row['order_transaction_date']}")
     prices = polygon_call_stocks(row['underlying_symbol'], from_stamp, current_date, "15", "minute")
     trimmed_df = prices.loc[prices['t'] > time_stamp]
     trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
@@ -80,8 +81,6 @@ def calculate_floor_pct(row):
     trimmed_df['minute'] = trimmed_df['date'].apply(lambda x: x.minute)
     trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
     trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
-    trimmed_df = trimmed_df.iloc[1:]
-    print(trimmed_df)
     high_price = trimmed_df['h'].max()
     low_price = trimmed_df['l'].min()
     if len(trimmed_df) == 0:
@@ -99,6 +98,7 @@ def get_derivative_max_value(row):
     try:
         from_stamp = row['order_transaction_date'].split('T')[0]
         time_stamp = datetime_to_timestamp_UTC(row['order_transaction_date'])
+        logger.info(f"MAX DERIV TIMESTAMP {time_stamp} {row['order_transaction_date']}")
         prices = polygon_call_stocks(f"O:{row['option_symbol']}", from_stamp, current_date, "15", "minute")
         trimmed_df = prices.loc[prices['t'] > time_stamp]
         trimmed_df['date'] = trimmed_df['t'].apply(lambda x: convert_timestamp_est(x))
@@ -107,7 +107,6 @@ def get_derivative_max_value(row):
         trimmed_df['minute'] = trimmed_df['date'].apply(lambda x: x.minute)
         trimmed_df = trimmed_df.loc[trimmed_df['hour'].isin(trading_hours)]
         trimmed_df = trimmed_df.loc[~((trimmed_df['hour'] == 9) & (trimmed_df['minute'] < 30))]
-        trimmed_df = trimmed_df.iloc[1:]
         high_price = trimmed_df['h'].max()
     except Exception as e:
         logger.info(e)
@@ -185,10 +184,10 @@ def convert_timestamp_est(timestamp):
     return est_datetime
     
 def bet_sizer(contracts, date, spread_length, call_put,strategy):
-    model_config = ALGORITHM_CONFIG[trading_strategy]
+    model_config = ALGORITHM_CONFIG[strategy]
     trading_capital = model_config['portfolio_cash']*model_config['portfolio_pct']
     target_cost = trading_capital/model_config['risk_unit']
-    contracts = size_spread_quantities(contracts, target_cost)
+    contracts = size_spread_quantities(contracts, target_cost, strategy)
     return contracts
 
 
@@ -201,21 +200,21 @@ def build_volume_features(df):
     avg_transactions = df['n'].mean()
     return avg_volume, avg_transactions
     
-def size_spread_quantities(contracts_details, target_cost):
+def size_spread_quantities(contracts_details, target_cost, strategy):
     day_of_week = date.weekday()
-    model_config = ALGORITHM_CONFIG[trading_strategy]
+    model_config = ALGORITHM_CONFIG[strategy]
     adjusted_target_cost = target_cost/100
     adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
 
-    if day_of_week >= 2:
-        spread_length = 3
-        adjusted_contracts = contracts_details[model_config['spread_start']-1:(model_config['spread_end']-1)]
-    elif day_of_week < 2:
-        spread_length = 3
-        adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
+    # if day_of_week >= 2:
+    #     spread_length = 3
+    #     adjusted_contracts = contracts_details[model_config['spread_start']-1:(model_config['spread_end']-1)]
+    # elif day_of_week < 2:
+    #     spread_length = 3
+    #     adjusted_contracts = contracts_details[model_config['spread_start']:model_config['spread_end']]
 
 
-    spread_candidates = configure_contracts_for_trade_capital_distributions(adjusted_contracts, adjusted_target_cost)
+    spread_candidates = configure_contracts_for_trade_capital_distributions(adjusted_contracts, adjusted_target_cost, strategy)
 
     if len(spread_candidates) == 0:
         return []
@@ -279,10 +278,10 @@ def add_spread_cost(spread_cost, target_cost, contracts_details):
 
     return spread_multiplier, add_one
 
-
-def configure_contracts_for_trade_capital_distributions(contracts_details, capital):
+##two
+def configure_contracts_for_trade_capital_distributions(contracts_details, capital, strategy):
     sized_contracts = []
-    capital_distributions = ALGORITHM_CONFIG[trading_strategy]['capital_distributions']
+    capital_distributions = ALGORITHM_CONFIG[strategy]['capital_distributions']
     total_capital = capital
     free_capital = 0
     for index, contract in enumerate(contracts_details):
@@ -349,6 +348,7 @@ def log_message_open(row, id, status_code, error, contract_ticker, option_side,l
         'underlying_symbol': row['symbol'],
         'option_side': option_side,
         'return_vol_5D': row['return_vol_5D'],
+        'return_vol_10D': row['return_vol_10D'],
         "spread_position": detail['spread_position'],
     })
     logger.info(log_entry)
@@ -370,7 +370,10 @@ def pull_model_config(trading_strategy):
     weekday = date.weekday()
     monday = date - timedelta(days=weekday)
     date_prefix = monday.strftime("%Y/%m/%d")
-    model_config = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"model_configurations/{date_prefix}.csv")
+    if trading_strategy in TREND_STRATEGIES:
+        model_config = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"model_configurations/trend/{date_prefix}.csv")
+    elif trading_strategy in CDVOL_STRATEGIES:
+        model_config = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"model_configurations/{date_prefix}.csv")
     model_config = pd.read_csv(model_config.get("Body"))
     model_config = model_config.loc[model_config['strategy'] == trading_strategy]
     return {"target_value": model_config['target_value'].values[0], "strategy": model_config['strategy'].values[0]}

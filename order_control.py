@@ -20,7 +20,9 @@ logger = logging.getLogger()
 def run_order_control(event, context):
     date_prefix = helper.calculate_date_prefix()
     base_url, account_id, access_token = te.get_tradier_credentials(env=env)
-    dynamo_orders_df = db.get_all_orders_from_dynamo(orders_table)
+    dynamo_cdvol_orders = db.get_all_orders_from_dynamo(orders_table)
+    dynamo_trend_orders = db.get_all_orders_from_dynamo("icarus-orders-table-trend-inv")
+    dynamo_orders_df = pd.concat([dynamo_cdvol_orders, dynamo_trend_orders], ignore_index=True)
     tradier_orders = te.get_account_positions(base_url, account_id, access_token)
 
     dynamo_orders_df['qty_executed_open'] = dynamo_orders_df['qty_executed_open'].astype(float)
@@ -42,7 +44,6 @@ def run_order_control(event, context):
 
 def compare_dataframes(tradier_df, ddb_symbol_count):
     mismatched_symbols = {}
-    
     for index, row in tradier_df.iterrows():
         symbol = row['option_symbol']
         quantity_tradier = row['quantity']
@@ -62,6 +63,12 @@ def compare_dataframes(tradier_df, ddb_symbol_count):
         except:
             logger.info(f"DynamoDB Quantity: 0")
             continue
+    tradier_list = tradier_df['option_symbol'].values.tolist()
+    for index, row in ddb_symbol_count.iterrows():
+        symbol = row['option_symbol']
+        if symbol not in tradier_list:
+            mismatched_symbols[symbol] = -float(row['qty_executed_open'])
+
     return mismatched_symbols
 
 def exposure_totalling():

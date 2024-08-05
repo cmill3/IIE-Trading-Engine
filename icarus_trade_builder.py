@@ -8,7 +8,7 @@ import logging
 import requests
 import json
 import pytz
-from helpers.constants import PREFIXES, CALL_STRATEGIES, PUT_STRATEGIES, ACTIVE_STRATEGIES, ENDPOINT_NAMES, TRADING_STRATEGIES
+from helpers.constants import CALL_STRATEGIES, PUT_STRATEGIES
 
 s3 = boto3.client('s3')
 logger = logging.getLogger()
@@ -16,6 +16,7 @@ logger.setLevel(logging.INFO)
 
 env = os.getenv("ENV")
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
+portfolio_strategy = os.getenv("PORTFOLIO_STRATEGY")
 
 
 
@@ -27,16 +28,24 @@ d = now.date() # Monday
 
 def build_trade_inv(event, context):
     year, month, day, hour = format_dates(now)
-    trading_strategy = os.getenv("TRADING_STRATEGY")
-    logger.info(trading_strategy)
-    print(f'Initializing trade builder: {year}-{month}-{day}-{hour}')
-    df  = pull_data_inv(trading_strategy,year, month, day, hour)
-    df['strategy'] = trading_strategy
+    if portfolio_strategy in ["CDVOL_GAIN","CDVOL_LOSE"]:
+        trading_strategies = os.getenv("TRADING_STRATEGY").split(",")
+    elif portfolio_strategy == "CDVOLBF":
+        trading_strategies = [os.getenv("TRADING_STRATEGY")]
 
-    results_df = process_data(df)
-    csv = results_df.to_csv()
+    for trading_strategy in trading_strategies:
+        logger.info(trading_strategy)
+        logger.info(f'Initializing trade builder: {year}-{month}-{day}-{hour}')
+        df  = pull_data_inv(trading_strategy,year, month, day, hour)
+        df['strategy'] = trading_strategy
 
-    response = s3.put_object(Body=csv, Bucket=trading_data_bucket, Key=f"invalerts_potential_trades/{env}/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
+        results_df = process_data(df)
+        csv = results_df.to_csv()
+        s3.put_object(
+            Body=csv, Bucket=trading_data_bucket, 
+            Key=f"invalerts_potential_trades/{env}/{trading_strategy}/{year}/{month}/{day}/{hour}.csv"
+            )
+    
     return {
         'statusCode': 200
     }
@@ -48,7 +57,7 @@ def pull_data_inv(trading_strategy,year, month, day, hour):
     if env == "PROD_VAL":
         dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"classifier_predictions/PROD/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     else:
-        dataset = s3.get_object(Bucket=trading_data_bucket, Key=f"classifier_predictions/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
+        dataset = s3.get_object(Bucket="inv-alerts-trading-data", Key=f"classifier_predictions/{env}/{trading_strategy}/{year}/{month}/{day}/{hour}.csv")
     df = pd.read_csv(dataset.get("Body"))
     df.dropna(inplace = True)
     df.reset_index(inplace= True, drop = True)
@@ -61,7 +70,6 @@ def process_data(df):
     df['expiry_2wk'] = date_2wk()
     df['expiry_1d'] = df['symbol'].apply(lambda x: date_1d(x))
     df['expiry_3d'] = df['symbol'].apply(lambda x: date_3d(x))
-    underlying_price = tradier.call_polygon_last_price(df['symbol'][0])
     df['trade_details1wk'] = df.apply(lambda row: build_trade_structure_1wk(row), axis=1)
     df['trade_details2wk'] = df.apply(lambda row: build_trade_structure_2wk(row), axis=1)
     df['sector'] = df['symbol'].apply(lambda Sym: strategy_helper.match_sector(Sym))

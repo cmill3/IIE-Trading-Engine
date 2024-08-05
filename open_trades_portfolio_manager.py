@@ -16,6 +16,7 @@ s3 = boto3.client('s3')
 trading_data_bucket = os.getenv('TRADING_DATA_BUCKET')
 table = os.getenv('TABLE')
 close_table = os.getenv("CLOSE_TABLE")
+portfolio_strategy = os.getenv("PORTFOLIO_STRATEGY")
 urllib3.disable_warnings(category=InsecureRequestWarning)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -37,23 +38,33 @@ def manage_portfolio_inv(event, context):
     store_signifier(lambda_signifier)
     try:
         check_time()
-    except ValueError as e:
+    except ValueError:
         return "disallowed"
     
-    base_url, account_id, access_token = trade.get_tradier_credentials(env)
     open_trades_df = db.get_all_orders_from_dynamo(table)
-    open_trades_df = open_trades_df.loc[open_trades_df['trading_strategy'] == strategy]
-    open_trades_df['qty_executed_open'] = open_trades_df['qty_executed_open'].astype(float)
-    open_trades_df = open_trades_df.loc[open_trades_df['qty_executed_open'] > 0]
+    if portfolio_strategy == "CDVOL_TREND":
+        if strategy == "CDGAIN":
+            strategies = ["CDGAINC_1D", "CDGAINP_1D"]
+        elif strategy == "CDLOSE":
+            strategies = ["CDLOSEP_1D", "CDLOSEC_1D"]
+    elif portfolio_strategy == "CDVOLBF":
+        strategies = [strategy]
 
-    capital_return = 0
-    if len(open_trades_df) == 0:
-        {"lambda_signifier": lambda_signifier}
-    open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
-    open_positions = open_trades_df['pos_id'].unique().tolist()
-    capital_return = evaluate_open_trades(open_trades_df)
+    for trading_strategy in strategies:
+        open_trades_df = open_trades_df.loc[open_trades_df['trading_strategy'] == trading_strategy]
+        open_trades_df['qty_executed_open'] = open_trades_df['qty_executed_open'].astype(float)
+        open_trades_df = open_trades_df.loc[open_trades_df['qty_executed_open'] > 0]
 
-    logger.info(f"Final Capital Return for {strategy}: {capital_return}")
+        capital_return = 0
+        if len(open_trades_df) == 0:
+            logger.info(f'No open trades for {trading_strategy}')
+            continue
+        open_trades_df['pos_id'] = open_trades_df['position_id'].apply(lambda x: f'{x.split("-")[0]}{x.split("-")[1]}')
+        open_positions = open_trades_df['pos_id'].unique().tolist()
+        logger.info(f'Open Positions: {open_positions}')
+        capital_return = evaluate_open_trades(open_trades_df)
+
+        logger.info(f"Final Capital Return for {trading_strategy}: {capital_return}")
     return {"capital_return": capital_return}
 
 def store_signifier(signifier):
@@ -78,8 +89,8 @@ def evaluate_open_trades(orders_df):
         except Exception as e:
             logger.error(f'Error closing order: {row["order_id"]}')
             logger.error(e)
+            logger.error(row)
             error_occurred = True
-    # positions_to_close = list(set(positions_to_close))
     logger.info(f'closing order ids: {orders_to_close}')
     closed_df = pd.DataFrame.from_dict(orders_to_close)   
     date_str = datetime.now().strftime("%Y/%m/%d/%H/%M")

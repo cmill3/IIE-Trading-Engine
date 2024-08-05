@@ -94,7 +94,9 @@ def get_order_info(base_url: str, account_id: str, access_token: str, order_id: 
         created_dt = response_json['order']['create_date']
         return {"id":response_json['order']['id'],"average_fill_price": average_fill_price, "last_fill_price": last_fill_price, 
                 "exec_quantity": exec_quantity, "transaction_date": transaction_dt, "created_date": created_dt, 
-                "option_symbol": response_json['order']['option_symbol'],"status":response_json['order']['status'],"position_id": response_json['order']['tag']}
+                "option_symbol": response_json['order']['option_symbol'],"status":response_json['order']['status'],
+                # "position_id": response_json['order']['tag']
+                }
     else:
         print(f"Order information for order_id: {order_id} has failed. Review option contract availability and code.")
         return "Order not filled"
